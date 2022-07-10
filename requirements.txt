@@ -11,9 +11,9 @@ sounddevice==0.4.3
 fire==0.4.0
 
 # extra=dev
-pytest==7.1.1
-black==22.3.0
-flake8==3.9.2
+pytest==7.1.2
+black==22.6.0
+flake8==4.0.1
 
 # extra=tf2.5
 tensorflow~=2.5

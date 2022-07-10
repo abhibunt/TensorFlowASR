@@ -15,12 +15,13 @@
 import json
 import os
 from typing import Union
+
 import numpy as np
 import tensorflow as tf
 import tqdm
 
 from tensorflow_asr.augmentations.augmentation import Augmentation
-from tensorflow_asr.datasets.base_dataset import AUTOTUNE, BUFFER_SIZE, TFRECORD_SHARDS, BaseDataset
+from tensorflow_asr.datasets.base_dataset import AUTOTUNE, BUFFER_SIZE, BaseDataset, TFRECORD_SHARDS
 from tensorflow_asr.featurizers.speech_featurizers import (
     SpeechFeaturizer,
     load_and_convert_to_wav,
@@ -62,6 +63,7 @@ class ASRDataset(BaseDataset):
             use_tf=use_tf,
             indefinite=indefinite,
         )
+        self.entries = []
         self.speech_featurizer = speech_featurizer
         self.text_featurizer = text_featurizer
 
@@ -130,7 +132,6 @@ class ASRDataset(BaseDataset):
     def read_entries(self):
         if hasattr(self, "entries") and len(self.entries) > 0:
             return
-        self.entries = []
         for file_path in self.data_paths:
             logger.info(f"Reading {file_path} ...")
             with tf.io.gfile.GFile(file_path, "r") as f:
@@ -349,7 +350,7 @@ class ASRTFRecordDataset(ASRDataset):
 
         return True
 
-    def parse(self, record: tf.Tensor):
+    def parse(self, record: tf.Tensor, **kwargs):
         feature_description = {
             "path": tf.io.FixedLenFeature([], tf.string),
             "audio": tf.io.FixedLenFeature([], tf.string),

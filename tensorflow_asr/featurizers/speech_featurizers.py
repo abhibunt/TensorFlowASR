@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import abc
 import io
 import math
 import os
 from typing import Union
+
 import librosa
 import numpy as np
 import soundfile as sf
@@ -25,6 +25,7 @@ import tensorflow_io as tfio
 
 from tensorflow_asr.utils import env_util, math_util
 from tensorflow_asr.featurizers.methods import gammatone
+
 
 # def tf_resample(signal, rate_in, rate_out):
 #     if rate_in == rate_out: return signal
@@ -127,6 +128,7 @@ def tf_normalize_audio_features(
     TF Mean and variance features normalization
     Args:
         audio_feature: tf.Tensor with shape [T, F]
+        per_frame:
 
     Returns:
         normalized audio features with shape [T, F]
@@ -228,7 +230,7 @@ def tf_depreemphasis(
     return tf.map_fn(map_fn, signal)
 
 
-class SpeechFeaturizer(metaclass=abc.ABCMeta):
+class SpeechFeaturizer:
     def __init__(
         self,
         speech_config: dict,
@@ -295,18 +297,30 @@ class SpeechFeaturizer(metaclass=abc.ABCMeta):
     def reset_length(self):
         self.max_length = 0
 
-    @abc.abstractclassmethod
-    def stft(self, signal):
+    def stft(
+        self,
+        signal,
+    ):
         raise NotImplementedError()
 
-    @abc.abstractclassmethod
-    def power_to_db(self, S, ref=1.0, amin=1e-10, top_db=80.0):
+    def power_to_db(
+        self,
+        S,
+        ref=1.0,
+        amin=1e-10,
+        top_db=80.0,
+    ):
         raise NotImplementedError()
 
-    @abc.abstractmethod
-    def extract(self, signal):
+    def extract(
+        self,
+        signal,
+    ):
         """Function to perform feature extraction"""
         raise NotImplementedError()
+
+    def tf_extract(self, signal):
+        pass
 
 
 class NumpySpeechFeaturizer(SpeechFeaturizer):
@@ -527,6 +541,7 @@ class TFSpeechFeaturizer(SpeechFeaturizer):
         self,
         S,
         amin=1e-10,
+        **kwargs,
     ):
         log_spec = 10.0 * math_util.log10(tf.maximum(amin, S))
         log_spec -= 10.0 * math_util.log10(tf.maximum(amin, 1.0))

@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import abc
 import tensorflow as tf
 
 from tensorflow_asr.augmentations.augmentation import Augmentation
@@ -21,7 +20,7 @@ TFRECORD_SHARDS = 16
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
 
-class BaseDataset(metaclass=abc.ABCMeta):
+class BaseDataset:
     """Based dataset for all models"""
 
     def __init__(
@@ -52,10 +51,8 @@ class BaseDataset(metaclass=abc.ABCMeta):
         self.indefinite = indefinite  # Whether to make dataset repeat indefinitely -> avoid the potential last partial batch
         self.total_steps = None  # for better training visualization
 
-    @abc.abstractmethod
     def parse(self, *args, **kwargs):
         raise NotImplementedError()
 
-    @abc.abstractmethod
     def create(self, batch_size):
         raise NotImplementedError()

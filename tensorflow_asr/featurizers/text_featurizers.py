@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import abc
 import codecs
 import os
 import unicodedata
 from multiprocessing import cpu_count
+
 import numpy as np
 import sentencepiece as sp
 import tensorflow as tf
@@ -58,7 +58,7 @@ ENGLISH_CHARACTERS = [
 ]
 
 
-class TextFeaturizer(metaclass=abc.ABCMeta):
+class TextFeaturizer:
     def __init__(
         self,
         decoder_config: dict,
@@ -123,15 +123,12 @@ class TextFeaturizer(metaclass=abc.ABCMeta):
         """Prepand blank index for transducer models"""
         return tf.concat([[self.blank], text], axis=0)
 
-    @abc.abstractclassmethod
     def extract(self, text):
         raise NotImplementedError()
 
-    @abc.abstractclassmethod
     def iextract(self, indices):
         raise NotImplementedError()
 
-    @abc.abstractclassmethod
     def indices2upoints(self, indices):
         raise NotImplementedError()
 
@@ -372,15 +369,15 @@ class SubwordFeaturizer(TextFeaturizer):
                 element_shape=tf.TensorShape([]),
             )
 
-            def cond(batch, total, _):
-                return tf.less(batch, total)
+            def cond(_batch, _total, _):
+                return tf.less(_batch, _total)
 
-            def body(batch, total, transcripts):
-                norm_indices = self.normalize_indices(indices[batch])
+            def body(_batch, _total, _transcripts):
+                norm_indices = self.normalize_indices(indices[_batch])
                 norm_indices = tf.gather_nd(norm_indices, tf.where(tf.not_equal(norm_indices, 0)))
                 decoded = tf.numpy_function(self.subwords.decode, inp=[norm_indices], Tout=tf.string)
-                transcripts = transcripts.write(batch, decoded)
-                return batch + 1, total, transcripts
+                _transcripts = _transcripts.write(_batch, decoded)
+                return _batch + 1, _total, _transcripts
 
             _, _, transcripts = tf.while_loop(cond, body, loop_vars=[batch, total, transcripts])
 
