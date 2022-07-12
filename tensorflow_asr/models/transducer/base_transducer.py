@@ -22,7 +22,7 @@ from tensorflow_asr.featurizers.text_featurizers import TextFeaturizer
 from tensorflow_asr.losses.rnnt_loss import RnntLoss
 from tensorflow_asr.utils import data_util, layer_util, math_util, shape_util
 from tensorflow_asr.models.base_model import BaseModel
-from tensorflow_asr.models.layers.embedding import Embedding
+from tensorflow_asr.models.layers.embedding import TFASREmbedding
 
 Hypothesis = collections.namedtuple("Hypothesis", ("index", "prediction", "states"))
 
@@ -47,11 +47,13 @@ class TransducerPrediction(tf.keras.Model):
         **kwargs,
     ):
         super().__init__(name=name, **kwargs)
-        self.embed = Embedding(vocabulary_size, embed_dim, regularizer=kernel_regularizer, name=f"{name}_embedding")
+        self.embed = TFASREmbedding(vocabulary_size, embed_dim, regularizer=kernel_regularizer, name=f"{name}_embedding")
         self.do = tf.keras.layers.Dropout(embed_dropout, name=f"{name}_dropout")
         # Initialize rnn layers
         RNN = layer_util.get_rnn(rnn_type)
         self.rnns = []
+        self.lns = []
+        self.projections = []
         for i in range(num_rnns):
             rnn = RNN(
                 units=rnn_units,
@@ -75,7 +77,9 @@ class TransducerPrediction(tf.keras.Model):
                 )
             else:
                 projection = None
-            self.rnns.append({"rnn": rnn, "ln": ln, "projection": projection})
+            self.rnns.append(rnn)
+            self.lns.append(ln)
+            self.projections.append(projection)
 
     def get_initial_state(self):
         """Get zeros states
@@ -85,7 +89,7 @@ class TransducerPrediction(tf.keras.Model):
         """
         states = []
         for rnn in self.rnns:
-            states.append(tf.stack(rnn["rnn"].get_initial_state(tf.zeros([1, 1, 1], dtype=tf.float32)), axis=0))
+            states.append(tf.stack(rnn.get_initial_state(tf.zeros([1, 1, 1], dtype=tf.float32)), axis=0))
         return tf.stack(states, axis=0)
 
     def call(self, inputs, training=False, **kwargs):
@@ -94,14 +98,14 @@ class TransducerPrediction(tf.keras.Model):
         outputs, prediction_length = inputs
         outputs = self.embed(outputs, training=training)
         outputs = self.do(outputs, training=training)
-        for rnn in self.rnns:
+        for i, rnn in enumerate(self.rnns):
             mask = tf.sequence_mask(prediction_length, maxlen=tf.shape(outputs)[1])
-            outputs = rnn["rnn"](outputs, training=training, mask=mask)
+            outputs = rnn(outputs, training=training, mask=mask)
             outputs = outputs[0]
-            if rnn["ln"] is not None:
-                outputs = rnn["ln"](outputs, training=training)
-            if rnn["projection"] is not None:
-                outputs = rnn["projection"](outputs, training=training)
+            if self.lns[i] is not None:
+                outputs = self.lns[i](outputs, training=training)
+            if self.projections[i] is not None:
+                outputs = self.projections[i](outputs, training=training)
         return outputs
 
     def recognize(self, inputs, states, tflite: bool = False):
@@ -122,25 +126,14 @@ class TransducerPrediction(tf.keras.Model):
         outputs = self.do(outputs, training=False)
         new_states = []
         for i, rnn in enumerate(self.rnns):
-            outputs = rnn["rnn"](outputs, training=False, initial_state=tf.unstack(states[i], axis=0))
+            outputs = rnn(outputs, training=False, initial_state=tf.unstack(states[i], axis=0))
             new_states.append(tf.stack(outputs[1:]))
             outputs = outputs[0]
-            if rnn["ln"] is not None:
-                outputs = rnn["ln"](outputs, training=False)
-            if rnn["projection"] is not None:
-                outputs = rnn["projection"](outputs, training=False)
+            if self.lns[i] is not None:
+                outputs = self.lns[i](outputs, training=False)
+            if self.projections[i] is not None:
+                outputs = self.projections[i](outputs, training=False)
         return outputs, tf.stack(new_states, axis=0)
-
-    def get_config(self):
-        conf = self.embed.get_config()
-        conf.update(self.do.get_config())
-        for rnn in self.rnns:
-            conf.update(rnn["rnn"].get_config())
-            if rnn["ln"] is not None:
-                conf.update(rnn["ln"].get_config())
-            if rnn["projection"] is not None:
-                conf.update(rnn["projection"].get_config())
-        return conf
 
 
 class TransducerJointReshape(tf.keras.layers.Layer):
@@ -229,15 +222,6 @@ class TransducerJoint(tf.keras.Model):
         outputs = self.activation(outputs, training=training)  # => [B, T, U, V]
         outputs = self.ffn_out(outputs, training=training)
         return outputs
-
-    def get_config(self):
-        conf = self.ffn_enc.get_config()
-        conf.update(self.ffn_pred.get_config())
-        conf.update(self.ffn_out.get_config())
-        conf.update(self.activation.get_config())
-        conf.update(self.joint.get_config())
-        conf.update({"prejoint_linear": self.prejoint_linear, "postjoint_linear": self.postjoint_linear})
-        return conf
 
 
 class Transducer(BaseModel):

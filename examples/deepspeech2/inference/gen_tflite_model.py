@@ -13,15 +13,16 @@
 # limitations under the License.
 
 import os
-import fire
-from tensorflow_asr.utils import env_util
 
-logger = env_util.setup_environment()
+import fire
 import tensorflow as tf
 
+from tensorflow_asr.utils import env_util
 from tensorflow_asr.configs.config import Config
 from tensorflow_asr.models.ctc.deepspeech2 import DeepSpeech2
 from tensorflow_asr.helpers import exec_helpers, featurizer_helpers
+
+logger = env_util.setup_environment()
 
 DEFAULT_YAML = os.path.join(os.path.abspath(os.path.dirname(__file__)), "config.yml")
 

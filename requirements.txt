@@ -48,9 +48,19 @@ tensorflow-io~=0.23
 # extra=tf2.8
 tensorflow~=2.8
 tensorflow-text~=2.8
-tensorflow-io~=0.24
+tensorflow-io~=0.25
 
 # extra=tf2.8-gpu
 tensorflow-gpu~=2.8
 tensorflow-text~=2.8
-tensorflow-io~=0.24
+tensorflow-io~=0.25
+
+# extra=tf2.9
+tensorflow~=2.9
+tensorflow-text~=2.9
+tensorflow-io~=0.26
+
+# extra=tf2.9-gpu
+tensorflow-gpu~=2.9
+tensorflow-text~=2.9
+tensorflow-io~=0.26

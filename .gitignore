@@ -13,3 +13,4 @@ __pycache__
 venv
 my_train
 .DS_Store
+models/

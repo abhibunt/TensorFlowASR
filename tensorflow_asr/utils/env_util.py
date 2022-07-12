@@ -28,11 +28,15 @@ def setup_environment():
     return logger
 
 
-def setup_devices(devices: List[int], cpu: bool = False):
+def setup_devices(
+    devices: List[int],
+    cpu: bool = False,
+):
     """Setting visible devices
 
     Args:
         devices (list): list of visible devices' indices
+        cpu (bool): use cpu or not
     """
     if cpu:
         cpus = tf.config.list_physical_devices("CPU")
@@ -47,20 +51,23 @@ def setup_devices(devices: List[int], cpu: bool = False):
             logger.info(f"Run on {len(visible_gpus)} Physical GPUs")
 
 
-def setup_tpu(tpu_address=None):
+def setup_tpu(
+    tpu_address=None,
+):
     if tpu_address is None:
         resolver = tf.distribute.cluster_resolver.TPUClusterResolver()
     else:
-        resolver = tf.distribute.cluster_resolver.TPUClusterResolver(
-            tpu="grpc://" + tpu_address
-        )
+        resolver = tf.distribute.cluster_resolver.TPUClusterResolver(tpu="grpc://" + tpu_address)
     tf.config.experimental_connect_to_cluster(resolver)
     tf.tpu.experimental.initialize_tpu_system(resolver)
     logger.info(f"All TPUs: {tf.config.list_logical_devices('TPU')}")
     return tf.distribute.experimental.TPUStrategy(resolver)
 
 
-def setup_strategy(devices: List[int], tpu_address: str = None):
+def setup_strategy(
+    devices: List[int],
+    tpu_address: str = None,
+):
     """Setting mirrored strategy for training
 
     Args:
@@ -79,7 +86,9 @@ def setup_strategy(devices: List[int], tpu_address: str = None):
     return tf.distribute.MirroredStrategy()
 
 
-def has_devices(devices: Union[List[str], str]):
+def has_devices(
+    devices: Union[List[str], str],
+):
     if isinstance(devices, list):
         return all([len(tf.config.list_logical_devices(d)) != 0 for d in devices])
     return len(tf.config.list_logical_devices(devices)) != 0

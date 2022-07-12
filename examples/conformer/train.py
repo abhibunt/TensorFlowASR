@@ -13,17 +13,18 @@
 # limitations under the License.
 
 import os
-import fire
 import math
-from tensorflow_asr.utils import env_util
 
-logger = env_util.setup_environment()
+import fire
 import tensorflow as tf
 
+from tensorflow_asr.utils import env_util
 from tensorflow_asr.configs.config import Config
-from tensorflow_asr.helpers import featurizer_helpers, dataset_helpers
+from tensorflow_asr.helpers import dataset_helpers, featurizer_helpers
 from tensorflow_asr.models.transducer.conformer import Conformer
 from tensorflow_asr.optimizers.schedules import TransformerSchedule
+
+logger = env_util.setup_environment()
 
 DEFAULT_YAML = os.path.join(os.path.abspath(os.path.dirname(__file__)), "config.yml")
 
