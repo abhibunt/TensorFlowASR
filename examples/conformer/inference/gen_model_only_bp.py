@@ -39,5 +39,6 @@ tf.keras.models.save_model(conformer, output_bp, include_optimizer=False)
 
 # %% Load bp
 loaded_conformer = tf.keras.models.load_model(output_bp)
+loaded_conformer.summary(line_length=90, expand_nested=True, show_trainable=True)
 
 # %%

@@ -22,7 +22,7 @@ from tensorflow_asr.featurizers.text_featurizers import TextFeaturizer
 from tensorflow_asr.losses.rnnt_loss import RnntLoss
 from tensorflow_asr.utils import data_util, layer_util, math_util, shape_util
 from tensorflow_asr.models.base_model import BaseModel
-from tensorflow_asr.models.layers.embedding import TFASREmbedding
+from tensorflow_asr.models.layers.embedding import LiteEmbedding
 
 Hypothesis = collections.namedtuple("Hypothesis", ("index", "prediction", "states"))
 
@@ -47,15 +47,15 @@ class TransducerPrediction(tf.keras.Model):
         **kwargs,
     ):
         super().__init__(name=name, **kwargs)
-        self.embed = TFASREmbedding(vocabulary_size, embed_dim, regularizer=kernel_regularizer, name=f"{name}_embedding")
+        self.embed = LiteEmbedding(vocabulary_size, embed_dim, regularizer=kernel_regularizer, name=f"{name}_embedding")
         self.do = tf.keras.layers.Dropout(embed_dropout, name=f"{name}_dropout")
         # Initialize rnn layers
-        RNN = layer_util.get_rnn(rnn_type)
+        RnnClass = layer_util.get_rnn(rnn_type)
         self.rnns = []
         self.lns = []
         self.projections = []
         for i in range(num_rnns):
-            rnn = RNN(
+            rnn = RnnClass(
                 units=rnn_units,
                 return_sequences=True,
                 name=f"{name}_{rnn_type}_{i}",
@@ -301,17 +301,6 @@ class Transducer(BaseModel):
             ),
             training=False,
         )
-
-    def summary(
-        self,
-        line_length=None,
-        **kwargs,
-    ):
-        if self.encoder is not None:
-            self.encoder.summary(line_length=line_length, **kwargs)
-        self.predict_net.summary(line_length=line_length, **kwargs)
-        self.joint_net.summary(line_length=line_length, **kwargs)
-        super().summary(line_length=line_length, **kwargs)
 
     def add_featurizers(
         self,
