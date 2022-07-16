@@ -28,8 +28,8 @@ h5 = "/Users/nlhuy/Paraphernalia/TensorFlowASR/models/subword-conformer/latest.h
 # build model
 conformer = Conformer(**config.model_config, vocabulary_size=text_featurizer.num_classes)
 conformer.make(speech_featurizer.shape)
-conformer.summary(line_length=90)
-conformer.load_weights(h5, by_name=True)
+conformer.summary(line_length=90, expand_nested=True, show_trainable=True)
+conformer.load_weights(h5, by_name=True, skip_mismatch=True)
 
 # %% Gen bp
 

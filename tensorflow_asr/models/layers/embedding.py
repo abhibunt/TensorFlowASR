@@ -15,7 +15,7 @@
 import tensorflow as tf
 
 
-class TFASREmbedding(tf.keras.layers.Layer):
+class Embedding(tf.keras.layers.Layer):
     def __init__(
         self,
         vocab_size,
@@ -25,7 +25,7 @@ class TFASREmbedding(tf.keras.layers.Layer):
         initializer=None,
         **kwargs,
     ):
-        super(TFASREmbedding, self).__init__(**kwargs)
+        super(Embedding, self).__init__(**kwargs)
         self.vocab_size = vocab_size
         self.embed_dim = embed_dim
         self.contraint = tf.keras.constraints.get(contraint)
@@ -53,7 +53,7 @@ class TFASREmbedding(tf.keras.layers.Layer):
         return tf.gather_nd(self.embeddings, outputs)  # https://github.com/tensorflow/tensorflow/issues/42410
 
     def get_config(self):
-        conf = super(TFASREmbedding, self).get_config()
+        conf = super(Embedding, self).get_config()
         conf.update(
             {
                 "vocab_size": self.vocab_size,
