@@ -82,7 +82,7 @@ def main(
         conformer.make(speech_featurizer.shape, prediction_shape=text_featurizer.prepand_shape, batch_size=global_batch_size)
         if pretrained:
             conformer.load_weights(pretrained, by_name=True, skip_mismatch=True)
-        conformer.summary(line_length=100)
+        conformer.summary(line_length=100, expand_nested=True, show_trainable=True)
         optimizer = tf.keras.optimizers.Adam(
             TransformerSchedule(
                 d_model=conformer.dmodel,
