@@ -79,7 +79,7 @@ def main(
         )
         if pretrained:
             rnn_transducer.load_weights(pretrained, by_name=True, skip_mismatch=True)
-        rnn_transducer.summary(line_length=100)
+        rnn_transducer.summary(line_length=100, expand_nested=True, show_trainable=True)
         rnn_transducer.compile(
             optimizer=config.learning_config.optimizer_config,
             experimental_steps_per_execution=spx,

@@ -55,7 +55,7 @@ def main(
     jasper = Jasper(**config.model_config, vocabulary_size=text_featurizer.num_classes)
     jasper.make(speech_featurizer.shape)
     jasper.load_weights(saved, by_name=True)
-    jasper.summary(line_length=100)
+    jasper.summary(line_length=100, expand_nested=True, show_trainable=True)
     jasper.add_featurizers(speech_featurizer, text_featurizer)
 
     test_dataset = dataset_helpers.prepare_testing_datasets(

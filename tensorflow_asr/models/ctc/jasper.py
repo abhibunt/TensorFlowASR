@@ -334,13 +334,6 @@ class JasperEncoder(tf.keras.Model):
         outputs = self.third_additional_block(outputs, training=training, **kwargs)
         return outputs
 
-    def summary(
-        self,
-        line_length=100,
-        **kwargs,
-    ):
-        super().summary(line_length=line_length, **kwargs)
-
     def get_config(self):
         conf = super().get_config()
         conf.update(self.reshape.get_config())

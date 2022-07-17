@@ -79,7 +79,7 @@ def main(
         contextnet.make(speech_featurizer.shape, prediction_shape=text_featurizer.prepand_shape, batch_size=global_batch_size)
         if pretrained:
             contextnet.load_weights(pretrained, by_name=True, skip_mismatch=True)
-        contextnet.summary(line_length=100)
+        contextnet.summary(line_length=100, expand_nested=True, show_trainable=True)
         optimizer = tf.keras.optimizers.Adam(
             TransformerSchedule(
                 d_model=contextnet.dmodel,

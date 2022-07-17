@@ -55,7 +55,7 @@ def main(
     contextnet = ContextNet(**config.model_config, vocabulary_size=text_featurizer.num_classes)
     contextnet.make(speech_featurizer.shape)
     contextnet.load_weights(saved, by_name=True)
-    contextnet.summary(line_length=100)
+    contextnet.summary(line_length=100, expand_nested=True, show_trainable=True)
     contextnet.add_featurizers(speech_featurizer, text_featurizer)
 
     test_dataset = dataset_helpers.prepare_testing_datasets(

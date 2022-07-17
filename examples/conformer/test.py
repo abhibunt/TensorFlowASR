@@ -57,7 +57,7 @@ def main(
     conformer = Conformer(**config.model_config, vocabulary_size=text_featurizer.num_classes)
     conformer.make(speech_featurizer.shape)
     conformer.load_weights(saved, by_name=True)
-    conformer.summary(line_length=100)
+    conformer.summary(line_length=100, expand_nested=True, show_trainable=True)
     conformer.add_featurizers(speech_featurizer, text_featurizer)
 
     test_dataset = dataset_helpers.prepare_testing_datasets(

@@ -345,16 +345,6 @@ class DeepSpeech2Encoder(tf.keras.Model):
             name=f"{self.name}_fc_module",
         )
 
-    def summary(
-        self,
-        line_length=100,
-        **kwargs,
-    ):
-        self.conv_module.summary(line_length=line_length, **kwargs)
-        self.rnn_module.summary(line_length=line_length, **kwargs)
-        self.fc_module.summary(line_length=line_length, **kwargs)
-        super().summary(line_length=line_length, **kwargs)
-
     def call(
         self,
         inputs,
