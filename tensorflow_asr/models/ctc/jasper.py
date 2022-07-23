@@ -14,8 +14,8 @@
 
 import tensorflow as tf
 
-from tensorflow_asr.utils import math_util
 from tensorflow_asr.models.ctc.base_ctc import CtcModel
+from tensorflow_asr.utils import math_util
 
 
 class Reshape(tf.keras.layers.Layer):

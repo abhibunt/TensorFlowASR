@@ -12,17 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 import math
+import os
 
 import fire
 import tensorflow as tf
 
-from tensorflow_asr.utils import env_util
 from tensorflow_asr.configs.config import Config
 from tensorflow_asr.helpers import dataset_helpers, featurizer_helpers
 from tensorflow_asr.models.transducer.contextnet import ContextNet
 from tensorflow_asr.optimizers.schedules import TransformerSchedule
+from tensorflow_asr.utils import env_util
 
 logger = env_util.setup_environment()
 

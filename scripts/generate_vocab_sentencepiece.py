@@ -1,5 +1,6 @@
-import os
 import argparse
+import os
+
 from tensorflow_asr.utils.env_util import setup_environment, setup_strategy
 
 logger = setup_environment()

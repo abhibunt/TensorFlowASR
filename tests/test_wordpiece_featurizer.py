@@ -1,6 +1,7 @@
 import os
 
 import tensorflow as tf
+
 from tensorflow_asr.featurizers.text_featurizers import WordPieceFeaturizer
 
 decoder_config = {

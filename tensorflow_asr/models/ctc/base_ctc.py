@@ -13,14 +13,15 @@
 # limitations under the License.
 
 from typing import Dict, Union
+
 import numpy as np
 import tensorflow as tf
 
 from tensorflow_asr.featurizers.speech_featurizers import TFSpeechFeaturizer
 from tensorflow_asr.featurizers.text_featurizers import TextFeaturizer
 from tensorflow_asr.losses.ctc_loss import CtcLoss
-from tensorflow_asr.utils import data_util, math_util, shape_util
 from tensorflow_asr.models.base_model import BaseModel
+from tensorflow_asr.utils import data_util, math_util, shape_util
 
 
 class CtcModel(BaseModel):

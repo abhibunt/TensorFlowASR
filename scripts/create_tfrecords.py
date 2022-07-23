@@ -13,14 +13,15 @@
 # limitations under the License.
 
 import fire
+
 from tensorflow_asr.utils import env_util
 
 logger = env_util.setup_environment()
 
 from tensorflow_asr.configs.config import Config
-from tensorflow_asr.utils.file_util import preprocess_paths
 from tensorflow_asr.datasets.asr_dataset import ASRTFRecordDataset
 from tensorflow_asr.helpers import featurizer_helpers
+from tensorflow_asr.utils.file_util import preprocess_paths
 
 
 def main(

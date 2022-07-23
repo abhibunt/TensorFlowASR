@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from typing import Tuple
+
 import tensorflow as tf
 from nltk.metrics import distance
 

@@ -21,7 +21,7 @@ import tensorflow as tf
 import tqdm
 
 from tensorflow_asr.augmentations.augmentation import Augmentation
-from tensorflow_asr.datasets.base_dataset import AUTOTUNE, BUFFER_SIZE, BaseDataset, TFRECORD_SHARDS
+from tensorflow_asr.datasets.base_dataset import AUTOTUNE, BUFFER_SIZE, TFRECORD_SHARDS, BaseDataset
 from tensorflow_asr.featurizers.speech_featurizers import (
     SpeechFeaturizer,
     load_and_convert_to_wav,

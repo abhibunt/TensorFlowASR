@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import tensorflow as tf
+
 from tensorflow_asr.augmentations.methods import specaugment
 
 AUGMENTATIONS = {

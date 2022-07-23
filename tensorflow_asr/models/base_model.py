@@ -18,6 +18,15 @@ from tensorflow_asr.utils import env_util, file_util
 
 
 class BaseModel(tf.keras.Model):
+    def summary(
+        self,
+        line_length=90,
+        expand_nested=True,
+        show_trainable=True,
+        **kwargs,
+    ):
+        super().summary(line_length=line_length, expand_nested=expand_nested, show_trainable=show_trainable, **kwargs)
+
     def save(
         self,
         filepath,

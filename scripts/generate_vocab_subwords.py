@@ -1,5 +1,5 @@
-import os
 import argparse
+import os
 
 from tensorflow_asr.configs.config import Config
 from tensorflow_asr.featurizers.text_featurizers import SubwordFeaturizer

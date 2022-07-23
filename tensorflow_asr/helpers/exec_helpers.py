@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from tqdm import tqdm
 import tensorflow as tf
+from tqdm import tqdm
 
 from tensorflow_asr.datasets.asr_dataset import ASRSliceDataset
 from tensorflow_asr.models.base_model import BaseModel

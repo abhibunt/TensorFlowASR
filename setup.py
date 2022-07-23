@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from setuptools import find_packages, setup
-from typing import List
 from collections import defaultdict
+from typing import List
+
+from setuptools import find_packages, setup
 
 
 def parse_requirements(lines: List[str]):

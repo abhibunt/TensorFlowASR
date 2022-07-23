@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from tensorflow_asr.datasets import asr_dataset
 from tensorflow_asr.configs.config import Config
+from tensorflow_asr.datasets import asr_dataset
 from tensorflow_asr.featurizers.speech_featurizers import SpeechFeaturizer
 from tensorflow_asr.featurizers.text_featurizers import TextFeaturizer
 

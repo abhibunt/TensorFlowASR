@@ -12,12 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-import glob
 import argparse
+import glob
+import os
+import unicodedata
+
 import librosa
 from tqdm.auto import tqdm
-import unicodedata
 
 from tensorflow_asr.utils.file_util import preprocess_paths
 

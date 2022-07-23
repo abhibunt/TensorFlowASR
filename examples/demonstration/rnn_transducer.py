@@ -13,7 +13,8 @@
 # limitations under the License.
 
 import argparse
-from tensorflow_asr.utils import env_util, math_util, data_util
+
+from tensorflow_asr.utils import data_util, env_util, math_util
 
 logger = env_util.setup_environment()
 import tensorflow as tf
@@ -43,9 +44,8 @@ args = parser.parse_args()
 env_util.setup_devices([args.device], cpu=args.cpu)
 
 from tensorflow_asr.configs.config import Config
-from tensorflow_asr.featurizers.speech_featurizers import read_raw_audio
-from tensorflow_asr.featurizers.speech_featurizers import TFSpeechFeaturizer
-from tensorflow_asr.featurizers.text_featurizers import CharFeaturizer, SubwordFeaturizer, SentencePieceFeaturizer
+from tensorflow_asr.featurizers.speech_featurizers import TFSpeechFeaturizer, read_raw_audio
+from tensorflow_asr.featurizers.text_featurizers import CharFeaturizer, SentencePieceFeaturizer, SubwordFeaturizer
 from tensorflow_asr.models.transducer.rnn_transducer import RnnTransducer
 
 config = Config(args.config)

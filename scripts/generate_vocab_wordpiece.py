@@ -14,7 +14,9 @@
 # limitations under the License.
 
 from typing import List
+
 import fire
+
 from tensorflow_asr.utils import env_util
 
 logger = env_util.setup_environment()

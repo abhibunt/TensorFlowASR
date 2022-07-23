@@ -17,8 +17,8 @@ import os
 import fire
 import tensorflow as tf
 
-from tensorflow_asr.utils import env_util
 from tensorflow_asr.featurizers.speech_featurizers import read_raw_audio
+from tensorflow_asr.utils import env_util
 
 logger = env_util.setup_environment()
 

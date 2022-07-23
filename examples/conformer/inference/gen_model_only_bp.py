@@ -1,10 +1,10 @@
 # %% Imports
 import tensorflow as tf
 
-from tensorflow_asr.utils import env_util
 from tensorflow_asr.configs.config import Config
 from tensorflow_asr.helpers import featurizer_helpers
 from tensorflow_asr.models.transducer.conformer import Conformer
+from tensorflow_asr.utils import env_util
 
 logger = env_util.setup_environment()
 
@@ -28,8 +28,8 @@ h5 = "/Users/nlhuy/Paraphernalia/TensorFlowASR/models/subword-conformer/latest.h
 # build model
 conformer = Conformer(**config.model_config, vocabulary_size=text_featurizer.num_classes)
 conformer.make(speech_featurizer.shape)
-conformer.summary(line_length=90, expand_nested=True, show_trainable=True)
-conformer.load_weights(h5, by_name=True, skip_mismatch=True)
+conformer.summary()
+# conformer.load_weights(h5, by_name=True, skip_mismatch=True)
 
 # %% Gen bp
 

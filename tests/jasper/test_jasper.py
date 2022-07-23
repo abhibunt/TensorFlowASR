@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import os
+
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 import tensorflow as tf
 
@@ -21,9 +22,9 @@ logger = tf.get_logger()
 DEFAULT_YAML = os.path.join(os.path.abspath(os.path.dirname(__file__)), "config.yml")
 
 from tensorflow_asr.configs.config import Config
-from tensorflow_asr.models.ctc.jasper import Jasper
-from tensorflow_asr.featurizers.text_featurizers import CharFeaturizer
 from tensorflow_asr.featurizers.speech_featurizers import TFSpeechFeaturizer
+from tensorflow_asr.featurizers.text_featurizers import CharFeaturizer
+from tensorflow_asr.models.ctc.jasper import Jasper
 
 
 def test_jasper():

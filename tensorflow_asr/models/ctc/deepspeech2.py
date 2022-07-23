@@ -14,10 +14,10 @@
 
 import tensorflow as tf
 
-from tensorflow_asr.utils import layer_util, math_util
+from tensorflow_asr.models.ctc.base_ctc import CtcModel
 from tensorflow_asr.models.layers.row_conv_1d import RowConv1D
 from tensorflow_asr.models.layers.sequence_wise_bn import SequenceBatchNorm
-from tensorflow_asr.models.ctc.base_ctc import CtcModel
+from tensorflow_asr.utils import layer_util, math_util
 
 
 class Reshape(tf.keras.layers.Layer):

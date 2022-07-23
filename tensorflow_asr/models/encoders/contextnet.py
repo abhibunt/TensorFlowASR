@@ -14,6 +14,7 @@
 """ Ref: https://github.com/iankur/ContextNet """
 
 from typing import List
+
 import tensorflow as tf
 
 from tensorflow_asr.utils import math_util
