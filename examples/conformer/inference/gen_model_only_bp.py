@@ -35,10 +35,9 @@ conformer.summary()
 
 output_bp = "/Users/nlhuy/Paraphernalia/TensorFlowASR/models/subword-conformer/bp"
 
-tf.keras.models.save_model(conformer, output_bp, include_optimizer=False)
+tf.saved_model.save(conformer, output_bp)
 
 # %% Load bp
-loaded_conformer = tf.keras.models.load_model(output_bp)
-loaded_conformer.summary(line_length=90, expand_nested=True, show_trainable=True)
+loaded_conformer = tf.saved_model.load(output_bp)
 
 # %%

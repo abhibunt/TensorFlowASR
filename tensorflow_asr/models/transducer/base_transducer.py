@@ -345,6 +345,49 @@ class Transducer(BaseModel):
 
     # -------------------------------- INFERENCES -------------------------------------
 
+    def preprocess(
+        self,
+        signals: tf.Tensor,
+    ):
+        with tf.name_scope(f"{self.name}_preprocess"):
+            batch = tf.constant(0, dtype=tf.int32)
+            total_batch = tf.shape(signals)[0]
+
+            inputs = tf.TensorArray(
+                dtype=tf.float32,
+                size=total_batch,
+                dynamic_size=False,
+                clear_after_read=False,
+                element_shape=tf.TensorShape(self.speech_featurizer.shape),
+            )
+
+            inputs_length = tf.TensorArray(
+                dtype=tf.int32,
+                size=total_batch,
+                dynamic_size=False,
+                clear_after_read=False,
+                element_shape=tf.TensorShape([]),
+            )
+
+            def condition(_batch, _inputs, _inputs_length):
+                return tf.less(_batch, total_batch)
+
+            def body(_batch, _inputs, _inputs_length):
+                item_inputs = self.speech_featurizer.tf_extract(signals[_batch])
+                item_inputs_length = tf.cast(tf.shape(inputs)[0], tf.int32)
+                _inputs.write(_batch, item_inputs)
+                _inputs_length.write(_batch, item_inputs_length)
+                return _batch + 1, _inputs, _inputs_length
+
+            batch, inputs, inputs_length = tf.while_loop(
+                condition,
+                body,
+                loop_vars=[batch, inputs, inputs_length],
+            )
+            inputs = math_util.pad_tfarray(inputs, blank=0.0, element_axis=0)
+
+            return inputs.stack(), inputs_length.stack()
+
     def encoder_inference(
         self,
         features: tf.Tensor,
@@ -412,6 +455,23 @@ class Transducer(BaseModel):
         encoded = self.encoder(inputs["inputs"], training=False)
         encoded_length = math_util.get_reduced_length(inputs["inputs_length"], self.time_reduction_factor)
         return self._perform_greedy_batch(encoded=encoded, encoded_length=encoded_length)
+
+    @tf.function(input_signature=[tf.TensorSpec(shape=[None, None], dtype=tf.float32)])
+    def recognize_from_signal(
+        self,
+        signals: tf.Tensor,
+    ):
+        """
+        RNN Transuder Greedy Decoding From Batch of Signals
+
+        Args:
+            signals (tf.Tensor): batch of signals in shape [B, None]
+
+        Returns:
+            tf.Tensor: batch of decoded transcripts in shape [B]
+        """
+        inputs, inputs_length = self.preprocess(signals)
+        return self.recognize(data_util.create_inputs(inputs=inputs, inputs_length=inputs_length))
 
     def recognize_tflite(
         self,
@@ -504,10 +564,10 @@ class Transducer(BaseModel):
                 body,
                 loop_vars=[batch, decoded],
                 parallel_iterations=parallel_iterations,
-                swap_memory=True,
+                swap_memory=swap_memory,
             )
 
-            decoded = math_util.pad_prediction_tfarray(decoded, blank=self.text_featurizer.blank)
+            decoded = math_util.pad_tfarray(decoded, blank=self.text_featurizer.blank)
             return self.text_featurizer.iextract(decoded.stack())
 
     def _perform_greedy(
@@ -708,7 +768,7 @@ class Transducer(BaseModel):
                 swap_memory=True,
             )
 
-            decoded = math_util.pad_prediction_tfarray(decoded, blank=self.text_featurizer.blank)
+            decoded = math_util.pad_tfarray(decoded, blank=self.text_featurizer.blank)
             return self.text_featurizer.iextract(decoded.stack())
 
     def _perform_beam_search(
@@ -777,7 +837,7 @@ class Transducer(BaseModel):
                     score=A.score.unstack(B.score.stack()),
                     indices=A.indices.unstack(B.indices.stack()),
                     prediction=A.prediction.unstack(
-                        math_util.pad_prediction_tfarray(B.prediction, blank=self.text_featurizer.blank).stack()
+                        math_util.pad_tfarray(B.prediction, blank=self.text_featurizer.blank).stack()
                     ),
                     states=A.states.unstack(B.states.stack()),
                 )
@@ -795,7 +855,7 @@ class Transducer(BaseModel):
                     y_hat_score = y_hat_score[0]
                     y_hat_index = tf.gather_nd(A.indices.stack(), y_hat_score_index)
                     y_hat_prediction = tf.gather_nd(
-                        math_util.pad_prediction_tfarray(A.prediction, blank=self.text_featurizer.blank).stack(),
+                        math_util.pad_tfarray(A.prediction, blank=self.text_featurizer.blank).stack(),
                         y_hat_score_index,
                     )
                     y_hat_states = tf.gather_nd(A.states.stack(), y_hat_score_index)
@@ -809,7 +869,7 @@ class Transducer(BaseModel):
                         indices=A.indices.unstack(tf.gather_nd(A.indices.stack(), remain_indices)),
                         prediction=A.prediction.unstack(
                             tf.gather_nd(
-                                math_util.pad_prediction_tfarray(A.prediction, blank=self.text_featurizer.blank).stack(),
+                                math_util.pad_tfarray(A.prediction, blank=self.text_featurizer.blank).stack(),
                                 remain_indices,
                             )
                         ),
@@ -897,7 +957,7 @@ class Transducer(BaseModel):
             )
 
             scores = B.score.stack()
-            prediction = math_util.pad_prediction_tfarray(B.prediction, blank=self.text_featurizer.blank).stack()
+            prediction = math_util.pad_tfarray(B.prediction, blank=self.text_featurizer.blank).stack()
             if self.text_featurizer.decoder_config.norm_score:
                 prediction_lengths = math_util.count_non_blank(prediction, blank=self.text_featurizer.blank, axis=1)
                 scores /= tf.cast(prediction_lengths, dtype=scores.dtype)

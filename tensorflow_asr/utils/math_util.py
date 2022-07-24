@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import math
+from typing import Union
 
 import numpy as np
 import tensorflow as tf
@@ -111,49 +112,56 @@ def merge_repeated(
     return tf.pad(result, [[U - shape_util.shape_list(result)[0], 0]], constant_values=blank)
 
 
-def find_max_length_prediction_tfarray(
+def find_max_length_tfarray(
     tfarray: tf.TensorArray,
+    element_axis: Union[int, tf.Tensor] = 0,
 ) -> tf.Tensor:
-    with tf.name_scope("find_max_length_prediction_tfarray"):
+    with tf.name_scope("find_max_length_tfarray"):
         index = tf.constant(0, dtype=tf.int32)
         total = tfarray.size()
         max_length = tf.constant(0, dtype=tf.int32)
 
-        def condition(index, _):
-            return tf.less(index, total)
+        def condition(_index, _):
+            return tf.less(_index, total)
 
-        def body(index, max_length):
-            prediction = tfarray.read(index)
-            length = tf.shape(prediction)[0]
-            max_length = tf.where(tf.greater(length, max_length), length, max_length)
-            return index + 1, max_length
+        def body(_index, _max_length):
+            prediction = tfarray.read(_index)
+            length = tf.shape(prediction)[element_axis]
+            _max_length = tf.where(tf.greater(length, _max_length), length, _max_length)
+            return _index + 1, _max_length
 
         index, max_length = tf.while_loop(condition, body, loop_vars=[index, max_length], swap_memory=False)
         return max_length
 
 
-def pad_prediction_tfarray(
+def pad_tfarray(
     tfarray: tf.TensorArray,
-    blank: int or tf.Tensor,
+    blank: Union[int, tf.Tensor],
+    element_axis: Union[int, tf.Tensor] = 0,
 ) -> tf.TensorArray:
     with tf.name_scope("pad_prediction_tfarray"):
         index = tf.constant(0, dtype=tf.int32)
         total = tfarray.size()
-        max_length = find_max_length_prediction_tfarray(tfarray) + 1
+        max_length = find_max_length_tfarray(tfarray, element_axis=element_axis)
+        paddings = tf.TensorArray(
+            dtype=tf.int32,
+            size=element_axis + 1,
+            dynamic_size=False,
+            clear_after_read=False,
+            element_shape=tf.TensorShape([2]),
+        )
+        paddings = paddings.unstack([[0, 0] for _ in range(element_axis + 1)])
 
-        def condition(index, _):
-            return tf.less(index, total)
+        def condition(_index, _tfarray, _paddings):
+            return tf.less(_index, total)
 
-        def body(index, tfarray):
-            prediction = tfarray.read(index)
-            prediction = tf.pad(
-                prediction,
-                paddings=[[0, max_length - tf.shape(prediction)[0]]],
-                mode="CONSTANT",
-                constant_values=blank,
-            )
-            tfarray = tfarray.write(index, prediction)
-            return index + 1, tfarray
+        def body(_index, _tfarray, _paddings):
+            prediction = _tfarray.read(_index)
+            pad_size = max_length - tf.shape(prediction)[element_axis]
+            _paddings.write(element_axis, tf.constant([0, pad_size], dtype=tf.int32))
+            prediction = tf.pad(prediction, paddings=_paddings.stack(), mode="CONSTANT", constant_values=blank)
+            _tfarray = _tfarray.write(_index, prediction)
+            return _index + 1, _tfarray, _paddings
 
-        index, tfarray = tf.while_loop(condition, body, loop_vars=[index, tfarray], swap_memory=False)
+        index, tfarray, _ = tf.while_loop(condition, body, loop_vars=[index, tfarray, paddings], swap_memory=False)
         return tfarray
