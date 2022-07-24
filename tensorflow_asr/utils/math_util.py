@@ -139,29 +139,30 @@ def pad_tfarray(
     blank: Union[int, tf.Tensor],
     element_axis: Union[int, tf.Tensor] = 0,
 ) -> tf.TensorArray:
-    with tf.name_scope("pad_prediction_tfarray"):
+    with tf.name_scope("pad_tfarray"):
         index = tf.constant(0, dtype=tf.int32)
         total = tfarray.size()
         max_length = find_max_length_tfarray(tfarray, element_axis=element_axis)
         paddings = tf.TensorArray(
             dtype=tf.int32,
-            size=element_axis + 1,
+            size=tfarray.element_shape.rank,
             dynamic_size=False,
             clear_after_read=False,
             element_shape=tf.TensorShape([2]),
         )
-        paddings = paddings.unstack([[0, 0] for _ in range(element_axis + 1)])
+        paddings = paddings.unstack(tf.zeros(shape=[tfarray.element_shape.rank, 2], dtype=tf.int32))
 
         def condition(_index, _tfarray, _paddings):
             return tf.less(_index, total)
 
         def body(_index, _tfarray, _paddings):
-            prediction = _tfarray.read(_index)
-            pad_size = max_length - tf.shape(prediction)[element_axis]
-            _paddings.write(element_axis, tf.constant([0, pad_size], dtype=tf.int32))
-            prediction = tf.pad(prediction, paddings=_paddings.stack(), mode="CONSTANT", constant_values=blank)
-            _tfarray = _tfarray.write(_index, prediction)
+            element = _tfarray.read(_index)
+            pad_size = max_length - tf.shape(element)[element_axis]
+            _paddings = _paddings.write(element_axis, tf.pad(tf.expand_dims(pad_size, axis=0), [[1, 0]]))
+            element = tf.pad(element, paddings=_paddings.stack(), mode="CONSTANT", constant_values=blank)
+            _tfarray = _tfarray.write(_index, element)
             return _index + 1, _tfarray, _paddings
 
-        index, tfarray, _ = tf.while_loop(condition, body, loop_vars=[index, tfarray, paddings], swap_memory=False)
+        index, tfarray, paddings = tf.while_loop(condition, body, loop_vars=[index, tfarray, paddings], swap_memory=False)
+        paddings.close()
         return tfarray

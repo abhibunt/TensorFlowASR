@@ -374,9 +374,9 @@ class Transducer(BaseModel):
 
             def body(_batch, _inputs, _inputs_length):
                 item_inputs = self.speech_featurizer.tf_extract(signals[_batch])
-                item_inputs_length = tf.cast(tf.shape(inputs)[0], tf.int32)
-                _inputs.write(_batch, item_inputs)
-                _inputs_length.write(_batch, item_inputs_length)
+                item_inputs_length = tf.cast(tf.shape(item_inputs)[0], tf.int32)
+                _inputs = _inputs.write(_batch, item_inputs)
+                _inputs_length = _inputs_length.write(_batch, item_inputs_length)
                 return _batch + 1, _inputs, _inputs_length
 
             batch, inputs, inputs_length = tf.while_loop(

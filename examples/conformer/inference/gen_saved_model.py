@@ -36,10 +36,11 @@ def main(
     output_dir: str = None,
 ):
     assert h5 and output_dir
-    config = Config(config_path)
     tf.random.set_seed(0)
     tf.keras.backend.clear_session()
 
+    logger.info("Load config and featurizers ...")
+    config = Config(config_path)
     speech_featurizer, text_featurizer = featurizer_helpers.prepare_featurizers(
         config=config,
         subwords=subwords,
@@ -47,13 +48,14 @@ def main(
         wordpiece=wordpiece,
     )
 
-    # build model
+    logger.info("Build and load model ...")
     conformer = Conformer(**config.model_config, vocabulary_size=text_featurizer.num_classes)
     conformer.make(speech_featurizer.shape)
     conformer.add_featurizers(speech_featurizer, text_featurizer)
     conformer.load_weights(h5, by_name=True)
     conformer.summary()
 
+    logger.info("Save model ...")
     tf.saved_model.save(conformer, export_dir=output_dir, signatures=conformer.recognize_from_signal.get_concrete_function())
 
 
