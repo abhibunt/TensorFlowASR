@@ -251,7 +251,7 @@ class SubwordFeaturizer(TextFeaturizer):
     ):
         """
         decoder_config = {
-            "target_vocab_size": int,
+            "vocab_size": int,
             "max_subword_length": 4,
             "max_corpus_chars": None,
             "reserved_tokens": None,
@@ -301,7 +301,7 @@ class SubwordFeaturizer(TextFeaturizer):
 
         subwords = tds.deprecated.text.SubwordTextEncoder.build_from_corpus(
             corpus_generator(),
-            dconf.target_vocab_size,
+            dconf.vocab_size,
             dconf.max_subword_length,
             dconf.max_corpus_chars,
             dconf.reserved_tokens,
@@ -465,7 +465,7 @@ class SentencePieceFeaturizer(TextFeaturizer):
             sentence_iterator=corpus_iterator(),
             model_prefix=decoder_cfg.output_path_prefix,
             model_type=decoder_cfg.model_type,
-            vocab_size=decoder_cfg.target_vocab_size,
+            vocab_size=decoder_cfg.vocab_size,
             num_threads=cpu_count(),
             unk_id=cls.UNK_TOKEN_ID,
             bos_id=cls.BOS_TOKEN_ID,
@@ -579,14 +579,20 @@ class WordPieceFeaturizer(TextFeaturizer):
         decoder_config: dict,
     ):
         super().__init__(decoder_config)
-        self.blank = 0  # subword treats blank as 0
-        self.tokenizer = tft.WordpieceTokenizer(
-            vocab_lookup_table=self.decoder_config.vocabulary,
-            unknown_token=None,
+        self.blank = 0  # treat [PAD] as blank
+        self.vocab = None
+        with tf.io.gfile.GFile(self.decoder_config.vocabulary, "r") as voc:
+            self.vocab = voc.read().splitlines()
+        if not self.vocab:
+            raise ValueError("Unable to read vocabulary")
+        self.tokenizer = tft.FastWordpieceTokenizer(
+            vocab=self.vocab,
             token_out_type=tf.int32,
-            max_chars_per_token=self.decoder_config.max_subword_length,
+            unknown_token=self.decoder_config.unknown_token,
+            no_pretokenization=True,
+            support_detokenization=True,
         )
-        self.num_classes = self.tokenizer.vocab_size()
+        self.num_classes = self.decoder_config.vocab_size
 
     def extract(
         self,
@@ -618,7 +624,7 @@ class WordPieceFeaturizer(TextFeaturizer):
         """
         indices = tf.ragged.boolean_mask(indices, tf.not_equal(indices, self.blank))
         transcripts = self.tokenizer.detokenize(indices)
-        return tf.strings.reduce_join(transcripts, axis=-1, separator=" ")  # add spaces
+        return transcripts
 
     @tf.function(input_signature=[tf.TensorSpec([None], dtype=tf.int32)])
     def indices2upoints(

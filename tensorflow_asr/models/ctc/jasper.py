@@ -348,7 +348,7 @@ class JasperEncoder(tf.keras.Model):
 class Jasper(CtcModel):
     def __init__(
         self,
-        vocabulary_size: int,
+        vocab_size: int,
         dense: bool = False,
         first_additional_block_channels: int = 256,
         first_additional_block_kernels: int = 11,
@@ -400,7 +400,7 @@ class Jasper(CtcModel):
                 bias_regularizer=None,
             ),
             decoder=tf.keras.layers.Conv1D(
-                filters=vocabulary_size,
+                filters=vocab_size,
                 kernel_size=1,
                 strides=1,
                 padding="same",
@@ -408,7 +408,7 @@ class Jasper(CtcModel):
                 bias_regularizer=bias_regularizer,
                 name=f"{name}_logits",
             ),
-            vocabulary_size=vocabulary_size,
+            vocab_size=vocab_size,
             name=name,
             **kwargs,
         )

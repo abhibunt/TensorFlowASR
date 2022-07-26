@@ -49,7 +49,7 @@ def main(
     )
 
     logger.info("Build and load model ...")
-    conformer = Conformer(**config.model_config, vocabulary_size=text_featurizer.num_classes)
+    conformer = Conformer(**config.model_config, vocab_size=text_featurizer.num_classes)
     conformer.make(speech_featurizer.shape)
     conformer.add_featurizers(speech_featurizer, text_featurizer)
     conformer.load_weights(h5, by_name=True)

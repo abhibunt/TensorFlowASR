@@ -28,13 +28,14 @@ class DecoderConfig:
         self.lm_config = config.pop("lm_config", {})
 
         self.vocabulary = file_util.preprocess_paths(config.pop("vocabulary", None))
-        self.target_vocab_size = config.pop("target_vocab_size", 1024)
+        self.vocab_size = config.pop("vocab_size", 1000)
         self.max_subword_length = config.pop("max_subword_length", 4)
         self.output_path_prefix = file_util.preprocess_paths(config.pop("output_path_prefix", None))
         self.model_type = config.pop("model_type", None)
         self.corpus_files = file_util.preprocess_paths(config.pop("corpus_files", []))
         self.max_corpus_chars = config.pop("max_corpus_chars", None)
         self.reserved_tokens = config.pop("reserved_tokens", None)
+        self.unknown_token = config.pop("unknown_token", "[UNK]")
 
         for k, v in config.items():
             setattr(self, k, v)

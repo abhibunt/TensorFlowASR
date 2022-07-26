@@ -20,7 +20,7 @@ from tensorflow_asr.utils import env_util, file_util
 class BaseModel(tf.keras.Model):
     def summary(
         self,
-        line_length=90,
+        line_length=127,
         expand_nested=True,
         show_trainable=True,
         **kwargs,

@@ -34,10 +34,10 @@ def test_ds2():
 
     speech_featurizer = TFSpeechFeaturizer(config.speech_config)
 
-    model = DeepSpeech2(vocabulary_size=text_featurizer.num_classes, **config.model_config)
+    model = DeepSpeech2(vocab_size=text_featurizer.num_classes, **config.model_config)
 
     model.make(speech_featurizer.shape)
-    model.summary(line_length=150)
+    model.summary()
 
     model.add_featurizers(speech_featurizer=speech_featurizer, text_featurizer=text_featurizer)
 

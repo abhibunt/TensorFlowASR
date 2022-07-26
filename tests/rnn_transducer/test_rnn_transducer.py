@@ -34,10 +34,10 @@ def test_streaming_transducer():
 
     speech_featurizer = TFSpeechFeaturizer(config.speech_config)
 
-    model = RnnTransducer(vocabulary_size=text_featurizer.num_classes, **config.model_config)
+    model = RnnTransducer(vocab_size=text_featurizer.num_classes, **config.model_config)
 
     model.make(speech_featurizer.shape)
-    model.summary(line_length=150)
+    model.summary()
 
     model.add_featurizers(speech_featurizer=speech_featurizer, text_featurizer=text_featurizer)
 
@@ -67,23 +67,16 @@ def test_streaming_transducer():
     tflitemodel.resize_tensor_input(input_details[0]["index"], signal.shape)
     tflitemodel.allocate_tensors()
     tflitemodel.set_tensor(input_details[0]["index"], signal)
-    tflitemodel.set_tensor(
-        input_details[1]["index"],
-        tf.constant(text_featurizer.blank, dtype=tf.int32)
-    )
+    tflitemodel.set_tensor(input_details[1]["index"], tf.constant(text_featurizer.blank, dtype=tf.int32))
     tflitemodel.set_tensor(
         input_details[2]["index"],
-        tf.zeros(
-            [config.model_config["encoder_nlayers"], 2, 1, config.model_config["encoder_rnn_units"]],
-            dtype=tf.float32
-        )
+        tf.zeros([config.model_config["encoder_nlayers"], 2, 1, config.model_config["encoder_rnn_units"]], dtype=tf.float32),
     )
     tflitemodel.set_tensor(
         input_details[3]["index"],
         tf.zeros(
-            [config.model_config["prediction_num_rnns"], 2, 1, config.model_config["prediction_rnn_units"]],
-            dtype=tf.float32
-        )
+            [config.model_config["prediction_num_rnns"], 2, 1, config.model_config["prediction_rnn_units"]], dtype=tf.float32
+        ),
     )
     tflitemodel.invoke()
     hyp = tflitemodel.get_tensor(output_details[0]["index"])
@@ -91,5 +84,5 @@ def test_streaming_transducer():
     logger.info(hyp)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test_streaming_transducer()

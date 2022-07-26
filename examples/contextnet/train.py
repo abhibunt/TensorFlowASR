@@ -75,11 +75,11 @@ def main(
     )
 
     with strategy.scope():
-        contextnet = ContextNet(**config.model_config, vocabulary_size=text_featurizer.num_classes)
+        contextnet = ContextNet(**config.model_config, vocab_size=text_featurizer.num_classes)
         contextnet.make(speech_featurizer.shape, prediction_shape=text_featurizer.prepand_shape, batch_size=global_batch_size)
         if pretrained:
             contextnet.load_weights(pretrained, by_name=True, skip_mismatch=True)
-        contextnet.summary(line_length=100, expand_nested=True, show_trainable=True)
+        contextnet.summary()
         optimizer = tf.keras.optimizers.Adam(
             TransformerSchedule(
                 d_model=contextnet.dmodel,

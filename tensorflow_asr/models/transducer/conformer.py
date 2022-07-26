@@ -19,7 +19,7 @@ from tensorflow_asr.models.transducer.base_transducer import Transducer
 class Conformer(Transducer):
     def __init__(
         self,
-        vocabulary_size: int,
+        vocab_size: int,
         encoder_subsampling: dict,
         encoder_positional_encoding: str = "sinusoid",
         encoder_dmodel: int = 144,
@@ -70,7 +70,7 @@ class Conformer(Transducer):
                 trainable=encoder_trainable,
                 name=f"{name}_encoder",
             ),
-            vocabulary_size=vocabulary_size,
+            vocab_size=vocab_size,
             embed_dim=prediction_embed_dim,
             embed_dropout=prediction_embed_dropout,
             num_rnns=prediction_num_rnns,

@@ -33,7 +33,7 @@ BeamHypothesis = collections.namedtuple("BeamHypothesis", ("score", "indices", "
 class TransducerPrediction(tf.keras.Model):
     def __init__(
         self,
-        vocabulary_size: int,
+        vocab_size: int,
         embed_dim: int,
         embed_dropout: float = 0,
         num_rnns: int = 1,
@@ -48,7 +48,7 @@ class TransducerPrediction(tf.keras.Model):
         **kwargs,
     ):
         super().__init__(name=name, **kwargs)
-        self.embed = LiteEmbedding(vocabulary_size, embed_dim, regularizer=kernel_regularizer, name=f"{name}_embedding")
+        self.embed = LiteEmbedding(vocab_size, embed_dim, regularizer=kernel_regularizer, name=f"{name}_embedding")
         self.do = tf.keras.layers.Dropout(embed_dropout, name=f"{name}_dropout")
         # Initialize rnn layers
         RnnClass = layer_util.get_rnn(rnn_type)
@@ -155,7 +155,7 @@ class TransducerJointReshape(tf.keras.layers.Layer):
 class TransducerJoint(tf.keras.Model):
     def __init__(
         self,
-        vocabulary_size: int,
+        vocab_size: int,
         joint_dim: int = 1024,
         activation: str = "tanh",
         prejoint_linear: bool = True,
@@ -205,7 +205,7 @@ class TransducerJoint(tf.keras.Model):
             )
 
         self.ffn_out = tf.keras.layers.Dense(
-            vocabulary_size, name=f"{name}_vocab", kernel_regularizer=kernel_regularizer, bias_regularizer=bias_regularizer
+            vocab_size, name=f"{name}_vocab", kernel_regularizer=kernel_regularizer, bias_regularizer=bias_regularizer
         )
 
     def call(self, inputs, training=False, **kwargs):
@@ -231,7 +231,7 @@ class Transducer(BaseModel):
     def __init__(
         self,
         encoder: tf.keras.Model,
-        vocabulary_size: int,
+        vocab_size: int,
         embed_dim: int = 512,
         embed_dropout: float = 0,
         num_rnns: int = 1,
@@ -255,7 +255,7 @@ class Transducer(BaseModel):
         super().__init__(name=name, **kwargs)
         self.encoder = encoder
         self.predict_net = TransducerPrediction(
-            vocabulary_size=vocabulary_size,
+            vocab_size=vocab_size,
             embed_dim=embed_dim,
             embed_dropout=embed_dropout,
             num_rnns=num_rnns,
@@ -270,7 +270,7 @@ class Transducer(BaseModel):
             name=f"{name}_prediction",
         )
         self.joint_net = TransducerJoint(
-            vocabulary_size=vocabulary_size,
+            vocab_size=vocab_size,
             joint_dim=joint_dim,
             activation=joint_activation,
             prejoint_linear=prejoint_linear,

@@ -73,13 +73,13 @@ def main(
     )
 
     with strategy.scope():
-        rnn_transducer = RnnTransducer(**config.model_config, vocabulary_size=text_featurizer.num_classes)
+        rnn_transducer = RnnTransducer(**config.model_config, vocab_size=text_featurizer.num_classes)
         rnn_transducer.make(
             speech_featurizer.shape, prediction_shape=text_featurizer.prepand_shape, batch_size=global_batch_size
         )
         if pretrained:
             rnn_transducer.load_weights(pretrained, by_name=True, skip_mismatch=True)
-        rnn_transducer.summary(line_length=100, expand_nested=True, show_trainable=True)
+        rnn_transducer.summary()
         rnn_transducer.compile(
             optimizer=config.learning_config.optimizer_config,
             experimental_steps_per_execution=spx,

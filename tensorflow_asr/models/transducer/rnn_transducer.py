@@ -207,7 +207,7 @@ class RnnTransducerEncoder(tf.keras.Model):
 class RnnTransducer(Transducer):
     def __init__(
         self,
-        vocabulary_size: int,
+        vocab_size: int,
         encoder_reductions: dict = {0: 3, 1: 2},
         encoder_dmodel: int = 640,
         encoder_nlayers: int = 8,
@@ -247,7 +247,7 @@ class RnnTransducer(Transducer):
                 trainable=encoder_trainable,
                 name=f"{name}_encoder",
             ),
-            vocabulary_size=vocabulary_size,
+            vocab_size=vocab_size,
             embed_dim=prediction_embed_dim,
             embed_dropout=prediction_embed_dropout,
             num_rnns=prediction_num_rnns,

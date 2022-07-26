@@ -45,10 +45,10 @@ def main(
         sentence_piece=sentence_piece,
     )
 
-    contextnet = ContextNet(**config.model_config, vocabulary_size=text_featurizer.num_classes)
+    contextnet = ContextNet(**config.model_config, vocab_size=text_featurizer.num_classes)
     contextnet.make(speech_featurizer.shape)
     contextnet.load_weights(h5, by_name=True)
-    contextnet.summary(line_length=100)
+    contextnet.summary()
     contextnet.add_featurizers(speech_featurizer, text_featurizer)
 
     exec_helpers.convert_tflite(model=contextnet, output=output)

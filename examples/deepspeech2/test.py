@@ -52,10 +52,10 @@ def main(
         sentence_piece=sentence_piece,
     )
 
-    deepspeech2 = DeepSpeech2(**config.model_config, vocabulary_size=text_featurizer.num_classes)
+    deepspeech2 = DeepSpeech2(**config.model_config, vocab_size=text_featurizer.num_classes)
     deepspeech2.make(speech_featurizer.shape)
     deepspeech2.load_weights(saved, by_name=True)
-    deepspeech2.summary(line_length=100, expand_nested=True, show_trainable=True)
+    deepspeech2.summary()
     deepspeech2.add_featurizers(speech_featurizer, text_featurizer)
 
     test_dataset = dataset_helpers.prepare_testing_datasets(

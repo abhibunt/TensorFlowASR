@@ -29,15 +29,15 @@ class CtcModel(BaseModel):
         self,
         encoder: tf.keras.Model,
         decoder: Union[tf.keras.Model, tf.keras.layers.Layer] = None,
-        vocabulary_size: int = None,
+        vocab_size: int = None,
         **kwargs,
     ):
         super().__init__(**kwargs)
         self.encoder = encoder
         if decoder is None:
-            assert vocabulary_size is not None, "vocabulary_size must be set"
+            assert vocab_size is not None, "vocab_size must be set"
             self.decoder = tf.keras.layers.Dense(
-                units=vocabulary_size,
+                units=vocab_size,
                 name=f"{self.name}_logits",
             )
         else:

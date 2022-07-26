@@ -73,11 +73,11 @@ def main(
     )
 
     with strategy.scope():
-        jasper = Jasper(**config.model_config, vocabulary_size=text_featurizer.num_classes)
+        jasper = Jasper(**config.model_config, vocab_size=text_featurizer.num_classes)
         jasper.make(speech_featurizer.shape, batch_size=global_batch_size)
         if pretrained:
             jasper.load_weights(pretrained, by_name=True, skip_mismatch=True)
-        jasper.summary(line_length=100, expand_nested=True, show_trainable=True)
+        jasper.summary()
         jasper.compile(
             optimizer=config.learning_config.optimizer_config,
             experimental_steps_per_execution=spx,

@@ -27,7 +27,7 @@ speech_config:
 
 decoder_config:
   vocabulary: ./vocabularies/librispeech/librispeech_train_4_1030.subwords
-  target_vocab_size: 1024
+  vocab_size: 1024
   max_subword_length: 4
   blank_at_zero: True
   beam_width: 5

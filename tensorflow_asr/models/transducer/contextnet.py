@@ -24,7 +24,7 @@ from tensorflow_asr.utils import data_util, math_util
 class ContextNet(Transducer):
     def __init__(
         self,
-        vocabulary_size: int,
+        vocab_size: int,
         encoder_blocks: List[dict],
         encoder_alpha: float = 0.5,
         encoder_trainable: bool = True,
@@ -57,7 +57,7 @@ class ContextNet(Transducer):
                 trainable=encoder_trainable,
                 name=f"{name}_encoder",
             ),
-            vocabulary_size=vocabulary_size,
+            vocab_size=vocab_size,
             embed_dim=prediction_embed_dim,
             embed_dropout=prediction_embed_dropout,
             num_rnns=prediction_num_rnns,

@@ -63,10 +63,10 @@ else:
 text_featurizer.decoder_config.beam_width = args.beam_width
 
 # build model
-conformer = Conformer(**config.model_config, vocabulary_size=text_featurizer.num_classes)
+conformer = Conformer(**config.model_config, vocab_size=text_featurizer.num_classes)
 conformer.make(speech_featurizer.shape)
 conformer.load_weights(args.saved, by_name=True, skip_mismatch=True)
-conformer.summary(line_length=120)
+conformer.summary()
 conformer.add_featurizers(speech_featurizer, text_featurizer)
 
 signal = read_raw_audio(args.filename)

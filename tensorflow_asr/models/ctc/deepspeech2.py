@@ -367,7 +367,7 @@ class DeepSpeech2Encoder(tf.keras.Model):
 class DeepSpeech2(CtcModel):
     def __init__(
         self,
-        vocabulary_size: int,
+        vocab_size: int,
         conv_type: str = "conv2d",
         conv_kernels: list = [[11, 41], [11, 21], [11, 21]],
         conv_strides: list = [[2, 2], [1, 2], [1, 2]],
@@ -403,7 +403,7 @@ class DeepSpeech2(CtcModel):
                 fc_dropout=fc_dropout,
                 name=f"{name}_encoder",
             ),
-            vocabulary_size=vocabulary_size,
+            vocab_size=vocab_size,
             name=name,
             **kwargs,
         )

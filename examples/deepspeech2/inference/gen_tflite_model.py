@@ -45,10 +45,10 @@ def main(
         sentence_piece=sentence_piece,
     )
 
-    deepspeech2 = DeepSpeech2(**config.model_config, vocabulary_size=text_featurizer.num_classes)
+    deepspeech2 = DeepSpeech2(**config.model_config, vocab_size=text_featurizer.num_classes)
     deepspeech2.make(speech_featurizer.shape)
     deepspeech2.load_weights(h5, by_name=True)
-    deepspeech2.summary(line_length=100)
+    deepspeech2.summary()
     deepspeech2.add_featurizers(speech_featurizer, text_featurizer)
 
     exec_helpers.convert_tflite(model=deepspeech2, output=output)

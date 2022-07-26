@@ -45,10 +45,10 @@ def main(
         sentence_piece=sentence_piece,
     )
 
-    jasper = Jasper(**config.model_config, vocabulary_size=text_featurizer.num_classes)
+    jasper = Jasper(**config.model_config, vocab_size=text_featurizer.num_classes)
     jasper.make(speech_featurizer.shape)
     jasper.load_weights(h5, by_name=True)
-    jasper.summary(line_length=100)
+    jasper.summary()
     jasper.add_featurizers(speech_featurizer, text_featurizer)
 
     exec_helpers.convert_tflite(model=jasper, output=output)
