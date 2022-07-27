@@ -50,7 +50,7 @@ def main(
     *transcripts,
     output: str = None,
     vocab_size: int = 1000,
-    max_token_length: int = 10,
+    max_token_length: int = 50,
     max_unique_chars: int = 1000,
     num_iterations: int = 4,
 ):
