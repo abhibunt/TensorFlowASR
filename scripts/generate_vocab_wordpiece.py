@@ -53,9 +53,9 @@ def main(
     max_token_length: int = 50,
     max_unique_chars: int = 1000,
     num_iterations: int = 4,
+    reserved_tokens: list = ["[PAD]", "[UNK]"],
 ):
     bert_tokenizer_params = dict(lower_case=True)
-    reserved_tokens = ["[PAD]", "[UNK]", "[START]", "[END]"]
 
     bert_vocab_args = dict(
         vocab_size=vocab_size,
