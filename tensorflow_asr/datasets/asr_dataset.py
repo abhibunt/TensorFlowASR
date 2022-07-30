@@ -338,25 +338,17 @@ class ASRTFRecordDataset(ASRDataset):
         splitted_entries: tuple,
     ):
         shard_path, entries = splitted_entries
-
-        def parse(record: tf.Tensor):
-            def fn(path: bytes, transcript: str):
-                audio = load_and_convert_to_wav(path.decode("utf-8")).numpy()
+        logger.info(f"Processing {shard_path} ...")
+        with tf.io.TFRecordWriter(shard_path, options=tf.io.TFRecordOptions(compression_type=self.compression_type)) as writer:
+            for path, _, transcript in entries:
+                audio = load_and_convert_to_wav(path).numpy()
                 feature = {
-                    "path": feature_util.bytestring_feature([path]),
+                    "path": feature_util.bytestring_feature([path.encode("utf-8")]),
                     "audio": feature_util.bytestring_feature([audio]),
-                    "transcript": feature_util.bytestring_feature([transcript]),
+                    "transcript": feature_util.bytestring_feature([transcript.encode("utf-8")]),
                 }
                 example = tf.train.Example(features=tf.train.Features(feature=feature))
-                return example.SerializeToString()
-
-            return tf.numpy_function(fn, inp=[record[0], record[2]], Tout=tf.string)
-
-        dataset = tf.data.Dataset.from_tensor_slices(entries)
-        dataset = dataset.map(parse, num_parallel_calls=AUTOTUNE)
-        writer = tf.io.TFRecordWriter(shard_path, options=tf.io.TFRecordOptions(compression_type=self.compression_type))
-        logger.info(f"Processing {shard_path} ...")
-        writer.write(dataset)
+                writer.write(example.SerializeToString())
         logger.info(f"Created {shard_path}")
 
     def create_tfrecords(self):
