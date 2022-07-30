@@ -78,7 +78,10 @@ class ASRDataset(BaseDataset):
             self.speech_featurizer.update_length(input_length)
             self.text_featurizer.update_length(label_length)
 
-    def save_metadata(self, metadata: str = None):
+    def save_metadata(
+        self,
+        metadata: str = None,
+    ):
         if metadata is None:
             return
         metadata = file_util.preprocess_paths(metadata)
@@ -99,7 +102,10 @@ class ASRDataset(BaseDataset):
             f.write(json.dumps(content, indent=2))
         logger.info(f"Metadata written to {metadata}")
 
-    def load_metadata(self, metadata: Union[str, dict] = None):
+    def load_metadata(
+        self,
+        metadata: Union[str, dict] = None,
+    ):
         if metadata is None:
             return
         content = None
@@ -122,7 +128,10 @@ class ASRDataset(BaseDataset):
         self.text_featurizer.update_length(int(content.get("max_label_length", 0)))
         self.total_steps = int(content.get("num_entries", 0))
 
-    def update_metadata(self, metadata: str = None):
+    def update_metadata(
+        self,
+        metadata: str = None,
+    ):
         self.load_metadata(metadata)
         self.compute_metadata()
         self.save_metadata(metadata)
@@ -153,7 +162,12 @@ class ASRDataset(BaseDataset):
             audio = load_and_convert_to_wav(path).numpy()
             yield bytes(path, "utf-8"), audio, bytes(transcript, "utf-8")
 
-    def preprocess(self, path: tf.Tensor, audio: tf.Tensor, transcript: tf.Tensor):
+    def preprocess(
+        self,
+        path: tf.Tensor,
+        audio: tf.Tensor,
+        transcript: tf.Tensor,
+    ):
         with tf.device("/CPU:0"):
 
             def fn(_path: bytes, _audio: bytes, _transcript: bytes):
@@ -178,7 +192,12 @@ class ASRDataset(BaseDataset):
                 Tout=[tf.string, tf.float32, tf.int32, tf.int32, tf.int32, tf.int32, tf.int32],
             )
 
-    def tf_preprocess(self, path: tf.Tensor, audio: tf.Tensor, transcript: tf.Tensor):
+    def tf_preprocess(
+        self,
+        path: tf.Tensor,
+        audio: tf.Tensor,
+        transcript: tf.Tensor,
+    ):
         with tf.device("/CPU:0"):
             signal = tf_read_raw_audio(audio, self.speech_featurizer.sample_rate)
             signal = self.augmentations.signal_augment(signal)
@@ -194,7 +213,12 @@ class ASRDataset(BaseDataset):
 
             return path, features, input_length, label, label_length, prediction, prediction_length
 
-    def parse(self, path: tf.Tensor, audio: tf.Tensor, transcript: tf.Tensor):
+    def parse(
+        self,
+        path: tf.Tensor,
+        audio: tf.Tensor,
+        transcript: tf.Tensor,
+    ):
         """
         Returns:
             path, features, input_lengths, labels, label_lengths, pred_inp
@@ -210,7 +234,11 @@ class ASRDataset(BaseDataset):
 
     # -------------------------------- CREATION -------------------------------------
 
-    def process(self, dataset, batch_size):
+    def process(
+        self,
+        dataset: tf.data.Dataset,
+        batch_size: int,
+    ):
         dataset = dataset.map(self.parse, num_parallel_calls=AUTOTUNE)
         self.total_steps = math_util.get_num_batches(self.total_steps, batch_size, drop_remainders=self.drop_remainder)
 
@@ -248,7 +276,10 @@ class ASRDataset(BaseDataset):
         dataset = dataset.prefetch(AUTOTUNE)
         return dataset
 
-    def create(self, batch_size: int):
+    def create(
+        self,
+        batch_size: int,
+    ):
         self.read_entries()
         if not self.total_steps or self.total_steps == 0:
             return None
@@ -304,13 +335,13 @@ class ASRTFRecordDataset(ASRDataset):
     def write_tfrecord_file(splitted_entries):
         shard_path, entries = splitted_entries
 
-        def parse(record):
-            def fn(path, indices):
+        def parse(record: tf.Tensor):
+            def fn(path: bytes, transcript: str):
                 audio = load_and_convert_to_wav(path.decode("utf-8")).numpy()
                 feature = {
                     "path": feature_util.bytestring_feature([path]),
                     "audio": feature_util.bytestring_feature([audio]),
-                    "indices": feature_util.bytestring_feature([indices]),
+                    "transcript": feature_util.bytestring_feature([transcript]),
                 }
                 example = tf.train.Example(features=tf.train.Features(feature=feature))
                 return example.SerializeToString()
@@ -338,7 +369,7 @@ class ASRTFRecordDataset(ASRDataset):
         if not self.total_steps or self.total_steps == 0:
             return False
 
-        def get_shard_path(shard_id):
+        def get_shard_path(shard_id: int):
             return os.path.join(self.tfrecords_dir, f"{self.stage}_{shard_id}.tfrecord")
 
         shards = [get_shard_path(idx) for idx in range(1, self.tfrecords_shards + 1)]
@@ -349,16 +380,23 @@ class ASRTFRecordDataset(ASRDataset):
 
         return True
 
-    def parse(self, record: tf.Tensor, **kwargs):
+    def parse(
+        self,
+        record: tf.Tensor,
+        **kwargs,
+    ):
         feature_description = {
             "path": tf.io.FixedLenFeature([], tf.string),
             "audio": tf.io.FixedLenFeature([], tf.string),
-            "indices": tf.io.FixedLenFeature([], tf.string),
+            "transcript": tf.io.FixedLenFeature([], tf.string),
         }
         example = tf.io.parse_single_example(record, feature_description)
         return super().parse(**example)
 
-    def create(self, batch_size: int):
+    def create(
+        self,
+        batch_size: int,
+    ):
         have_data = self.create_tfrecords()
         if not have_data:
             return None
@@ -377,14 +415,17 @@ class ASRSliceDataset(ASRDataset):
     """Dataset for ASR using Slice"""
 
     @staticmethod
-    def load(record: tf.Tensor):
+    def load(record):
         def fn(path: bytes):
             return load_and_convert_to_wav(path.decode("utf-8")).numpy()
 
         audio = tf.numpy_function(fn, inp=[record[0]], Tout=tf.string)
         return record[0], audio, record[2]
 
-    def create(self, batch_size: int):
+    def create(
+        self,
+        batch_size: int,
+    ):
         self.read_entries()
         if not self.total_steps or self.total_steps == 0:
             return None

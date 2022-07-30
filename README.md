@@ -5,7 +5,7 @@
   <img alt="GitHub" src="https://img.shields.io/github/license/TensorSpeech/TensorFlowASR?logo=apache&logoColor=green">
 </a>
 <img alt="python" src="https://img.shields.io/badge/python-%3E%3D3.6-blue?logo=python">
-<img alt="tensorflow" src="https://img.shields.io/badge/tensorflow-%3E%3D2.5.1-orange?logo=tensorflow">
+<img alt="tensorflow" src="https://img.shields.io/badge/tensorflow-%3E%3D2.8.0-orange?logo=tensorflow">
 <a href="https://pypi.org/project/TensorFlowASR/">
   <img alt="PyPI" src="https://img.shields.io/pypi/v/TensorFlowASR?color=%234285F4&label=release&logo=pypi&logoColor=%234285F4">
 </a>
@@ -41,6 +41,7 @@ TensorFlowASR implements some automatic speech recognition architectures such as
 - [Installation](#installation)
   - [Installing from source (recommended)](#installing-from-source-recommended)
   - [Installing via PyPi](#installing-via-pypi)
+  - [Installing for development](#installing-for-development)
   - [Running in a container](#running-in-a-container)
 - [Setup training and testing](#setup-training-and-testing)
 - [TFLite Convertion](#tflite-convertion)
