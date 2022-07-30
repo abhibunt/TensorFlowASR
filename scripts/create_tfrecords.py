@@ -27,7 +27,7 @@ from tensorflow_asr.utils.file_util import preprocess_paths
 def main(
     *transcripts,
     mode: str = None,
-    config_file: str = None,
+    config_path: str = None,
     tfrecords_dir: str = None,
     tfrecords_shards: int = 16,
     shuffle: bool = True,
@@ -39,7 +39,7 @@ def main(
     tfrecords_dir = preprocess_paths(tfrecords_dir, isdir=True)
     logger.info(f"Create tfrecords to directory: {tfrecords_dir}")
 
-    config = Config(config_file)
+    config = Config(config_path)
 
     speech_featurizer, text_featurizer = featurizer_helpers.prepare_featurizers(
         config=config, subwords=subwords, sentence_piece=sentence_piece, wordpiece=wordpiece

@@ -309,6 +309,7 @@ class ASRTFRecordDataset(ASRDataset):
         indefinite: bool = False,
         drop_remainder: bool = True,
         buffer_size: int = BUFFER_SIZE,
+        compression_type: str = "GZIP",
         **kwargs,
     ):
         super().__init__(
@@ -330,9 +331,12 @@ class ASRTFRecordDataset(ASRDataset):
         if tfrecords_shards <= 0:
             raise ValueError("tfrecords_shards must be positive")
         self.tfrecords_shards = tfrecords_shards
+        self.compression_type = compression_type
 
-    @staticmethod
-    def write_tfrecord_file(splitted_entries):
+    def write_tfrecord_file(
+        self,
+        splitted_entries: tuple,
+    ):
         shard_path, entries = splitted_entries
 
         def parse(record: tf.Tensor):
@@ -350,7 +354,7 @@ class ASRTFRecordDataset(ASRDataset):
 
         dataset = tf.data.Dataset.from_tensor_slices(entries)
         dataset = dataset.map(parse, num_parallel_calls=AUTOTUNE)
-        writer = tf.data.experimental.TFRecordWriter(shard_path, compression_type="ZLIB")
+        writer = tf.io.TFRecordWriter(shard_path, options=tf.io.TFRecordOptions(compression_type=self.compression_type))
         logger.info(f"Processing {shard_path} ...")
         writer.write(dataset)
         logger.info(f"Created {shard_path}")
@@ -406,7 +410,7 @@ class ASRTFRecordDataset(ASRDataset):
         ignore_order = tf.data.Options()
         ignore_order.experimental_deterministic = False
         files_ds = files_ds.with_options(ignore_order)
-        dataset = tf.data.TFRecordDataset(files_ds, compression_type="ZLIB", num_parallel_reads=AUTOTUNE)
+        dataset = tf.data.TFRecordDataset(files_ds, compression_type=self.compression_type, num_parallel_reads=AUTOTUNE)
 
         return self.process(dataset, batch_size)
 
