@@ -71,9 +71,9 @@ class ASRDataset(BaseDataset):
 
     def compute_metadata(self):
         self.read_entries()
-        for _, duration, indices in tqdm.tqdm(self.entries, desc=f"Computing metadata for entries in {self.stage} dataset"):
+        for _, duration, transcript in tqdm.tqdm(self.entries, desc=f"Computing metadata for entries in {self.stage} dataset"):
             input_length = self.speech_featurizer.get_length_from_duration(duration)
-            label = str(indices).split()
+            label = self.text_featurizer.extract(transcript).numpy()
             label_length = len(label)
             self.speech_featurizer.update_length(input_length)
             self.text_featurizer.update_length(label_length)
@@ -135,15 +135,12 @@ class ASRDataset(BaseDataset):
         for file_path in self.data_paths:
             logger.info(f"Reading {file_path} ...")
             with tf.io.gfile.GFile(file_path, "r") as f:
-                temp_lines = f.read().splitlines()
-                # Skip the header of tsv file
-                self.entries += temp_lines[1:]
-        # The files is "\t" seperated
-        self.entries = [line.split("\t", 2) for line in self.entries]
-        with tqdm.tqdm(total=len(self.entries), desc="Convert transcript to indices") as pbar:
-            for i, line in enumerate(self.entries):
-                self.entries[i][-1] = " ".join([str(x) for x in self.text_featurizer.extract(line[-1]).numpy()])
-                pbar.update(1)
+                for line in f.read().splitlines()[1:]:  # Skip the header of tsv file
+                    self.entries.append(line.split("\t", 2))  # The files is "\t" seperated
+        # with tqdm.tqdm(total=len(self.entries), desc="Convert transcript to indices") as pbar:
+        #     for i, line in enumerate(self.entries):
+        #         self.entries[i].append(" ".join([str(x) for x in self.text_featurizer.extract(line[-1]).numpy()]))
+        #         pbar.update(1)
         self.entries = np.array(self.entries)
         if self.shuffle:
             np.random.shuffle(self.entries)  # Mix transcripts.tsv
@@ -152,55 +149,57 @@ class ASRDataset(BaseDataset):
     # -------------------------------- LOAD AND PREPROCESS -------------------------------------
 
     def generator(self):
-        for path, _, indices in self.entries:
+        for path, _, transcript in self.entries:
             audio = load_and_convert_to_wav(path).numpy()
-            yield bytes(path, "utf-8"), audio, bytes(indices, "utf-8")
+            yield bytes(path, "utf-8"), audio, bytes(transcript, "utf-8")
 
-    def preprocess(self, path: tf.Tensor, audio: tf.Tensor, indices: tf.Tensor):
+    def preprocess(self, path: tf.Tensor, audio: tf.Tensor, transcript: tf.Tensor):
         with tf.device("/CPU:0"):
 
-            def fn(_path: bytes, _audio: bytes, _indices: bytes):
+            def fn(_path: bytes, _audio: bytes, _transcript: bytes):
                 signal = read_raw_audio(_audio, sample_rate=self.speech_featurizer.sample_rate)
                 signal = self.augmentations.signal_augment(signal)
                 features = self.speech_featurizer.extract(signal.numpy())
                 features = self.augmentations.feature_augment(features)
                 features = tf.convert_to_tensor(features, tf.float32)
-                input_length = tf.cast(tf.shape(features)[0], tf.int32)
+                input_length = tf.shape(features, out_type=tf.int32)[0]
 
-                label = tf.strings.to_number(tf.strings.split(_indices), out_type=tf.int32)
-                label_length = tf.cast(tf.shape(label)[0], tf.int32)
+                label = self.text_featurizer.extract(_transcript)
+                label_length = tf.shape(label, out_type=tf.int32)[0]
 
                 prediction = self.text_featurizer.prepand_blank(label)
-                prediction_length = tf.cast(tf.shape(prediction)[0], tf.int32)
+                prediction_length = tf.shape(prediction, out_type=tf.int32)[0]
 
                 return _path, features, input_length, label, label_length, prediction, prediction_length
 
             return tf.numpy_function(
-                fn, inp=[path, audio, indices], Tout=[tf.string, tf.float32, tf.int32, tf.int32, tf.int32, tf.int32, tf.int32]
+                fn,
+                inp=[path, audio, transcript],
+                Tout=[tf.string, tf.float32, tf.int32, tf.int32, tf.int32, tf.int32, tf.int32],
             )
 
-    def tf_preprocess(self, path: tf.Tensor, audio: tf.Tensor, indices: tf.Tensor):
+    def tf_preprocess(self, path: tf.Tensor, audio: tf.Tensor, transcript: tf.Tensor):
         with tf.device("/CPU:0"):
             signal = tf_read_raw_audio(audio, self.speech_featurizer.sample_rate)
             signal = self.augmentations.signal_augment(signal)
             features = self.speech_featurizer.tf_extract(signal)
             features = self.augmentations.feature_augment(features)
-            input_length = tf.cast(tf.shape(features)[0], tf.int32)
+            input_length = tf.shape(features, out_type=tf.int32)[0]
 
-            label = tf.strings.to_number(tf.strings.split(indices), out_type=tf.int32)
-            label_length = tf.cast(tf.shape(label)[0], tf.int32)
+            label = self.text_featurizer.extract(transcript)
+            label_length = tf.shape(label, out_type=tf.int32)[0]
 
             prediction = self.text_featurizer.prepand_blank(label)
-            prediction_length = tf.cast(tf.shape(prediction)[0], tf.int32)
+            prediction_length = tf.shape(prediction, out_type=tf.int32)[0]
 
             return path, features, input_length, label, label_length, prediction, prediction_length
 
-    def parse(self, path: tf.Tensor, audio: tf.Tensor, indices: tf.Tensor):
+    def parse(self, path: tf.Tensor, audio: tf.Tensor, transcript: tf.Tensor):
         """
         Returns:
             path, features, input_lengths, labels, label_lengths, pred_inp
         """
-        data = self.tf_preprocess(path, audio, indices) if self.use_tf else self.preprocess(path, audio, indices)
+        data = self.tf_preprocess(path, audio, transcript) if self.use_tf else self.preprocess(path, audio, transcript)
         _, features, input_length, label, label_length, prediction, prediction_length = data
         return (
             data_util.create_inputs(
