@@ -24,9 +24,9 @@ speech_config:
   normalize_per_frame: False
 
 decoder_config:
-  vocabulary: ./vocabularies/librispeech/librispeech_train_4_1000.wordpiece
+  vocabulary: ./vocabularies/librispeech/librispeech_train_1000.wordpiece
   vocab_size: 1000
-  max_subword_length: 4
+  max_subword_length: 50
   blank_at_zero: True
   beam_width: 0
   norm_score: True
