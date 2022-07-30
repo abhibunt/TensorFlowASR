@@ -76,7 +76,7 @@ learning_config:
           mask_factor: 27
     data_paths:
       - E:/MLDL/Datasets/ASR/LibriSpeech/train-clean-100/transcripts.tsv
-    tfrecords_dir: null
+    tfrecords_dir: E:/MLDL/Datasets/ASR/LibriSpeech/tfrecords/wordpiece-1000/
     shuffle: True
     cache: True
     buffer_size: 100

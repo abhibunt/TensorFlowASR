@@ -205,7 +205,7 @@ class ASRDataset(BaseDataset):
             features = self.augmentations.feature_augment(features)
             input_length = tf.shape(features, out_type=tf.int32)[0]
 
-            label = self.text_featurizer.extract(transcript)
+            label = self.text_featurizer.tf_extract(transcript)
             label_length = tf.shape(label, out_type=tf.int32)[0]
 
             prediction = self.text_featurizer.prepand_blank(label)

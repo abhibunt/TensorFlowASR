@@ -16,7 +16,7 @@ text = "but it would have broken down after ten miles of that hard trail dawn ca
 def test_wordpiece_featurizer():
     featurizer = WordPieceFeaturizer(decoder_config=decoder_config)
     print(text)
-    indices = featurizer.extract(text)
+    indices = featurizer.tf_extract(text)
     print(indices.numpy())
     batch_indices = tf.stack([indices, indices], axis=0)
     reversed_text = featurizer.iextract(batch_indices)

@@ -90,7 +90,12 @@ class TextFeaturizer:
 
     def preprocess_text(self, text):
         text = unicodedata.normalize("NFC", text.lower())
-        return text.strip("\n")  # remove trailing newline
+        return text.strip("\n").strip()  # remove trailing newline
+
+    def tf_preprocess_text(self, text: tf.Tensor):
+        text = tf.strings.lower(text)
+        text = tf.strings.strip(text)  # remove trailing whitespace
+        return text
 
     def add_scorer(
         self,
@@ -124,6 +129,9 @@ class TextFeaturizer:
         return tf.concat([[self.blank], text], axis=0)
 
     def extract(self, text):
+        raise NotImplementedError()
+
+    def tf_extract(self, text):
         raise NotImplementedError()
 
     def iextract(self, indices):
@@ -606,7 +614,16 @@ class WordPieceFeaturizer(TextFeaturizer):
         Returns:
             sequence of ints in tf.Tensor
         """
-        text = self.preprocess_text(text).strip().split(" ")  # remove spaces
+        text = self.preprocess_text(text).split()
+        indices = self.tokenizer.tokenize(text).merge_dims(0, 1)
+        return indices
+
+    def tf_extract(
+        self,
+        text: tf.Tensor,
+    ) -> tf.Tensor:
+        text = self.tf_preprocess_text(text)
+        text = tf.strings.split(text)
         indices = self.tokenizer.tokenize(text).merge_dims(0, 1)
         return indices
 
