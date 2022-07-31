@@ -82,14 +82,14 @@ def main(
         rnn_transducer.summary()
         rnn_transducer.compile(
             optimizer=config.learning_config.optimizer_config,
-            experimental_steps_per_execution=spx,
+            steps_per_execution=spx,
             global_batch_size=global_batch_size,
             blank=text_featurizer.blank,
         )
 
     callbacks = [
         tf.keras.callbacks.ModelCheckpoint(**config.learning_config.running_config.checkpoint),
-        tf.keras.callbacks.experimental.BackupAndRestore(config.learning_config.running_config.states_dir),
+        tf.keras.callbacks.BackupAndRestore(config.learning_config.running_config.states_dir),
         tf.keras.callbacks.TensorBoard(**config.learning_config.running_config.tensorboard),
     ]
 
