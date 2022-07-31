@@ -27,7 +27,7 @@ from tensorflow_asr.utils.file_util import preprocess_paths
 def main(
     *transcripts,
     stage: str = "train",
-    config_file: str = None,
+    config_path: str = None,
     wordpiece: bool = True,
     sentence_piece: bool = False,
     subwords: bool = False,
@@ -35,7 +35,7 @@ def main(
 ):
     transcripts = preprocess_paths(transcripts)
 
-    config = Config(config_file)
+    config = Config(config_path)
 
     speech_featurizer, text_featurizer = featurizer_helpers.prepare_featurizers(
         config=config, subwords=subwords, sentence_piece=sentence_piece, wordpiece=wordpiece
