@@ -396,9 +396,9 @@ class ASRTFRecordDataset(ASRDataset):
             return None
 
         pattern = os.path.join(self.tfrecords_dir, f"{self.stage}*.tfrecord")
-        files_ds = tf.data.Dataset.list_files(pattern)
+        files_ds = tf.data.Dataset.list_files(pattern, shuffle=self.shuffle)
         ignore_order = tf.data.Options()
-        ignore_order.experimental_deterministic = False
+        ignore_order.deterministic = False
         files_ds = files_ds.with_options(ignore_order)
         dataset = tf.data.TFRecordDataset(files_ds, compression_type=self.compression_type, num_parallel_reads=AUTOTUNE)
 
