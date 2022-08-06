@@ -47,6 +47,7 @@ class Conformer(Transducer):
         postjoint_linear: bool = False,
         joint_mode: str = "add",
         joint_trainable: bool = True,
+        gauss_noise_stddev=0.075,  # variational noise, from http://arxiv.org/abs/1211.3711
         kernel_regularizer=L2,
         bias_regularizer=L2,
         name: str = "conformer",
@@ -65,6 +66,7 @@ class Conformer(Transducer):
                 depth_multiplier=encoder_depth_multiplier,
                 fc_factor=encoder_fc_factor,
                 dropout=encoder_dropout,
+                gauss_noise_stddev=gauss_noise_stddev,
                 kernel_regularizer=kernel_regularizer,
                 bias_regularizer=bias_regularizer,
                 trainable=encoder_trainable,

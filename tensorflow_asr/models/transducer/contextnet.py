@@ -43,6 +43,7 @@ class ContextNet(Transducer):
         postjoint_linear: bool = False,
         joint_mode: str = "add",
         joint_trainable: bool = True,
+        gauss_noise_stddev=0.075,  # variational noise, from http://arxiv.org/abs/1211.3711
         kernel_regularizer=L2,
         bias_regularizer=L2,
         name: str = "contextnet",
@@ -52,6 +53,7 @@ class ContextNet(Transducer):
             encoder=ContextNetEncoder(
                 blocks=encoder_blocks,
                 alpha=encoder_alpha,
+                gauss_noise_stddev=gauss_noise_stddev,
                 kernel_regularizer=kernel_regularizer,
                 bias_regularizer=bias_regularizer,
                 trainable=encoder_trainable,

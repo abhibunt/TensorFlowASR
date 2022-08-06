@@ -61,6 +61,7 @@ model_config:
   prejoint_linear: True
   joint_activation: tanh
   joint_mode: add
+  gauss_noise_stddev: 0.075
 
 learning_config:
   train_dataset_config:
