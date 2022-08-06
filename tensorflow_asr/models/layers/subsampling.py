@@ -44,11 +44,6 @@ class TimeReduction(tf.keras.layers.Layer):
         outputs = tf.reshape(outputs, [shape[0], -1, shape[-1] * self.time_reduction_factor])
         return outputs
 
-    def get_config(self):
-        config = super(TimeReduction, self).get_config()
-        config.update({"factor": self.time_reduction_factor})
-        return config
-
 
 class VggSubsampling(tf.keras.layers.Layer):
     def __init__(
@@ -122,18 +117,6 @@ class VggSubsampling(tf.keras.layers.Layer):
 
         return math_util.merge_two_last_dims(outputs)
 
-    def get_config(
-        self,
-    ):
-        conf = super(VggSubsampling, self).get_config()
-        conf.update(self.conv1.get_config())
-        conf.update(self.conv2.get_config())
-        conf.update(self.maxpool1.get_config())
-        conf.update(self.conv3.get_config())
-        conf.update(self.conv4.get_config())
-        conf.update(self.maxpool2.get_config())
-        return conf
-
 
 class Conv2dSubsampling(tf.keras.layers.Layer):
     def __init__(
@@ -178,9 +161,3 @@ class Conv2dSubsampling(tf.keras.layers.Layer):
         outputs = self.conv2(outputs, training=training)
         outputs = tf.nn.relu(outputs)
         return math_util.merge_two_last_dims(outputs)
-
-    def get_config(self):
-        conf = super(Conv2dSubsampling, self).get_config()
-        conf.update(self.conv1.get_config())
-        conf.update(self.conv2.get_config())
-        return conf

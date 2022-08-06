@@ -146,11 +146,6 @@ class TransducerJointReshape(tf.keras.layers.Layer):
         outputs = tf.expand_dims(inputs, axis=self.axis)
         return tf.repeat(outputs, repeats=repeats, axis=self.axis)
 
-    def get_config(self):
-        conf = super().get_config()
-        conf.update({"axis": self.axis})
-        return conf
-
 
 class TransducerJoint(tf.keras.Model):
     def __init__(
@@ -429,12 +424,6 @@ class Transducer(BaseModel):
             ytu = tf.nn.log_softmax(self.joint_net([encoded, y], training=False))  # [1, 1, V]
             ytu = tf.reshape(ytu, shape=[-1])  # [1, 1, V] => [V]
             return ytu, new_states
-
-    def get_config(self):
-        conf = self.encoder.get_config()
-        conf.update(self.predict_net.get_config())
-        conf.update(self.joint_net.get_config())
-        return conf
 
     # -------------------------------- GREEDY -------------------------------------
 

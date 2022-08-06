@@ -51,16 +51,3 @@ class LiteEmbedding(tf.keras.layers.Layer):
     def recognize_tflite(self, inputs):
         outputs = tf.cast(tf.expand_dims(inputs, axis=-1), dtype=tf.int32)
         return tf.gather_nd(self.embeddings, outputs)  # https://github.com/tensorflow/tensorflow/issues/42410
-
-    def get_config(self):
-        conf = super(LiteEmbedding, self).get_config()
-        conf.update(
-            {
-                "vocab_size": self.vocab_size,
-                "embed_dim": self.embed_dim,
-                "contraint": self.contraint,
-                "regularizer": self.regularizer,
-                "initializer": self.initializer,
-            }
-        )
-        return conf

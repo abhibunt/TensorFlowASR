@@ -213,26 +213,6 @@ class MultiHeadAttention(tf.keras.layers.Layer):
         else:
             return output_shape
 
-    def get_config(self):
-        config = super().get_config()
-
-        config.update(
-            head_size=self.head_size,
-            num_heads=self.num_heads,
-            output_size=self.output_size,
-            dropout=self._droput_rate,
-            use_projection_bias=self.use_projection_bias,
-            return_attn_coef=self.return_attn_coef,
-            kernel_initializer=tf.keras.initializers.serialize(self.kernel_initializer),
-            kernel_regularizer=tf.keras.regularizers.serialize(self.kernel_regularizer),
-            kernel_constraint=tf.keras.constraints.serialize(self.kernel_constraint),
-            bias_initializer=tf.keras.initializers.serialize(self.bias_initializer),
-            bias_regularizer=tf.keras.regularizers.serialize(self.bias_regularizer),
-            bias_constraint=tf.keras.constraints.serialize(self.bias_constraint),
-        )
-
-        return config
-
 
 class RelPositionMultiHeadAttention(MultiHeadAttention):
     def build(

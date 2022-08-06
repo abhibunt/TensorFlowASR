@@ -33,8 +33,3 @@ class GLU(tf.keras.layers.Layer):
         a, b = tf.split(inputs, 2, axis=self.axis)
         b = tf.nn.sigmoid(b)
         return tf.multiply(a, b)
-
-    def get_config(self):
-        conf = super(GLU, self).get_config()
-        conf.update({"axis": self.axis})
-        return conf

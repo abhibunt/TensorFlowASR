@@ -64,14 +64,6 @@ class JasperSubBlock(tf.keras.layers.Layer):
         outputs = self.do(outputs, training=training)
         return outputs
 
-    def get_config(self):
-        conf = super(JasperSubBlock, self).get_config()
-        conf.update(self.conv1d.get_config())
-        conf.update(self.bn.get_config())
-        conf.update(self.relu.get_config())
-        conf.update(self.do.get_config())
-        return conf
-
 
 class JasperResidual(tf.keras.layers.Layer):
     def __init__(
@@ -102,12 +94,6 @@ class JasperResidual(tf.keras.layers.Layer):
         outputs = self.pointwise_conv1d(inputs, training=training)
         outputs = self.bn(outputs, training=training)
         return outputs
-
-    def get_config(self):
-        conf = super(JasperResidual, self).get_config()
-        conf.update(self.pointwise_conv1d.get_config())
-        conf.update(self.bn.get_config())
-        return conf
 
 
 class JasperSubBlockResidual(JasperSubBlock):
@@ -161,12 +147,6 @@ class JasperSubBlockResidual(JasperSubBlock):
         outputs = self.relu(outputs, training=training)
         outputs = self.do(outputs, training=training)
         return outputs
-
-    def get_config(self):
-        conf = super(JasperSubBlockResidual, self).get_config()
-        conf.update(self.residual.get_config())
-        conf.update(self.add.get_config())
-        return conf
 
 
 class JasperBlock(tf.keras.Model):
@@ -226,13 +206,6 @@ class JasperBlock(tf.keras.Model):
         else:
             outputs = self.subblock_residual([outputs, [inputs]], training=training, **kwargs)
         return outputs, residuals
-
-    def get_config(self):
-        conf = self.subblock_residual.get_config()
-        conf.update({"dense": self.dense})
-        for subblock in self.subblocks:
-            conf.update(subblock.get_config())
-        return conf
 
 
 class JasperEncoder(tf.keras.Model):
@@ -333,16 +306,6 @@ class JasperEncoder(tf.keras.Model):
         outputs = self.second_additional_block(outputs, training=training, **kwargs)
         outputs = self.third_additional_block(outputs, training=training, **kwargs)
         return outputs
-
-    def get_config(self):
-        conf = super().get_config()
-        conf.update(self.reshape.get_config())
-        conf.update(self.first_additional_block.get_config())
-        for block in self.blocks:
-            conf.update(block.get_config())
-        conf.update(self.second_additional_block.get_config())
-        conf.update(self.third_additional_block.get_config())
-        return conf
 
 
 class Jasper(CtcModel):

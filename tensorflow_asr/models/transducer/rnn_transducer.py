@@ -100,16 +100,6 @@ class RnnTransducerBlock(tf.keras.Model):
         outputs = self.projection(outputs, training=False)
         return outputs, new_states
 
-    def get_config(self):
-        conf = {}
-        if self.reduction is not None:
-            conf.update(self.reduction.get_config())
-        conf.update(self.rnn.get_config())
-        if self.ln is not None:
-            conf.update(self.ln.get_config())
-        conf.update(self.projection.get_config())
-        return conf
-
 
 class RnnTransducerEncoder(tf.keras.Model):
     def __init__(
@@ -120,11 +110,14 @@ class RnnTransducerEncoder(tf.keras.Model):
         rnn_type: str = "lstm",
         rnn_units: int = 2048,
         layer_norm: bool = True,
+        gauss_noise_stddev=0.075,  # variational noise, from http://arxiv.org/abs/1211.3711
         kernel_regularizer=None,
         bias_regularizer=None,
         **kwargs,
     ):
         super().__init__(**kwargs)
+
+        self.gauss_noise = tf.keras.layers.GaussianNoise(stddev=gauss_noise_stddev, name=f"{self.name}_gaussian_noise")
 
         self.reshape = Reshape(name=f"{self.name}_reshape")
 
@@ -168,7 +161,8 @@ class RnnTransducerEncoder(tf.keras.Model):
         training=False,
         **kwargs,
     ):
-        outputs = self.reshape(inputs)
+        outputs = self.gauss_noise(inputs, training=training)
+        outputs = self.reshape(outputs)
         for block in self.blocks:
             outputs = block(outputs, training=training, **kwargs)
         return outputs
@@ -194,14 +188,6 @@ class RnnTransducerEncoder(tf.keras.Model):
             outputs, block_states = block.recognize(outputs, states=tf.unstack(states[i], axis=0))
             new_states.append(block_states)
         return outputs, tf.stack(new_states, axis=0)
-
-    def get_config(self):
-        conf = self.reshape.get_config()
-        if self.fnorm is not None:
-            conf.update(self.fnorm.get_config())
-        for block in self.blocks:
-            conf.update(block.get_config())
-        return conf
 
 
 class RnnTransducer(Transducer):
@@ -229,6 +215,7 @@ class RnnTransducer(Transducer):
         postjoint_linear: bool = False,
         joint_mode: str = "add",
         joint_trainable: bool = True,
+        gauss_noise_stddev=0.075,  # variational noise, from http://arxiv.org/abs/1211.3711
         kernel_regularizer=None,
         bias_regularizer=None,
         name="RnnTransducer",
@@ -242,6 +229,7 @@ class RnnTransducer(Transducer):
                 rnn_type=encoder_rnn_type,
                 rnn_units=encoder_rnn_units,
                 layer_norm=encoder_layer_norm,
+                gauss_noise_stddev=gauss_noise_stddev,
                 kernel_regularizer=kernel_regularizer,
                 bias_regularizer=bias_regularizer,
                 trainable=encoder_trainable,

@@ -66,11 +66,6 @@ class PositionalEncoding(tf.keras.layers.Layer):
         pe = self.encode(max_len * self.alpha + self.beta, dmodel)
         return tf.cast(pe, dtype=inputs.dtype)
 
-    def get_config(self):
-        conf = super().get_config()
-        conf.update({"alpha": self.alpha, "beta": self.beta})
-        return conf
-
 
 class PositionalEncodingConcat(PositionalEncoding):
     def build(

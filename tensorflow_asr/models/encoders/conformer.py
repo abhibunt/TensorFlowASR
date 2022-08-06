@@ -73,18 +73,6 @@ class FFModule(tf.keras.layers.Layer):
         outputs = self.res_add([inputs, self.fc_factor * outputs])
         return outputs
 
-    def get_config(self):
-        conf = super(FFModule, self).get_config()
-        conf.update({"fc_factor": self.fc_factor})
-        conf.update(self.ln.get_config())
-        conf.update(self.ffn1.get_config())
-        conf.update(self.swish.get_config())
-        conf.update(self.do1.get_config())
-        conf.update(self.ffn2.get_config())
-        conf.update(self.do2.get_config())
-        conf.update(self.res_add.get_config())
-        return conf
-
 
 class MHSAModule(tf.keras.layers.Layer):
     def __init__(
@@ -143,15 +131,6 @@ class MHSAModule(tf.keras.layers.Layer):
         outputs = self.do(outputs, training=training)
         outputs = self.res_add([inputs, outputs])
         return outputs
-
-    def get_config(self):
-        conf = super(MHSAModule, self).get_config()
-        conf.update({"mha_type": self.mha_type})
-        conf.update(self.ln.get_config())
-        conf.update(self.mha.get_config())
-        conf.update(self.do.get_config())
-        conf.update(self.res_add.get_config())
-        return conf
 
 
 class ConvModule(tf.keras.layers.Layer):
@@ -228,19 +207,6 @@ class ConvModule(tf.keras.layers.Layer):
         outputs = self.res_add([inputs, outputs])
         return outputs
 
-    def get_config(self):
-        conf = super(ConvModule, self).get_config()
-        conf.update(self.ln.get_config())
-        conf.update(self.pw_conv_1.get_config())
-        conf.update(self.glu.get_config())
-        conf.update(self.dw_conv.get_config())
-        conf.update(self.bn.get_config())
-        conf.update(self.swish.get_config())
-        conf.update(self.pw_conv_2.get_config())
-        conf.update(self.do.get_config())
-        conf.update(self.res_add.get_config())
-        return conf
-
 
 class ConformerBlock(tf.keras.layers.Layer):
     def __init__(
@@ -314,15 +280,6 @@ class ConformerBlock(tf.keras.layers.Layer):
         outputs = self.ln(outputs, training=training)
         return outputs
 
-    def get_config(self):
-        conf = super(ConformerBlock, self).get_config()
-        conf.update(self.ffm1.get_config())
-        conf.update(self.mhsam.get_config())
-        conf.update(self.convm.get_config())
-        conf.update(self.ffm2.get_config())
-        conf.update(self.ln.get_config())
-        return conf
-
 
 class ConformerEncoder(tf.keras.Model):
     def __init__(
@@ -338,12 +295,15 @@ class ConformerEncoder(tf.keras.Model):
         depth_multiplier=1,
         fc_factor=0.5,
         dropout=0.0,
+        gauss_noise_stddev=0.075,  # variational noise, from http://arxiv.org/abs/1211.3711
         kernel_regularizer=L2,
         bias_regularizer=L2,
         name="conformer_encoder",
         **kwargs,
     ):
         super(ConformerEncoder, self).__init__(name=name, **kwargs)
+
+        self.gauss_noise = tf.keras.layers.GaussianNoise(stddev=gauss_noise_stddev, name=f"{name}_gaussian_noise")
 
         subsampling_name = subsampling.pop("type", "conv2d")
         if subsampling_name == "vgg":
@@ -409,20 +369,11 @@ class ConformerEncoder(tf.keras.Model):
         **kwargs,
     ):
         # input with shape [B, T, V1, V2]
-        outputs = self.conv_subsampling(inputs, training=training)
+        outputs = self.gauss_noise(inputs, training=training)
+        outputs = self.conv_subsampling(outputs, training=training)
         outputs = self.linear(outputs, training=training)
         pe = self.pe(outputs)
         outputs = self.do(outputs, training=training)
         for cblock in self.conformer_blocks:
             outputs = cblock([outputs, pe], training=training, mask=mask, **kwargs)
         return outputs
-
-    def get_config(self):
-        conf = super(ConformerEncoder, self).get_config()
-        conf.update(self.conv_subsampling.get_config())
-        conf.update(self.linear.get_config())
-        conf.update(self.do.get_config())
-        conf.update(self.pe.get_config())
-        for cblock in self.conformer_blocks:
-            conf.update(cblock.get_config())
-        return conf

@@ -65,14 +65,6 @@ class ConvBlock(tf.keras.layers.Layer):
         outputs = self.do(outputs, training=training)
         return outputs
 
-    def get_config(self):
-        conf = super(ConvBlock, self).get_config()
-        conf.update(self.conv.get_config())
-        conf.update(self.bn.get_config())
-        conf.update(self.relu.get_config())
-        conf.update(self.do.get_config())
-        return conf
-
 
 class ConvModule(tf.keras.Model):
     def __init__(
@@ -128,14 +120,6 @@ class ConvModule(tf.keras.Model):
             outputs = self.postprocess(outputs)
         return outputs
 
-    def get_config(self):
-        conf = {}
-        conf.update(self.preprocess.get_config())
-        for block in self.blocks:
-            conf.update(block.get_config())
-        conf.update(self.postprocess.get_config())
-        return conf
-
 
 class RnnBlock(tf.keras.layers.Layer):
     def __init__(
@@ -180,14 +164,6 @@ class RnnBlock(tf.keras.layers.Layer):
             outputs = self.rowconv(outputs, training=training)
         return outputs
 
-    def get_config(self):
-        conf = super(RnnBlock, self).get_config()
-        conf.update(self.rnn.get_config())
-        conf.update(self.bn.get_config())
-        if self.rowconv is not None:
-            conf.update(self.rowconv.get_config())
-        return conf
-
 
 class RnnModule(tf.keras.Model):
     def __init__(
@@ -225,12 +201,6 @@ class RnnModule(tf.keras.Model):
             outputs = block(outputs, training=training, **kwargs)
         return outputs
 
-    def get_config(self):
-        conf = {}
-        for block in self.blocks:
-            conf.update(block.get_config())
-        return conf
-
 
 class FcBlock(tf.keras.layers.Layer):
     def __init__(
@@ -258,14 +228,6 @@ class FcBlock(tf.keras.layers.Layer):
         outputs = self.do(outputs, training=training)
         return outputs
 
-    def get_config(self):
-        conf = super(FcBlock, self).get_config()
-        conf.update(self.fc.get_config())
-        conf.update(self.bn.get_config())
-        conf.update(self.relu.get_config())
-        conf.update(self.do.get_config())
-        return conf
-
 
 class FcModule(tf.keras.Model):
     def __init__(
@@ -289,12 +251,6 @@ class FcModule(tf.keras.Model):
         for block in self.blocks:
             outputs = block(outputs, training=training, **kwargs)
         return outputs
-
-    def get_config(self):
-        conf = {}
-        for block in self.blocks:
-            conf.update(block.get_config())
-        return conf
 
 
 class DeepSpeech2Encoder(tf.keras.Model):
@@ -355,13 +311,6 @@ class DeepSpeech2Encoder(tf.keras.Model):
         outputs = self.rnn_module(outputs, training=training, **kwargs)
         outputs = self.fc_module(outputs, training=training, **kwargs)
         return outputs
-
-    def get_config(self):
-        conf = super().get_config()
-        conf.update(self.conv_module.get_config())
-        conf.update(self.rnn_module.get_config())
-        conf.update(self.fc_module.get_config())
-        return conf
 
 
 class DeepSpeech2(CtcModel):
