@@ -91,13 +91,25 @@ class BaseModel(tf.keras.Model):
         loss,
         optimizer,
         run_eagerly=None,
+        ga_steps=None,
         **kwargs,
     ):
+        if ga_steps:
+            if not isinstance(ga_steps, int) or ga_steps < 0:
+                raise ValueError("ga_steps must be integer > 0")
+            self.ga_steps = ga_steps
+            self.ga_acum_step = 0
+            self.ga = [tf.Variable(tf.zeros_like(v, dtype=tf.float32), trainable=False) for v in self.trainable_variables]
+        else:
+            self.ga_steps = None
+
         self.use_loss_scale = False
         if not env_util.has_devices("TPU"):
             optimizer = tf.keras.mixed_precision.LossScaleOptimizer(tf.keras.optimizers.get(optimizer), dynamic=True)
             self.use_loss_scale = True
+
         self.add_metric(metric=tf.keras.metrics.Mean(name="loss", dtype=tf.float32))
+
         super().compile(optimizer=optimizer, loss=loss, run_eagerly=run_eagerly, **kwargs)
 
     # -------------------------------- STEP FUNCTIONS -------------------------------------
@@ -112,17 +124,32 @@ class BaseModel(tf.keras.Model):
 
         """
         inputs, y_true = batch
+
         with tf.GradientTape() as tape:
             y_pred = self(inputs, training=True)
             loss = self.loss(y_true, y_pred)
             if self.use_loss_scale:
                 scaled_loss = self.optimizer.get_scaled_loss(loss)
+
         if self.use_loss_scale:
             gradients = tape.gradient(scaled_loss, self.trainable_weights)
             gradients = self.optimizer.get_unscaled_gradients(gradients)
         else:
             gradients = tape.gradient(loss, self.trainable_weights)
-        self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
+
+        if self.ga_steps:  # perform gradient accumulation
+            self.ga_acum_step += 1
+            for i in range(len(self.ga)):
+                self.ga[i].assign_add(gradients[i])
+            # If ga_acum_step reach the ga_steps then we apply accumulated gradients to update the variables else do nothing
+            if self.ga_acum_step == self.ga_steps:
+                self.optimizer.apply_gradients(zip(self.ga, self.trainable_variables))
+                self.ga_acum_step = 0  # reset accumulation
+                for i in range(len(self.ga)):
+                    self.ga[i].assign(tf.zeros_like(self.trainable_variables[i], dtype=tf.float32))
+        else:
+            self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
+
         self._tfasr_metrics["loss"].update_state(loss)
         return {m.name: m.result() for m in self.metrics}
 

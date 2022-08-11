@@ -43,6 +43,7 @@ def main(
     mxp: bool = False,
     pretrained: str = None,
     jit_compile: bool = False,
+    ga_steps: int = None,
 ):
     tf.keras.backend.clear_session()
     tf.config.optimizer.set_experimental_options({"auto_mixed_precision": mxp})
@@ -98,6 +99,7 @@ def main(
             global_batch_size=global_batch_size,
             blank=text_featurizer.blank,
             jit_compile=jit_compile,
+            ga_steps=ga_steps,
         )
 
     callbacks = [
