@@ -34,6 +34,7 @@ def main(
     bs: int = None,
     sentence_piece: bool = False,
     subwords: bool = False,
+    wordpiece: bool = True,
     device: int = 0,
     cpu: bool = False,
     output: str = "test.tsv",
@@ -50,6 +51,7 @@ def main(
         config=config,
         subwords=subwords,
         sentence_piece=sentence_piece,
+        wordpiece=wordpiece,
     )
 
     contextnet = ContextNet(**config.model_config, vocab_size=text_featurizer.num_classes)
