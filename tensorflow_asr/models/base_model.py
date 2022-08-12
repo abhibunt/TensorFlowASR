@@ -99,7 +99,10 @@ class BaseModel(tf.keras.Model):
                 raise ValueError("ga_steps must be integer > 0")
             self.ga_steps = ga_steps
             self.ga_acum_step = 0
-            self.ga = [tf.Variable(tf.zeros_like(v, dtype=tf.float32), trainable=False) for v in self.trainable_variables]
+            self.ga = [
+                tf.Variable(tf.zeros_like(v, dtype=tf.float32), trainable=False, name=f"{self.name}_ga_{i}")
+                for i, v in enumerate(self.trainable_variables)
+            ]
         else:
             self.ga_steps = None
 
