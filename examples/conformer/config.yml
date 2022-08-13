@@ -107,14 +107,14 @@ learning_config:
     stage: test
 
   optimizer_config:
-    warmup_steps: 40000
+    warmup_steps: 10000
     beta_1: 0.9
     beta_2: 0.98
     epsilon: 1e-9
 
   running_config:
     batch_size: 2
-    num_epochs: 50
+    num_epochs: 100
     checkpoint:
       filepath: D:/Models/local/conformer/checkpoints/{epoch:02d}.h5
       save_best_only: False

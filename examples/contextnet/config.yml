@@ -24,9 +24,9 @@ speech_config:
   normalize_per_frame: False
 
 decoder_config:
-  vocabulary: ./vocabularies/librispeech/librispeech_train_4_1030.subwords
-  vocab_size: 1024
-  max_subword_length: 4
+  vocabulary: ./vocabularies/librispeech/librispeech_train_1000.wordpiece
+  vocab_size: 1000
+  max_subword_length: 50
   blank_at_zero: True
   beam_width: 5
   norm_score: True
@@ -193,6 +193,7 @@ model_config:
   prediction_projection_units: 0
   joint_dim: 640
   joint_activation: tanh
+  gauss_noise_stddev: 0.075
 
 learning_config:
   train_dataset_config:
@@ -207,8 +208,8 @@ learning_config:
           num_masks: 1
           mask_factor: 27
     data_paths:
-      - H:/MLDL/Datasets/ASR/Raw/LibriSpeech/train-clean-100/transcripts.tsv
-    tfrecords_dir: null
+      - E:/MLDL/Datasets/ASR/LibriSpeech/train-clean-100/transcripts.tsv
+    tfrecords_dir: E:/MLDL/Datasets/ASR/LibriSpeech/tfrecords/wordpiece-1000/
     shuffle: True
     cache: True
     buffer_size: 100
@@ -218,7 +219,7 @@ learning_config:
   eval_dataset_config:
     use_tf: True
     data_paths:
-      - H:/MLDL/Datasets/ASR/Raw/LibriSpeech/dev-clean/transcripts.tsv
+      - E:/MLDL/Datasets/ASR/LibriSpeech/dev-clean/transcripts.tsv
     tfrecords_dir: null
     shuffle: False
     cache: True
@@ -229,7 +230,7 @@ learning_config:
   test_dataset_config:
     use_tf: True
     data_paths:
-      - H:/MLDL/Datasets/ASR/Raw/LibriSpeech/test-clean/transcripts.tsv
+      - E:/MLDL/Datasets/ASR/LibriSpeech/test-clean/transcripts.tsv
     tfrecords_dir: null
     shuffle: False
     cache: True
@@ -238,14 +239,14 @@ learning_config:
     stage: test
 
   optimizer_config:
-    warmup_steps: 40000
+    warmup_steps: 10000
     beta_1: 0.9
     beta_2: 0.98
     epsilon: 1e-9
 
   running_config:
     batch_size: 2
-    num_epochs: 20
+    num_epochs: 100
     checkpoint:
       filepath: D:/Models/local/contextnet/checkpoints/{epoch:02d}.h5
       save_best_only: False

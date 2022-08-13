@@ -97,14 +97,15 @@ class BaseModel(tf.keras.Model):
         if ga_steps:
             if not isinstance(ga_steps, int) or ga_steps < 0:
                 raise ValueError("ga_steps must be integer > 0")
-            self.ga_steps = ga_steps
-            self.ga_acum_step = 0
+            self.use_ga = True
+            self.ga_steps = tf.constant(ga_steps, dtype=tf.int32)
+            self.ga_acum_step = tf.Variable(0, dtype=tf.int32, trainable=False, name=f"{self.name}_ga_accum_step")
             self.ga = [
                 tf.Variable(tf.zeros_like(v, dtype=tf.float32), trainable=False, name=f"{self.name}_ga_{i}")
                 for i, v in enumerate(self.trainable_variables)
             ]
         else:
-            self.ga_steps = None
+            self.use_ga = False
 
         self.use_loss_scale = False
         if not env_util.has_devices("TPU"):
@@ -140,16 +141,15 @@ class BaseModel(tf.keras.Model):
         else:
             gradients = tape.gradient(loss, self.trainable_weights)
 
-        if self.ga_steps:  # perform gradient accumulation
-            self.ga_acum_step += 1
-            for i in range(len(self.ga)):
-                self.ga[i].assign_add(gradients[i])
-            # If ga_acum_step reach the ga_steps then we apply accumulated gradients to update the variables else do nothing
-            if self.ga_acum_step == self.ga_steps:
-                self.optimizer.apply_gradients(zip(self.ga, self.trainable_variables))
-                self.ga_acum_step = 0  # reset accumulation
-                for i in range(len(self.ga)):
-                    self.ga[i].assign(tf.zeros_like(self.trainable_variables[i], dtype=tf.float32))
+        if self.use_ga:  # perform gradient accumulation
+            apply = tf.equal(self.ga_acum_step, self.ga_steps)
+            tf.cond(apply, lambda: self.ga_acum_step.assign(0), lambda: self.ga_acum_step.assign_add(1))
+            for i, g in enumerate(self.ga):
+                g.assign_add(gradients[i])
+            self.optimizer.apply_gradients(zip(self.ga, self.trainable_variables))
+            keep = tf.cond(apply, lambda: tf.constant(0, dtype=tf.float32), lambda: tf.constant(1, dtype=tf.float32))
+            for g in self.ga:
+                g.assign(g * keep)
         else:
             self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
 
