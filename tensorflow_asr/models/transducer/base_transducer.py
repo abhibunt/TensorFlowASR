@@ -18,8 +18,6 @@ from typing import Dict
 
 import tensorflow as tf
 
-from tensorflow_asr.featurizers.speech_featurizers import SpeechFeaturizer
-from tensorflow_asr.featurizers.text_featurizers import TextFeaturizer
 from tensorflow_asr.losses.rnnt_loss import RnntLoss
 from tensorflow_asr.models.base_model import BaseModel
 from tensorflow_asr.models.layers.embedding import LiteEmbedding
@@ -297,21 +295,6 @@ class Transducer(BaseModel):
             ),
             training=False,
         )
-
-    def add_featurizers(
-        self,
-        speech_featurizer: SpeechFeaturizer,
-        text_featurizer: TextFeaturizer,
-    ):
-        """
-        Function to add featurizer to model to convert to end2end tflite
-        Args:
-            speech_featurizer: SpeechFeaturizer instance
-            text_featurizer: TextFeaturizer instance
-            scorer: external language model scorer
-        """
-        self.speech_featurizer = speech_featurizer
-        self.text_featurizer = text_featurizer
 
     def compile(
         self,

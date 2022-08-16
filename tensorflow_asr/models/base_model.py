@@ -14,7 +14,11 @@
 
 import tensorflow as tf
 
-from tensorflow_asr.utils import env_util, file_util
+from tensorflow_asr.featurizers.speech_featurizers import SpeechFeaturizer
+from tensorflow_asr.featurizers.text_featurizers import TextFeaturizer
+from tensorflow_asr.metrics.error_rates import ErrorRate
+from tensorflow_asr.optimizers.accumulation import GradientAccumulator
+from tensorflow_asr.utils import env_util, file_util, metric_util
 
 
 class BaseModel(tf.keras.Model):
@@ -94,16 +98,9 @@ class BaseModel(tf.keras.Model):
         ga_steps=None,
         **kwargs,
     ):
-        if ga_steps:
-            if not isinstance(ga_steps, int) or ga_steps < 0:
-                raise ValueError("ga_steps must be integer > 0")
+        if isinstance(ga_steps, int) and ga_steps > 1:
             self.use_ga = True
-            self.ga_steps = tf.constant(ga_steps, dtype=tf.int32)
-            self.ga_acum_step = tf.Variable(0, dtype=tf.int32, trainable=False, name=f"{self.name}_ga_accum_step")
-            self.ga = [
-                tf.Variable(tf.zeros_like(v, dtype=tf.float32), trainable=False, name=f"{self.name}_ga_{i}")
-                for i, v in enumerate(self.trainable_variables)
-            ]
+            self.ga = GradientAccumulator(ga_steps=ga_steps)
         else:
             self.use_ga = False
 
@@ -113,8 +110,25 @@ class BaseModel(tf.keras.Model):
             self.use_loss_scale = True
 
         self.add_metric(metric=tf.keras.metrics.Mean(name="loss", dtype=tf.float32))
+        self.add_metric(metric=ErrorRate(metric_util.tf_wer, name="wer"))
+        self.add_metric(metric=ErrorRate(metric_util.tf_cer, name="cer"))
 
         super().compile(optimizer=optimizer, loss=loss, run_eagerly=run_eagerly, **kwargs)
+
+    def add_featurizers(
+        self,
+        speech_featurizer: SpeechFeaturizer,
+        text_featurizer: TextFeaturizer,
+    ):
+        """
+        Function to add featurizer to model to convert to end2end tflite
+        Args:
+            speech_featurizer: SpeechFeaturizer instance
+            text_featurizer: TextFeaturizer instance
+            scorer: external language model scorer
+        """
+        self.speech_featurizer = speech_featurizer
+        self.text_featurizer = text_featurizer
 
     # -------------------------------- STEP FUNCTIONS -------------------------------------
 
@@ -130,6 +144,7 @@ class BaseModel(tf.keras.Model):
         inputs, y_true = batch
 
         with tf.GradientTape() as tape:
+            tape.watch(inputs)
             y_pred = self(inputs, training=True)
             loss = self.loss(y_true, y_pred)
             if self.use_loss_scale:
@@ -142,19 +157,14 @@ class BaseModel(tf.keras.Model):
             gradients = tape.gradient(loss, self.trainable_weights)
 
         if self.use_ga:  # perform gradient accumulation
-            apply = tf.equal(self.ga_acum_step, self.ga_steps)
-            tf.cond(apply, lambda: self.ga_acum_step.assign(0), lambda: self.ga_acum_step.assign_add(1))
-            for i, g in enumerate(self.ga):
-                g.assign_add(gradients[i])
-            self.optimizer.apply_gradients(zip(self.ga, self.trainable_variables))
-            keep = tf.cond(apply, lambda: tf.constant(0, dtype=tf.float32), lambda: tf.constant(1, dtype=tf.float32))
-            for g in self.ga:
-                g.assign(g * keep)
+            self.ga.accumulate(gradients=gradients)
+            self.optimizer.apply_gradients(zip(self.ga.gradients, self.trainable_variables))
+            tf.cond(self.ga.is_apply_step, self.ga.reset, lambda: None)
         else:
             self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
 
         self._tfasr_metrics["loss"].update_state(loss)
-        return {m.name: m.result() for m in self.metrics}
+        return {"loss": self._tfasr_metrics["loss"].result()}
 
     def test_step(self, batch):
         """
@@ -167,8 +177,15 @@ class BaseModel(tf.keras.Model):
         """
         inputs, y_true = batch
         y_pred = self(inputs, training=False)
+
         loss = self.loss(y_true, y_pred)
         self._tfasr_metrics["loss"].update_state(loss)
+
+        target = self.text_featurizer.iextract(y_true["labels"])
+        decode = self.recognize(inputs)
+        self._tfasr_metrics["wer"].update_state(decode=decode, target=target)
+        self._tfasr_metrics["cer"].update_state(decode=decode, target=target)
+
         return {m.name: m.result() for m in self.metrics}
 
     def predict_step(self, batch):

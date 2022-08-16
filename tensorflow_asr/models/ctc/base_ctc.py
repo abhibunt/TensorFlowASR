@@ -17,8 +17,6 @@ from typing import Dict, Union
 import numpy as np
 import tensorflow as tf
 
-from tensorflow_asr.featurizers.speech_featurizers import TFSpeechFeaturizer
-from tensorflow_asr.featurizers.text_featurizers import TextFeaturizer
 from tensorflow_asr.losses.ctc_loss import CtcLoss
 from tensorflow_asr.models.base_model import BaseModel
 from tensorflow_asr.utils import data_util, math_util, shape_util
@@ -70,14 +68,6 @@ class CtcModel(BaseModel):
     ):
         loss = CtcLoss(blank=blank, global_batch_size=global_batch_size)
         super().compile(loss=loss, optimizer=optimizer, run_eagerly=run_eagerly, ga_steps=ga_steps, **kwargs)
-
-    def add_featurizers(
-        self,
-        speech_featurizer: TFSpeechFeaturizer,
-        text_featurizer: TextFeaturizer,
-    ):
-        self.speech_featurizer = speech_featurizer
-        self.text_featurizer = text_featurizer
 
     def call(
         self,
