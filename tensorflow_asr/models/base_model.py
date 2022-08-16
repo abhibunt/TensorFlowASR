@@ -16,9 +16,8 @@ import tensorflow as tf
 
 from tensorflow_asr.featurizers.speech_featurizers import SpeechFeaturizer
 from tensorflow_asr.featurizers.text_featurizers import TextFeaturizer
-from tensorflow_asr.metrics.error_rates import ErrorRate
 from tensorflow_asr.optimizers.accumulation import GradientAccumulator
-from tensorflow_asr.utils import env_util, file_util, metric_util
+from tensorflow_asr.utils import env_util, file_util
 
 
 class BaseModel(tf.keras.Model):
@@ -110,8 +109,6 @@ class BaseModel(tf.keras.Model):
             self.use_loss_scale = True
 
         self.add_metric(metric=tf.keras.metrics.Mean(name="loss", dtype=tf.float32))
-        self.add_metric(metric=ErrorRate(metric_util.tf_wer, name="wer"))
-        self.add_metric(metric=ErrorRate(metric_util.tf_cer, name="cer"))
 
         super().compile(optimizer=optimizer, loss=loss, run_eagerly=run_eagerly, **kwargs)
 
@@ -163,7 +160,7 @@ class BaseModel(tf.keras.Model):
             self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
 
         self._tfasr_metrics["loss"].update_state(loss)
-        return {"loss": self._tfasr_metrics["loss"].result()}
+        return {m.name: m.result() for m in self.metrics}
 
     def test_step(self, batch):
         """
@@ -176,15 +173,8 @@ class BaseModel(tf.keras.Model):
         """
         inputs, y_true = batch
         y_pred = self(inputs, training=False)
-
         loss = self.loss(y_true, y_pred)
         self._tfasr_metrics["loss"].update_state(loss)
-
-        target = self.text_featurizer.iextract(y_true["labels"])
-        decode = self.recognize(inputs)
-        self._tfasr_metrics["wer"].update_state(decode=decode, target=target)
-        self._tfasr_metrics["cer"].update_state(decode=decode, target=target)
-
         return {m.name: m.result() for m in self.metrics}
 
     def predict_step(self, batch):
