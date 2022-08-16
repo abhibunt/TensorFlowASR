@@ -48,7 +48,7 @@ class GradientAccumulator:
         return tf.cond(  # zeros gradients so that apply_gradient has no effect
             self.is_apply_step,
             lambda: list(gradient.value() for gradient in self._gradients),
-            lambda: list(tf.zeros_like(gradient.shape, dtype=gradient.dtype) for gradient in self._gradients),
+            lambda: list(tf.zeros_like(gradient) for gradient in self._gradients),
         )
 
     def accumulate(self, gradients):
@@ -80,4 +80,4 @@ class GradientAccumulator:
             return
         self._accum_step.assign(0)
         for gradient in self._gradients:
-            gradient.assign(tf.zeros(gradient.shape, dtype=gradient.dtype), read_value=False)
+            gradient.assign(tf.zeros_like(gradient), read_value=False)
