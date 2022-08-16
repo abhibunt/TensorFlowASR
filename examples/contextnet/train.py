@@ -92,6 +92,7 @@ def main(
             ),
             **config.learning_config.optimizer_config
         )
+        contextnet.add_featurizers(speech_featurizer=speech_featurizer, text_featurizer=text_featurizer)
         contextnet.compile(
             optimizer=optimizer,
             steps_per_execution=spx,

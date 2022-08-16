@@ -78,6 +78,7 @@ def main(
         if pretrained:
             jasper.load_weights(pretrained, by_name=True, skip_mismatch=True)
         jasper.summary()
+        jasper.add_featurizers(speech_featurizer=speech_featurizer, text_featurizer=text_featurizer)
         jasper.compile(
             optimizer=config.learning_config.optimizer_config,
             steps_per_execution=spx,

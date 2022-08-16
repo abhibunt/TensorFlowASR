@@ -78,6 +78,7 @@ def main(
         if pretrained:
             deepspeech2.load_weights(pretrained, by_name=True, skip_mismatch=True)
         deepspeech2.summary()
+        deepspeech2.add_featurizers(speech_featurizer=speech_featurizer, text_featurizer=text_featurizer)
         deepspeech2.compile(
             optimizer=config.learning_config.optimizer_config,
             steps_per_execution=spx,

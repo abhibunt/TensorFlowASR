@@ -93,6 +93,7 @@ def main(
             ),
             **config.learning_config.optimizer_config,
         )
+        conformer.add_featurizers(speech_featurizer=speech_featurizer, text_featurizer=text_featurizer)
         conformer.compile(
             optimizer=optimizer,
             steps_per_execution=spx,
