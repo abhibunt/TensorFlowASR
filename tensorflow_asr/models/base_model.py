@@ -144,7 +144,6 @@ class BaseModel(tf.keras.Model):
         inputs, y_true = batch
 
         with tf.GradientTape() as tape:
-            tape.watch(inputs)
             y_pred = self(inputs, training=True)
             loss = self.loss(y_true, y_pred)
             if self.use_loss_scale:
