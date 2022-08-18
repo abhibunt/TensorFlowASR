@@ -19,19 +19,17 @@ class CtcLoss(tf.keras.losses.Loss):
     def __init__(
         self,
         blank=0,
-        global_batch_size=None,
         name=None,
     ):
-        super(CtcLoss, self).__init__(reduction=tf.keras.losses.Reduction.NONE, name=name)
+        super(CtcLoss, self).__init__(reduction=tf.keras.losses.Reduction.AUTO, name=name)
         self.blank = blank
-        self.global_batch_size = global_batch_size
 
     def call(
         self,
         y_true,
         y_pred,
     ):
-        loss = ctc_loss(
+        return ctc_loss(
             y_pred=y_pred["logits"],
             input_length=y_pred["logits_length"],
             y_true=y_true["labels"],
@@ -39,7 +37,7 @@ class CtcLoss(tf.keras.losses.Loss):
             blank=self.blank,
             name=self.name,
         )
-        return tf.nn.compute_average_loss(loss, global_batch_size=self.global_batch_size)
+        # return tf.nn.compute_average_loss(loss, global_batch_size=self.global_batch_size)
 
 
 @tf.function

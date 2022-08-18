@@ -82,7 +82,6 @@ def main(
         jasper.compile(
             optimizer=config.learning_config.optimizer_config,
             steps_per_execution=spx,
-            global_batch_size=global_batch_size,
             blank=text_featurizer.blank,
         )
 

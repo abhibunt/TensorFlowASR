@@ -299,13 +299,12 @@ class Transducer(BaseModel):
     def compile(
         self,
         optimizer,
-        global_batch_size,
         blank=0,
         run_eagerly=None,
         ga_steps=None,
         **kwargs,
     ):
-        loss = RnntLoss(blank=blank, global_batch_size=global_batch_size)
+        loss = RnntLoss(blank=blank)
         super().compile(loss=loss, optimizer=optimizer, run_eagerly=run_eagerly, ga_steps=ga_steps, **kwargs)
 
     def call(

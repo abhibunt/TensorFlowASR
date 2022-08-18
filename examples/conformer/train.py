@@ -97,7 +97,6 @@ def main(
         conformer.compile(
             optimizer=optimizer,
             steps_per_execution=spx,
-            global_batch_size=global_batch_size,
             blank=text_featurizer.blank,
             jit_compile=jit_compile,
             ga_steps=ga_steps,

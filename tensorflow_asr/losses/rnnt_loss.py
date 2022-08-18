@@ -22,79 +22,27 @@ logger = tf.get_logger()
 
 LOG_0 = float("-inf")
 
-try:
-    from warprnnt_tensorflow import rnnt_loss as warp_rnnt_loss
-
-    use_warprnnt = True
-    logger.info("Use RNNT loss in WarpRnnt")
-except ImportError:
-    logger.info("Use RNNT loss in TensorFlow")
-    use_warprnnt = False
-
 
 class RnntLoss(tf.keras.losses.Loss):
     def __init__(
         self,
         blank=0,
-        global_batch_size=None,
         name=None,
     ):
-        super(RnntLoss, self).__init__(reduction=tf.keras.losses.Reduction.NONE, name=name)
+        super(RnntLoss, self).__init__(reduction=tf.keras.losses.Reduction.AUTO, name=name)
+        if blank != 0:  # restrict blank index
+            raise ValueError("rnnt_loss must use blank = 0")
         self.blank = blank
-        self.global_batch_size = global_batch_size
 
     def call(self, y_true, y_pred):
-        loss = rnnt_loss(
+        return rnnt_loss(
             logits=y_pred["logits"],
             logit_length=y_pred["logits_length"],
             labels=y_true["labels"],
             label_length=y_true["labels_length"],
-            blank=self.blank,
             name=self.name,
         )
-        return tf.nn.compute_average_loss(loss, global_batch_size=self.global_batch_size)
-
-
-@tf.function
-def rnnt_loss(
-    logits,
-    labels,
-    label_length,
-    logit_length,
-    blank=0,
-    name=None,
-):
-    if use_warprnnt:
-        return rnnt_loss_warprnnt(
-            logits=logits, labels=labels, label_length=label_length, logit_length=logit_length, blank=blank
-        )
-    else:
-        return rnnt_loss_tf(
-            logits=logits,
-            labels=labels,
-            label_length=label_length,
-            logit_length=logit_length,
-            name=name,
-        )
-
-
-def rnnt_loss_warprnnt(
-    logits,
-    labels,
-    label_length,
-    logit_length,
-    blank=0,
-):
-    if not env_util.has_devices(["GPU", "TPU"]):
-        logits = tf.nn.log_softmax(logits)
-    loss = warp_rnnt_loss(
-        acts=tf.cast(logits, tf.float32),
-        label_lengths=tf.cast(label_length, tf.int32),
-        labels=tf.cast(labels, tf.int32),
-        input_lengths=tf.cast(logit_length, tf.int32),
-        blank_label=blank,
-    )
-    return loss
+        # return tf.nn.compute_average_loss(loss, global_batch_size=self.global_batch_size)
 
 
 def nan_to_zero(
@@ -366,7 +314,8 @@ def compute_rnnt_loss_and_grad_helper(logits, labels, label_length, logit_length
     return loss, grads_logits
 
 
-def rnnt_loss_tf(
+@tf.function
+def rnnt_loss(
     logits,
     labels,
     label_length,
