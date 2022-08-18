@@ -17,7 +17,7 @@ import tensorflow as tf
 from tensorflow_asr.featurizers.speech_featurizers import SpeechFeaturizer
 from tensorflow_asr.featurizers.text_featurizers import TextFeaturizer
 from tensorflow_asr.optimizers.accumulation import GradientAccumulator
-from tensorflow_asr.utils import env_util, file_util
+from tensorflow_asr.utils import file_util
 
 
 class BaseModel(tf.keras.Model):
@@ -89,13 +89,9 @@ class BaseModel(tf.keras.Model):
         """Custom function for building model (uses self.build so cannot overwrite that function)"""
         raise NotImplementedError()
 
-    def compile(
+    def add_ga(
         self,
-        loss,
-        optimizer,
-        run_eagerly=None,
         ga_steps=None,
-        **kwargs,
     ):
         if isinstance(ga_steps, int) and ga_steps > 1:
             self.use_ga = True
@@ -103,13 +99,16 @@ class BaseModel(tf.keras.Model):
         else:
             self.use_ga = False
 
-        self.use_loss_scale = False
-        if not env_util.has_devices("TPU"):
-            optimizer = tf.keras.mixed_precision.LossScaleOptimizer(tf.keras.optimizers.get(optimizer), dynamic=True)
-            self.use_loss_scale = True
-
+    def compile(
+        self,
+        loss,
+        optimizer,
+        run_eagerly=None,
+        mxp=True,
+        **kwargs,
+    ):
+        self.mxp = mxp
         self.add_metric(metric=tf.keras.metrics.Mean(name="loss", dtype=tf.float32))
-
         super().compile(optimizer=optimizer, loss=loss, run_eagerly=run_eagerly, **kwargs)
 
     def add_featurizers(
@@ -143,10 +142,10 @@ class BaseModel(tf.keras.Model):
         with tf.GradientTape() as tape:
             y_pred = self(inputs, training=True)
             loss = self.loss(y_true, y_pred)
-            if self.use_loss_scale:
+            if self.mxp:
                 scaled_loss = self.optimizer.get_scaled_loss(loss)
 
-        if self.use_loss_scale:
+        if self.mxp:
             gradients = tape.gradient(scaled_loss, self.trainable_weights)
             gradients = self.optimizer.get_unscaled_gradients(gradients)
         else:

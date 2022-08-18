@@ -301,11 +301,11 @@ class Transducer(BaseModel):
         optimizer,
         blank=0,
         run_eagerly=None,
-        ga_steps=None,
+        mxp=True,
         **kwargs,
     ):
         loss = RnntLoss(blank=blank)
-        super().compile(loss=loss, optimizer=optimizer, run_eagerly=run_eagerly, ga_steps=ga_steps, **kwargs)
+        super().compile(loss=loss, optimizer=optimizer, run_eagerly=run_eagerly, mxp=mxp, **kwargs)
 
     def call(
         self,

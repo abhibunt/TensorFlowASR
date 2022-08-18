@@ -92,3 +92,13 @@ def has_devices(
     if isinstance(devices, list):
         return all([len(tf.config.list_logical_devices(d)) != 0 for d in devices])
     return len(tf.config.list_logical_devices(devices)) != 0
+
+
+def setup_mxp(
+    mxp=True,
+):
+    if mxp:
+        if has_devices("TPU"):
+            tf.keras.mixed_precision.set_global_policy("mixed_bfloat16")
+        elif has_devices("GPU"):
+            tf.keras.mixed_precision.set_global_policy("mixed_float16")
