@@ -29,9 +29,9 @@ class RnntLoss(tf.keras.losses.Loss):
         blank=0,
         name=None,
     ):
-        super(RnntLoss, self).__init__(reduction=tf.keras.losses.Reduction.AUTO, name=name)
         if blank != 0:  # restrict blank index
             raise ValueError("rnnt_loss must use blank = 0")
+        super(RnntLoss, self).__init__(reduction=tf.keras.losses.Reduction.NONE, name=name)
         self.blank = blank
 
     def call(self, y_true, y_pred):
@@ -42,7 +42,6 @@ class RnntLoss(tf.keras.losses.Loss):
             label_length=y_true["labels_length"],
             name=self.name,
         )
-        # return tf.nn.compute_average_loss(loss, global_batch_size=self.global_batch_size)
 
 
 def nan_to_zero(

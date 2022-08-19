@@ -21,7 +21,7 @@ class CtcLoss(tf.keras.losses.Loss):
         blank=0,
         name=None,
     ):
-        super(CtcLoss, self).__init__(reduction=tf.keras.losses.Reduction.AUTO, name=name)
+        super(CtcLoss, self).__init__(reduction=tf.keras.losses.Reduction.NONE, name=name)
         self.blank = blank
 
     def call(
@@ -37,7 +37,6 @@ class CtcLoss(tf.keras.losses.Loss):
             blank=self.blank,
             name=self.name,
         )
-        # return tf.nn.compute_average_loss(loss, global_batch_size=self.global_batch_size)
 
 
 @tf.function

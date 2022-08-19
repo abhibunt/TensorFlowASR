@@ -99,6 +99,8 @@ class BaseModel(tf.keras.Model):
         **kwargs,
     ):
         self.mxp = mxp
+        if self.mxp:
+            optimizer = tf.keras.mixed_precision.LossScaleOptimizer(tf.keras.optimizers.get(optimizer))
         if isinstance(ga_steps, int) and ga_steps > 1:
             self.use_ga = True
             self.ga = GradientAccumulator(ga_steps=ga_steps, trainable_variables=self.trainable_variables)
@@ -123,6 +125,13 @@ class BaseModel(tf.keras.Model):
         self.text_featurizer = text_featurizer
 
     # -------------------------------- STEP FUNCTIONS -------------------------------------
+    def compute_loss(self, y_true, y_pred):
+        return tf.nn.compute_average_loss(self.loss(y_true, y_pred))
+
+    def update_loss_metric(self, loss):
+        # https://www.tensorflow.org/tutorials/distribute/custom_training#tracking_training_loss_across_replicas
+        per_replica_avg_loss = loss * tf.distribute.get_strategy().num_replicas_in_sync
+        self._tfasr_metrics["loss"].update_state(per_replica_avg_loss)
 
     def train_step(self, batch):
         """
@@ -137,7 +146,7 @@ class BaseModel(tf.keras.Model):
 
         with tf.GradientTape() as tape:
             y_pred = self(inputs, training=True)
-            loss = self.loss(y_true, y_pred)
+            loss = self.compute_loss(y_true=y_true, y_pred=y_pred)
             if self.mxp:
                 scaled_loss = self.optimizer.get_scaled_loss(loss)
 
@@ -154,7 +163,7 @@ class BaseModel(tf.keras.Model):
         else:
             self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
 
-        self._tfasr_metrics["loss"].update_state(loss)
+        self.update_loss_metric(loss)
         return {m.name: m.result() for m in self.metrics}
 
     def test_step(self, batch):
@@ -168,8 +177,8 @@ class BaseModel(tf.keras.Model):
         """
         inputs, y_true = batch
         y_pred = self(inputs, training=False)
-        loss = self.loss(y_true, y_pred)
-        self._tfasr_metrics["loss"].update_state(loss)
+        loss = self.compute_loss(y_true=y_true, y_pred=y_pred)
+        self.update_loss_metric(loss)
         return {m.name: m.result() for m in self.metrics}
 
     def predict_step(self, batch):
