@@ -200,7 +200,11 @@ class TransducerJoint(tf.keras.Model):
             )
 
         self.ffn_out = tf.keras.layers.Dense(
-            vocab_size, name=f"{name}_vocab", kernel_regularizer=kernel_regularizer, bias_regularizer=bias_regularizer
+            vocab_size,
+            name=f"{name}_vocab",
+            kernel_regularizer=kernel_regularizer,
+            bias_regularizer=bias_regularizer,
+            dtype=tf.float32,  # to compatible with rnnt_loss in mixed_precision
         )
 
     def call(self, inputs, training=False, **kwargs):
