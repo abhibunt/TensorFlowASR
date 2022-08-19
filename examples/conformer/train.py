@@ -46,8 +46,8 @@ def main(
     ga_steps: int = None,
 ):
     tf.keras.backend.clear_session()
-    env_util.setup_mxp(mxp=mxp)
     strategy = env_util.setup_strategy(devices)
+    env_util.setup_mxp(mxp=mxp)
 
     config = Config(config_path)
 

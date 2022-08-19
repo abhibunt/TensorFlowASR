@@ -46,8 +46,8 @@ def main(
     ga_steps: int = None,
 ):
     tf.keras.backend.clear_session()
-    env_util.setup_mxp(mxp=mxp)
     strategy = env_util.setup_strategy(devices)
+    env_util.setup_mxp(mxp=mxp)
 
     config = Config(config_path)
 
@@ -81,6 +81,8 @@ def main(
     with strategy.scope():
         contextnet = ContextNet(**config.model_config, vocab_size=text_featurizer.num_classes)
         contextnet.make(speech_featurizer.shape, prediction_shape=text_featurizer.prepand_shape, batch_size=global_batch_size)
+        if pretrained:
+            contextnet.load_weights(pretrained, by_name=True, skip_mismatch=True)
         optimizer = tf.keras.optimizers.Adam(
             TransformerSchedule(
                 d_model=contextnet.dmodel,
@@ -89,8 +91,6 @@ def main(
             ),
             **config.learning_config.optimizer_config
         )
-        if pretrained:
-            contextnet.load_weights(pretrained, by_name=True, skip_mismatch=True)
         contextnet.compile(
             optimizer=optimizer,
             steps_per_execution=spx,
