@@ -20,7 +20,7 @@ import tensorflow as tf
 
 from tensorflow_asr.losses.rnnt_loss import RnntLoss
 from tensorflow_asr.models.base_model import BaseModel
-from tensorflow_asr.models.layers.embedding import LiteEmbedding
+from tensorflow_asr.models.layers.embedding import Embedding
 from tensorflow_asr.utils import data_util, layer_util, math_util, shape_util
 
 Hypothesis = collections.namedtuple("Hypothesis", ("index", "prediction", "states"))
@@ -46,7 +46,7 @@ class TransducerPrediction(tf.keras.Model):
         **kwargs,
     ):
         super().__init__(name=name, **kwargs)
-        self.embed = LiteEmbedding(vocab_size, embed_dim, regularizer=kernel_regularizer, name=f"{name}_embedding")
+        self.embed = Embedding(vocab_size, embed_dim, regularizer=kernel_regularizer, name=f"{name}_embedding", mask_zero=True)
         self.do = tf.keras.layers.Dropout(embed_dropout, name=f"{name}_dropout")
         # Initialize rnn layers
         RnnClass = layer_util.get_rnn(rnn_type)
@@ -62,6 +62,7 @@ class TransducerPrediction(tf.keras.Model):
                 implementation=rnn_implementation,
                 kernel_regularizer=kernel_regularizer,
                 bias_regularizer=bias_regularizer,
+                dtype=(tf.float16 if tf.keras.mixed_precision.global_policy().name == "mixed_bfloat16" else None),
             )
             if layer_norm:
                 ln = tf.keras.layers.LayerNormalization(name=f"{name}_ln_{i}")
@@ -97,8 +98,8 @@ class TransducerPrediction(tf.keras.Model):
         outputs, prediction_length = inputs
         outputs = self.embed(outputs, training=training)
         outputs = self.do(outputs, training=training)
+        mask = tf.sequence_mask(prediction_length, maxlen=tf.shape(outputs)[1])
         for i, rnn in enumerate(self.rnns):
-            mask = tf.sequence_mask(prediction_length, maxlen=tf.shape(outputs)[1])
             outputs = math_util.bfloat16_to_float16(outputs)
             outputs = rnn(outputs, training=training, mask=mask)
             outputs = outputs[0]
@@ -124,9 +125,10 @@ class TransducerPrediction(tf.keras.Model):
         else:
             outputs = self.embed(inputs, training=False)
         outputs = self.do(outputs, training=False)
+        mask = self.embed.compute_mask(outputs)
         new_states = []
         for i, rnn in enumerate(self.rnns):
-            outputs = rnn(outputs, training=False, initial_state=tf.unstack(states[i], axis=0))
+            outputs = rnn(outputs, training=False, initial_state=tf.unstack(states[i], axis=0), mask=mask)
             new_states.append(tf.stack(outputs[1:]))
             outputs = outputs[0]
             if self.lns[i] is not None:
