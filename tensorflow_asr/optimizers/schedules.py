@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import tensorflow as tf
-from tensorflow.keras.optimizers.schedules import ExponentialDecay
 
 
 class TransformerSchedule(tf.keras.optimizers.schedules.LearningRateSchedule):
@@ -52,7 +51,7 @@ class SANSchedule(tf.keras.optimizers.schedules.LearningRateSchedule):
         return (self.lamb / tf.math.sqrt(self.d_model)) * tf.math.minimum(arg1, arg2)
 
 
-class BoundExponentialDecay(ExponentialDecay):
+class BoundExponentialDecay(tf.keras.optimizers.schedules.ExponentialDecay):
     def __init__(self, min_lr=0.0, **kwargs):
         super().__init__(**kwargs)
         self.min_lr = min_lr
