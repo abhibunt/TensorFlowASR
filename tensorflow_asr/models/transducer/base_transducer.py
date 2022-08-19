@@ -302,10 +302,11 @@ class Transducer(BaseModel):
         blank=0,
         run_eagerly=None,
         mxp=True,
+        ga_steps=None,
         **kwargs,
     ):
         loss = RnntLoss(blank=blank)
-        super().compile(loss=loss, optimizer=optimizer, run_eagerly=run_eagerly, mxp=mxp, **kwargs)
+        super().compile(loss=loss, optimizer=optimizer, run_eagerly=run_eagerly, mxp=mxp, ga_steps=ga_steps, **kwargs)
 
     def call(
         self,

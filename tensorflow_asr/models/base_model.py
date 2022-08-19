@@ -89,25 +89,21 @@ class BaseModel(tf.keras.Model):
         """Custom function for building model (uses self.build so cannot overwrite that function)"""
         raise NotImplementedError()
 
-    def add_ga(
-        self,
-        ga_steps=None,
-    ):
-        if isinstance(ga_steps, int) and ga_steps > 1:
-            self.use_ga = True
-            self.ga = GradientAccumulator(ga_steps=ga_steps, trainable_variables=self.trainable_variables)
-        else:
-            self.use_ga = False
-
     def compile(
         self,
         loss,
         optimizer,
         run_eagerly=None,
         mxp=True,
+        ga_steps=None,
         **kwargs,
     ):
         self.mxp = mxp
+        if isinstance(ga_steps, int) and ga_steps > 1:
+            self.use_ga = True
+            self.ga = GradientAccumulator(ga_steps=ga_steps, trainable_variables=self.trainable_variables)
+        else:
+            self.use_ga = False
         self.add_metric(metric=tf.keras.metrics.Mean(name="loss", dtype=tf.float32))
         super().compile(optimizer=optimizer, loss=loss, run_eagerly=run_eagerly, **kwargs)
 

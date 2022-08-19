@@ -81,7 +81,6 @@ def main(
     with strategy.scope():
         contextnet = ContextNet(**config.model_config, vocab_size=text_featurizer.num_classes)
         contextnet.make(speech_featurizer.shape, prediction_shape=text_featurizer.prepand_shape, batch_size=global_batch_size)
-        contextnet.add_ga(ga_steps=ga_steps)
         optimizer = tf.keras.optimizers.Adam(
             TransformerSchedule(
                 d_model=contextnet.dmodel,
@@ -90,18 +89,17 @@ def main(
             ),
             **config.learning_config.optimizer_config
         )
-
-    if pretrained:
-        contextnet.load_weights(pretrained, by_name=True, skip_mismatch=True)
-    contextnet.summary()
-    contextnet.add_featurizers(speech_featurizer=speech_featurizer, text_featurizer=text_featurizer)
-    contextnet.compile(
-        optimizer=optimizer,
-        steps_per_execution=spx,
-        blank=text_featurizer.blank,
-        jit_compile=jit_compile,
-        mxp=mxp,
-    )
+        if pretrained:
+            contextnet.load_weights(pretrained, by_name=True, skip_mismatch=True)
+        contextnet.compile(
+            optimizer=optimizer,
+            steps_per_execution=spx,
+            blank=text_featurizer.blank,
+            jit_compile=jit_compile,
+            mxp=mxp,
+            ga_steps=ga_steps,
+        )
+        contextnet.summary()
 
     callbacks = [
         tf.keras.callbacks.ModelCheckpoint(**config.learning_config.running_config.checkpoint),

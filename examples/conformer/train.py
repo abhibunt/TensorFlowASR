@@ -46,7 +46,7 @@ def main(
     ga_steps: int = None,
 ):
     tf.keras.backend.clear_session()
-    tf.config.optimizer.set_experimental_options({"auto_mixed_precision": mxp})
+    env_util.setup_mxp(mxp=mxp)
     strategy = env_util.setup_strategy(devices)
 
     config = Config(config_path)
@@ -84,7 +84,6 @@ def main(
         conformer.make(speech_featurizer.shape, prediction_shape=text_featurizer.prepand_shape, batch_size=global_batch_size)
         if pretrained:
             conformer.load_weights(pretrained, by_name=True, skip_mismatch=True)
-        conformer.summary()
         optimizer = tf.keras.optimizers.Adam(
             TransformerSchedule(
                 d_model=conformer.dmodel,
@@ -93,14 +92,15 @@ def main(
             ),
             **config.learning_config.optimizer_config,
         )
-        conformer.add_featurizers(speech_featurizer=speech_featurizer, text_featurizer=text_featurizer)
         conformer.compile(
             optimizer=optimizer,
             steps_per_execution=spx,
             blank=text_featurizer.blank,
             jit_compile=jit_compile,
+            mxp=mxp,
             ga_steps=ga_steps,
         )
+        conformer.summary()
 
     callbacks = [
         tf.keras.callbacks.ModelCheckpoint(**config.learning_config.running_config.checkpoint),

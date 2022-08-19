@@ -62,11 +62,12 @@ class CtcModel(BaseModel):
         optimizer,
         blank=0,
         run_eagerly=None,
+        mxp=True,
         ga_steps=None,
         **kwargs,
     ):
         loss = CtcLoss(blank=blank)
-        super().compile(loss=loss, optimizer=optimizer, run_eagerly=run_eagerly, ga_steps=ga_steps, **kwargs)
+        super().compile(loss=loss, optimizer=optimizer, run_eagerly=run_eagerly, mxp=mxp, ga_steps=ga_steps, **kwargs)
 
     def call(
         self,

@@ -97,8 +97,7 @@ def has_devices(
 def setup_mxp(
     mxp=True,
 ):
-    if mxp:
-        if has_devices("TPU"):
-            tf.keras.mixed_precision.set_global_policy("mixed_bfloat16")
-        elif has_devices("GPU"):
-            tf.keras.mixed_precision.set_global_policy("mixed_float16")
+    if not mxp:
+        return
+    policy = "mixed_bfloat16" if has_devices("TPU") else "mixed_float16"
+    tf.keras.mixed_precision.set_global_policy(policy)
