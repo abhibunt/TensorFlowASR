@@ -99,6 +99,7 @@ class TransducerPrediction(tf.keras.Model):
         outputs = self.do(outputs, training=training)
         for i, rnn in enumerate(self.rnns):
             mask = tf.sequence_mask(prediction_length, maxlen=tf.shape(outputs)[1])
+            outputs = math_util.bfloat16_to_float16(outputs)
             outputs = rnn(outputs, training=training, mask=mask)
             outputs = outputs[0]
             if self.lns[i] is not None:

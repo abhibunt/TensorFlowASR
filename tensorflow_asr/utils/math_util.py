@@ -166,3 +166,11 @@ def pad_tfarray(
         index, tfarray, paddings = tf.while_loop(condition, body, loop_vars=[index, tfarray, paddings], swap_memory=False)
         paddings.close()
         return tfarray
+
+
+def bfloat16_to_float16(
+    tensor,
+):
+    if tensor.dtype == "bfloat16":
+        return tf.cast(tensor, "float16")
+    return tensor
