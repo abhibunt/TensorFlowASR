@@ -95,7 +95,7 @@ class BaseModel(tf.keras.Model):
     ):
         if isinstance(ga_steps, int) and ga_steps > 1:
             self.use_ga = True
-            self.ga = GradientAccumulator(ga_steps=ga_steps)
+            self.ga = GradientAccumulator(ga_steps=ga_steps, trainable_variables=self.trainable_variables)
         else:
             self.use_ga = False
 
