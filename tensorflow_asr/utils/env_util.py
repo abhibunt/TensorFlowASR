@@ -101,3 +101,4 @@ def setup_mxp(
         return
     policy = "mixed_bfloat16" if has_devices("TPU") else "mixed_float16"
     tf.keras.mixed_precision.set_global_policy(policy)
+    logger.info(f"USING mixed precision policy {policy}")
