@@ -204,7 +204,6 @@ class TransducerJoint(tf.keras.Model):
             name=f"{name}_vocab",
             kernel_regularizer=kernel_regularizer,
             bias_regularizer=bias_regularizer,
-            dtype=tf.float32,  # to compatible with rnnt_loss in mixed_precision
         )
 
     def call(self, inputs, training=False, **kwargs):
