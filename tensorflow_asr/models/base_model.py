@@ -17,7 +17,7 @@ import tensorflow as tf
 from tensorflow_asr.featurizers.speech_featurizers import SpeechFeaturizer
 from tensorflow_asr.featurizers.text_featurizers import TextFeaturizer
 from tensorflow_asr.optimizers.accumulation import GradientAccumulator
-from tensorflow_asr.utils import file_util
+from tensorflow_asr.utils import env_util, file_util
 
 
 class BaseModel(tf.keras.Model):
@@ -98,9 +98,15 @@ class BaseModel(tf.keras.Model):
         ga_steps=None,
         **kwargs,
     ):
-        self.mxp = mxp
-        if self.mxp:
-            optimizer = tf.keras.mixed_precision.LossScaleOptimizer(tf.keras.optimizers.get(optimizer))
+        if env_util.has_devices("TPU"):
+            self.use_loss_scale = False
+        else:
+            self.use_loss_scale = mxp
+            optimizer = (
+                tf.keras.mixed_precision.LossScaleOptimizer(tf.keras.optimizers.get(optimizer))
+                if self.use_loss_scale
+                else optimizer
+            )
         if isinstance(ga_steps, int) and ga_steps > 1:
             self.use_ga = True
             self.ga = GradientAccumulator(ga_steps=ga_steps, trainable_variables=self.trainable_variables)
@@ -147,10 +153,10 @@ class BaseModel(tf.keras.Model):
         with tf.GradientTape() as tape:
             y_pred = self(inputs, training=True)
             loss = self.compute_loss(y_true=y_true, y_pred=y_pred)
-            if self.mxp:
+            if self.use_loss_scale:
                 scaled_loss = self.optimizer.get_scaled_loss(loss)
 
-        if self.mxp:
+        if self.use_loss_scale:
             gradients = tape.gradient(scaled_loss, self.trainable_weights)
             gradients = self.optimizer.get_unscaled_gradients(gradients)
         else:
