@@ -140,7 +140,7 @@ class MultiHeadAttention(tf.keras.layers.Layer):
                 raise ValueError("mask's last dimension must be equal to the number of elements in 'key'")
         # apply mask
         if mask is not None:
-            mask = tf.cast(mask, tf.float32)
+            mask = tf.cast(mask, logits.dtype)
 
             # possibly expand on the head dimension so broadcasting works
             if len(mask.shape) != len(logits.shape):
@@ -178,7 +178,7 @@ class MultiHeadAttention(tf.keras.layers.Layer):
 
         # Scale dot-product, doing the division to either query or key
         # instead of their product saves some computation
-        depth = tf.constant(self.head_size, dtype=tf.float32)
+        depth = tf.constant(self.head_size, dtype=query.dtype)
         query /= tf.sqrt(depth)
 
         # Calculate dot product attention
@@ -273,7 +273,7 @@ class RelPositionMultiHeadAttention(MultiHeadAttention):
 
         logits = logits_with_u + logits_with_v[:, :, :, : tf.shape(logits_with_u)[3]]
 
-        depth = tf.constant(self.head_size, dtype=tf.float32)
+        depth = tf.constant(self.head_size, dtype=logits.dtype)
         logits /= tf.sqrt(depth)
 
         output, attn_coef = self.call_attention(query, key, value, logits, training=training, mask=mask)

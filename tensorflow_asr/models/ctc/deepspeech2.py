@@ -46,7 +46,6 @@ class ConvBlock(tf.keras.layers.Layer):
             kernel_size=kernels,
             strides=strides,
             padding="same",
-            dtype=tf.float32,
             name=f"{self.name}_{conv_type}",
         )
         self.bn = tf.keras.layers.BatchNormalization(name=f"{self.name}_bn")
