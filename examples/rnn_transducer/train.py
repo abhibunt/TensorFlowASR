@@ -41,8 +41,8 @@ def main(
     pretrained: str = None,
 ):
     tf.keras.backend.clear_session()
-    tf.config.optimizer.set_experimental_options({"auto_mixed_precision": mxp})
     strategy = env_util.setup_strategy(devices)
+    env_util.setup_mxp(mxp=mxp)
 
     config = Config(config_path)
 
@@ -79,13 +79,12 @@ def main(
         )
         if pretrained:
             rnn_transducer.load_weights(pretrained, by_name=True, skip_mismatch=True)
-        rnn_transducer.summary()
-        rnn_transducer.add_featurizers(speech_featurizer=speech_featurizer, text_featurizer=text_featurizer)
         rnn_transducer.compile(
             optimizer=config.learning_config.optimizer_config,
             steps_per_execution=spx,
             blank=text_featurizer.blank,
         )
+        rnn_transducer.summary()
 
     callbacks = [
         tf.keras.callbacks.ModelCheckpoint(**config.learning_config.running_config.checkpoint),

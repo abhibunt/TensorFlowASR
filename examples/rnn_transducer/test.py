@@ -41,8 +41,8 @@ def main(
     assert saved and output
     tf.random.set_seed(0)
     tf.keras.backend.clear_session()
-    tf.config.optimizer.set_experimental_options({"auto_mixed_precision": mxp})
     env_util.setup_devices([device], cpu=cpu)
+    env_util.setup_mxp(mxp=mxp)
 
     config = Config(config_path)
 
