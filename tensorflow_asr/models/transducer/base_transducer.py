@@ -46,7 +46,9 @@ class TransducerPrediction(tf.keras.Model):
         **kwargs,
     ):
         super().__init__(name=name, **kwargs)
-        self.embed = Embedding(vocab_size, embed_dim, regularizer=kernel_regularizer, name=f"{name}_embedding", mask_zero=True)
+        self.embed = Embedding(
+            vocab_size, embed_dim, regularizer=kernel_regularizer, name=f"{name}_embedding", mask_zero=False
+        )
         self.do = tf.keras.layers.Dropout(embed_dropout, name=f"{name}_dropout")
         # Initialize rnn layers
         RnnClass = layer_util.get_rnn(rnn_type)
@@ -124,10 +126,9 @@ class TransducerPrediction(tf.keras.Model):
         else:
             outputs = self.embed(inputs, training=False)
         outputs = self.do(outputs, training=False)
-        mask = self.embed.compute_mask(outputs)
         new_states = []
         for i, rnn in enumerate(self.rnns):
-            outputs = rnn(outputs, training=False, initial_state=tf.unstack(states[i], axis=0), mask=mask)
+            outputs = rnn(outputs, training=False, initial_state=tf.unstack(states[i], axis=0))
             new_states.append(tf.stack(outputs[1:]))
             outputs = outputs[0]
             if self.lns[i] is not None:
