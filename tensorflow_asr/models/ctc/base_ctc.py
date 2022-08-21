@@ -40,6 +40,7 @@ class CtcModel(BaseModel):
             )
         else:
             self.decoder = decoder
+        self.out = tf.keras.layers.Activation("linear", name=f"{self.name}_out", dtype=tf.float32)  # for numerical stability
         self.time_reduction_factor = 1
 
     def make(
@@ -77,6 +78,7 @@ class CtcModel(BaseModel):
     ):
         logits = self.encoder(inputs["inputs"], training=training, **kwargs)
         logits = self.decoder(logits, training=training, **kwargs)
+        logits = self.out(logits, training=training)
         return data_util.create_logits(
             logits=logits,
             logits_length=math_util.get_reduced_length(inputs["inputs_length"], self.time_reduction_factor),

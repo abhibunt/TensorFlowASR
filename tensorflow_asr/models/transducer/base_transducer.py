@@ -279,6 +279,7 @@ class Transducer(BaseModel):
             trainable=joint_trainable,
             name=f"{name}_joint",
         )
+        self.out = tf.keras.layers.Activation("linear", name=f"{name}_out", dtype=tf.float32)  # for numerical stability
         self.time_reduction_factor = 1
 
     def make(
@@ -322,6 +323,7 @@ class Transducer(BaseModel):
         enc = self.encoder(inputs["inputs"], training=training, **kwargs)
         pred = self.predict_net([inputs["predictions"], inputs["predictions_length"]], training=training, **kwargs)
         logits = self.joint_net([enc, pred], training=training, **kwargs)
+        logits = self.out(logits, training=training)
         return data_util.create_logits(
             logits=logits,
             logits_length=math_util.get_reduced_length(inputs["inputs_length"], self.time_reduction_factor),
