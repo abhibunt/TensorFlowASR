@@ -47,11 +47,11 @@ class TransducerPrediction(tf.keras.Model):
         **kwargs,
     ):
         super().__init__(name=name, **kwargs)
-        self.gauss_noise = tf.keras.layers.GaussianNoise(stddev=gauss_noise_stddev, name=f"{name}_gaussian_noise")
         self.embed = Embedding(
             vocab_size, embed_dim, regularizer=kernel_regularizer, name=f"{name}_embedding", mask_zero=False
         )
         self.do = tf.keras.layers.Dropout(embed_dropout, name=f"{name}_dropout")
+        self.gauss_noise = tf.keras.layers.GaussianNoise(stddev=gauss_noise_stddev, name=f"{name}_gaussian_noise")
         # Initialize rnn layers
         RnnClass = layer_util.get_rnn(rnn_type)
         self.rnns = []
@@ -100,9 +100,9 @@ class TransducerPrediction(tf.keras.Model):
         # inputs has shape [B, U]
         # use tf.gather_nd instead of tf.gather for tflite conversion
         outputs, prediction_length = inputs
-        outputs = self.gauss_noise(outputs, training=training)
         outputs = self.embed(outputs, training=training)
         outputs = self.do(outputs, training=training)
+        outputs = self.gauss_noise(outputs, training=training)
         mask = tf.sequence_mask(prediction_length, maxlen=tf.shape(outputs)[1])
         for i, rnn in enumerate(self.rnns):
             outputs = rnn(outputs, training=training, mask=mask)
