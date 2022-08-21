@@ -28,6 +28,7 @@ class ContextNet(Transducer):
         encoder_blocks: List[dict],
         encoder_alpha: float = 0.5,
         encoder_trainable: bool = True,
+        encoder_gauss_noise_stddev: float = 0.075,  # variational noise, from http://arxiv.org/abs/1211.3711
         prediction_embed_dim: int = 512,
         prediction_embed_dropout: int = 0,
         prediction_num_rnns: int = 1,
@@ -37,13 +38,13 @@ class ContextNet(Transducer):
         prediction_layer_norm: bool = True,
         prediction_projection_units: int = 0,
         prediction_trainable: bool = True,
+        prediction_gauss_noise_stddev: float = 0.075,  # variational noise, from http://arxiv.org/abs/1211.3711
         joint_dim: int = 1024,
         joint_activation: str = "tanh",
         prejoint_linear: bool = True,
         postjoint_linear: bool = False,
         joint_mode: str = "add",
         joint_trainable: bool = True,
-        gauss_noise_stddev=0.075,  # variational noise, from http://arxiv.org/abs/1211.3711
         kernel_regularizer=L2,
         bias_regularizer=L2,
         name: str = "contextnet",
@@ -53,7 +54,7 @@ class ContextNet(Transducer):
             encoder=ContextNetEncoder(
                 blocks=encoder_blocks,
                 alpha=encoder_alpha,
-                gauss_noise_stddev=gauss_noise_stddev,
+                gauss_noise_stddev=encoder_gauss_noise_stddev,
                 kernel_regularizer=kernel_regularizer,
                 bias_regularizer=bias_regularizer,
                 trainable=encoder_trainable,
@@ -68,6 +69,7 @@ class ContextNet(Transducer):
             rnn_implementation=prediction_rnn_implementation,
             layer_norm=prediction_layer_norm,
             prediction_trainable=prediction_trainable,
+            prediction_gauss_noise_stddev=prediction_gauss_noise_stddev,
             projection_units=prediction_projection_units,
             joint_dim=joint_dim,
             joint_activation=joint_activation,

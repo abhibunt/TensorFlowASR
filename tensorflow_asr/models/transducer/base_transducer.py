@@ -40,12 +40,14 @@ class TransducerPrediction(tf.keras.Model):
         rnn_implementation: int = 2,
         layer_norm: bool = True,
         projection_units: int = 0,
+        gauss_noise_stddev: float = 0.075,
         kernel_regularizer=None,
         bias_regularizer=None,
         name="transducer_prediction",
         **kwargs,
     ):
         super().__init__(name=name, **kwargs)
+        self.gauss_noise = tf.keras.layers.GaussianNoise(stddev=gauss_noise_stddev, name=f"{name}_gaussian_noise")
         self.embed = Embedding(
             vocab_size, embed_dim, regularizer=kernel_regularizer, name=f"{name}_embedding", mask_zero=False
         )
@@ -98,6 +100,7 @@ class TransducerPrediction(tf.keras.Model):
         # inputs has shape [B, U]
         # use tf.gather_nd instead of tf.gather for tflite conversion
         outputs, prediction_length = inputs
+        outputs = self.gauss_noise(outputs, training=training)
         outputs = self.embed(outputs, training=training)
         outputs = self.do(outputs, training=training)
         mask = tf.sequence_mask(prediction_length, maxlen=tf.shape(outputs)[1])
@@ -240,6 +243,7 @@ class Transducer(BaseModel):
         layer_norm: bool = True,
         projection_units: int = 0,
         prediction_trainable: bool = True,
+        prediction_gauss_noise_stddev: float = 0.075,
         joint_dim: int = 1024,
         joint_activation: str = "tanh",
         prejoint_linear: bool = True,
@@ -263,6 +267,7 @@ class Transducer(BaseModel):
             rnn_implementation=rnn_implementation,
             layer_norm=layer_norm,
             projection_units=projection_units,
+            gauss_noise_stddev=prediction_gauss_noise_stddev,
             kernel_regularizer=kernel_regularizer,
             bias_regularizer=bias_regularizer,
             trainable=prediction_trainable,
