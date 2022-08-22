@@ -26,10 +26,10 @@ class CtcLoss(tf.keras.losses.Loss):
 
     def call(self, y_true, y_pred):
         return tf.nn.ctc_loss(
-            logits=y_pred["logits"],
-            logit_length=y_pred["logits_length"],
-            labels=y_true["labels"],
-            label_length=y_true["labels_length"],
+            logits=tf.cast(y_pred["logits"], tf.float32),
+            logit_length=tf.cast(y_pred["logits_length"], tf.int32),
+            labels=tf.cast(y_true["labels"], tf.int32),
+            label_length=tf.cast(y_true["labels_length"], tf.int32),
             logits_time_major=False,
             blank_index=self.blank,
             name=self.name,
