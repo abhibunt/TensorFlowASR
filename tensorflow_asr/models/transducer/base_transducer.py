@@ -43,14 +43,22 @@ class TransducerPrediction(tf.keras.Model):
         gauss_noise_stddev: float = 0.075,
         kernel_regularizer=None,
         bias_regularizer=None,
+        dtype=None,
         name="transducer_prediction",
         **kwargs,
     ):
         super().__init__(name=name, **kwargs)
+        # cudnn not support bfloat16
+        dtype = tf.float32 if tf.keras.mixed_precision.global_policy().name == "mixed_bfloat16" else None
         self.embed = Embedding(
-            vocab_size, embed_dim, regularizer=kernel_regularizer, name=f"{name}_embedding", mask_zero=False
+            vocab_size,
+            embed_dim,
+            regularizer=kernel_regularizer,
+            name=f"{name}_embedding",
+            mask_zero=False,
+            dtype=dtype,
         )
-        self.do = tf.keras.layers.Dropout(embed_dropout, name=f"{name}_dropout")
+        self.do = tf.keras.layers.Dropout(embed_dropout, name=f"{name}_dropout", dtype=dtype)
         self.gauss_noise = tf.keras.layers.GaussianNoise(stddev=gauss_noise_stddev, name=f"{name}_gaussian_noise")
         # Initialize rnn layers
         RnnClass = layer_util.get_rnn(rnn_type)
@@ -66,10 +74,10 @@ class TransducerPrediction(tf.keras.Model):
                 implementation=rnn_implementation,
                 kernel_regularizer=kernel_regularizer,
                 bias_regularizer=bias_regularizer,
-                dtype=(tf.float16 if tf.keras.mixed_precision.global_policy().name == "mixed_bfloat16" else None),
+                dtype=dtype,
             )
             if layer_norm:
-                ln = tf.keras.layers.LayerNormalization(name=f"{name}_ln_{i}")
+                ln = tf.keras.layers.LayerNormalization(name=f"{name}_ln_{i}", dtype=dtype)
             else:
                 ln = None
             if projection_units > 0:
@@ -78,6 +86,7 @@ class TransducerPrediction(tf.keras.Model):
                     name=f"{name}_projection_{i}",
                     kernel_regularizer=kernel_regularizer,
                     bias_regularizer=bias_regularizer,
+                    dtype=dtype,
                 )
             else:
                 projection = None

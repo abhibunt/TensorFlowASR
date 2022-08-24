@@ -13,6 +13,7 @@
 # limitations under the License.
 # RNNT loss implementation in pure TensorFlow is borrowed from [iamjanvijay's repo](https://github.com/iamjanvijay/rnnt)
 
+import numpy as np
 import tensorflow as tf
 from tensorflow.python.ops.gen_array_ops import matrix_diag_part_v2
 
@@ -20,7 +21,7 @@ from tensorflow_asr.utils import env_util
 
 logger = tf.get_logger()
 
-LOG_0 = float("-inf")
+LOG_0 = -np.inf
 
 
 class RnntLoss(tf.keras.losses.Loss):
