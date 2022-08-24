@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import math
 import os
 
 import fire
@@ -86,8 +85,8 @@ def main(
         optimizer = tf.keras.optimizers.Adam(
             TransformerSchedule(
                 d_model=contextnet.dmodel,
-                warmup_steps=config.learning_config.optimizer_config.pop("warmup_steps", 10000),
-                max_lr=(0.05 / math.sqrt(contextnet.dmodel)),
+                warmup_steps=config.learning_config.optimizer_config.pop("warmup_steps", 15000),
+                max_lr=0.0025,
             ),
             **config.learning_config.optimizer_config
         )

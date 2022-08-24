@@ -32,8 +32,9 @@ class TransducerPrediction(tf.keras.Model):
     def __init__(
         self,
         vocab_size: int,
-        embed_dim: int,
-        embed_dropout: float = 0,
+        label_encode_mode: str = "category",  # either "embedding" | "category"
+        category_mode: str = "one_hot",  # either "one_hot" | "multi_hot" | "count"
+        embed_dim: int = 0,
         num_rnns: int = 1,
         rnn_units: int = 512,
         rnn_type: str = "lstm",
@@ -48,18 +49,29 @@ class TransducerPrediction(tf.keras.Model):
         **kwargs,
     ):
         super().__init__(name=name, **kwargs)
+        if label_encode_mode not in ["category", "embedding"]:
+            raise ValueError("label_encode_mode must be either 'category' or 'embedding'")
+        self.label_encode_mode = label_encode_mode
         # cudnn not support bfloat16
         dtype = tf.float32 if tf.keras.mixed_precision.global_policy().name == "mixed_bfloat16" else None
-        self.embed = Embedding(
-            vocab_size,
-            embed_dim,
-            regularizer=kernel_regularizer,
-            name=f"{name}_embedding",
-            mask_zero=False,
-            dtype=dtype,
-        )
-        self.do = tf.keras.layers.Dropout(embed_dropout, name=f"{name}_dropout", dtype=dtype)
-        self.gauss_noise = tf.keras.layers.GaussianNoise(stddev=gauss_noise_stddev, name=f"{name}_gaussian_noise")
+        if self.label_encode_mode == "embedding":
+            self.label_encoder = Embedding(
+                vocab_size,
+                embed_dim,
+                regularizer=kernel_regularizer,
+                name=f"{self.name}_{self.label_encode_mode}",
+                mask_zero=False,
+                dtype=dtype,
+            )
+        else:
+            self.label_encoder = tf.keras.layers.CategoryEncoding(
+                num_tokens=vocab_size,
+                output_mode=category_mode,
+                sparse=False,
+                name=f"{self.name}_{self.label_encode_mode}",
+                dtype=dtype,
+            )
+        self.gauss_noise = tf.keras.layers.GaussianNoise(stddev=gauss_noise_stddev, name=f"{name}_gaussian_noise", dtype=dtype)
         # Initialize rnn layers
         RnnClass = layer_util.get_rnn(rnn_type)
         self.rnns = []
@@ -109,8 +121,7 @@ class TransducerPrediction(tf.keras.Model):
         # inputs has shape [B, U]
         # use tf.gather_nd instead of tf.gather for tflite conversion
         outputs, prediction_length = inputs
-        outputs = self.embed(outputs, training=training)
-        outputs = self.do(outputs, training=training)
+        outputs = self.label_encoder(outputs, training=training)
         outputs = self.gauss_noise(outputs, training=training)
         mask = tf.sequence_mask(prediction_length, maxlen=tf.shape(outputs)[1])
         for i, rnn in enumerate(self.rnns):
@@ -133,10 +144,10 @@ class TransducerPrediction(tf.keras.Model):
             tf.Tensor: outputs with shape [1, 1, P]
             tf.Tensor: new states with shape [num_lstms, 2, 1, P]
         """
-        if tflite:
-            outputs = self.embed.recognize_tflite(inputs)
+        if tflite and self.label_encode_mode == "embedding":
+            outputs = self.label_encoder.recognize_tflite(inputs)
         else:
-            outputs = self.embed(inputs, training=False)
+            outputs = self.label_encoder(inputs, training=False)
         outputs = self.do(outputs, training=False)
         new_states = []
         for i, rnn in enumerate(self.rnns):
@@ -166,7 +177,8 @@ class TransducerJoint(tf.keras.Model):
         vocab_size: int,
         joint_dim: int = 1024,
         activation: str = "tanh",
-        prejoint_linear: bool = True,
+        prejoint_encoder_linear: bool = True,
+        prejoint_prediction_linear: bool = True,
         postjoint_linear: bool = False,
         joint_mode: str = "add",
         kernel_regularizer=None,
@@ -186,13 +198,15 @@ class TransducerJoint(tf.keras.Model):
         else:
             raise ValueError("activation must be either 'linear', 'relu' or 'tanh'")
 
-        self.prejoint_linear = prejoint_linear
+        self.prejoint_encoder_linear = prejoint_encoder_linear
+        self.prejoint_prediction_linear = prejoint_prediction_linear
         self.postjoint_linear = postjoint_linear
 
-        if self.prejoint_linear:
+        if self.prejoint_encoder_linear:
             self.ffn_enc = tf.keras.layers.Dense(
                 joint_dim, name=f"{name}_enc", kernel_regularizer=kernel_regularizer, bias_regularizer=bias_regularizer
             )
+        if self.prejoint_prediction_linear:
             self.ffn_pred = tf.keras.layers.Dense(
                 joint_dim, use_bias=False, name=f"{name}_pred", kernel_regularizer=kernel_regularizer
             )
@@ -223,8 +237,9 @@ class TransducerJoint(tf.keras.Model):
         # enc has shape [B, T, E]
         # pred has shape [B, U, P]
         enc_out, pred_out = inputs
-        if self.prejoint_linear:
+        if self.prejoint_encoder_linear:
             enc_out = self.ffn_enc(enc_out, training=training)  # [B, T, E] => [B, T, V]
+        if self.prejoint_prediction_linear:
             pred_out = self.ffn_pred(pred_out, training=training)  # [B, U, P] => [B, U, V]
         enc_out = self.enc_reshape(enc_out, repeats=tf.shape(pred_out)[1])
         pred_out = self.pred_reshape(pred_out, repeats=tf.shape(enc_out)[1])
@@ -243,8 +258,9 @@ class Transducer(BaseModel):
         self,
         encoder: tf.keras.Model,
         vocab_size: int,
+        label_encode_mode: str = "category",
+        category_mode: str = "one_hot",
         embed_dim: int = 512,
-        embed_dropout: float = 0,
         num_rnns: int = 1,
         rnn_units: int = 320,
         rnn_type: str = "lstm",
@@ -255,7 +271,8 @@ class Transducer(BaseModel):
         prediction_gauss_noise_stddev: float = 0.075,
         joint_dim: int = 1024,
         joint_activation: str = "tanh",
-        prejoint_linear: bool = True,
+        prejoint_encoder_linear: bool = True,
+        prejoint_prediction_linear: bool = True,
         postjoint_linear: bool = False,
         joint_mode: str = "add",
         joint_trainable: bool = True,
@@ -268,8 +285,9 @@ class Transducer(BaseModel):
         self.encoder = encoder
         self.predict_net = TransducerPrediction(
             vocab_size=vocab_size,
+            label_encode_mode=label_encode_mode,
+            category_mode=category_mode,
             embed_dim=embed_dim,
-            embed_dropout=embed_dropout,
             num_rnns=num_rnns,
             rnn_units=rnn_units,
             rnn_type=rnn_type,
@@ -286,7 +304,8 @@ class Transducer(BaseModel):
             vocab_size=vocab_size,
             joint_dim=joint_dim,
             activation=joint_activation,
-            prejoint_linear=prejoint_linear,
+            prejoint_encoder_linear=prejoint_encoder_linear,
+            prejoint_prediction_linear=prejoint_prediction_linear,
             postjoint_linear=postjoint_linear,
             joint_mode=joint_mode,
             kernel_regularizer=kernel_regularizer,

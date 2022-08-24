@@ -49,19 +49,23 @@ model_config:
   encoder_kernel_size: 32
   encoder_fc_factor: 0.5
   encoder_dropout: 0.1
+  encoder_gauss_noise_stddev: 0.075
+  prediction_label_encode_mode: category
+  prediction_category_mode: one_hot
   prediction_embed_dim: 320
-  prediction_embed_dropout: 0
   prediction_num_rnns: 1
   prediction_rnn_units: 320
   prediction_rnn_type: lstm
   prediction_rnn_implementation: 2
   prediction_layer_norm: True
   prediction_projection_units: 0
+  prediction_gauss_noise_stddev: 0.075
   joint_dim: 320
-  prejoint_linear: True
+  prejoint_encoder_linear: True
+  prejoint_prediction_linear: True
+  postjoint_linear: False
   joint_activation: tanh
   joint_mode: add
-  gauss_noise_stddev: 0.075
 
 learning_config:
   train_dataset_config:

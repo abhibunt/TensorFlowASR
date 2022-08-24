@@ -26,8 +26,8 @@ speech_config:
   top_db: null
 
 decoder_config:
-  vocabulary: ./vocabularies/librispeech/librispeech_train_4_1030.subwords
-  vocab_size: 1024
+  vocabulary: ./vocabularies/librispeech/librispeech_train_1000.wordpiece
+  vocab_size: 1000
   max_subword_length: 4
   blank_at_zero: True
   beam_width: 5
@@ -43,15 +43,20 @@ model_config:
   encoder_rnn_units: 1024
   encoder_nlayers: 8
   encoder_layer_norm: True
+  prediction_label_encode_mode: category
+  prediction_category_mode: one_hot
   prediction_embed_dim: 320
-  prediction_embed_dropout: 0.0
   prediction_num_rnns: 2
   prediction_rnn_units: 1024
   prediction_rnn_type: lstm
   prediction_projection_units: 320
   prediction_layer_norm: True
   joint_dim: 320
+  prejoint_encoder_linear: True
+  prejoint_prediction_linear: False
+  postjoint_linear: False
   joint_activation: tanh
+  joint_mode: add
 
 learning_config:
   train_dataset_config:

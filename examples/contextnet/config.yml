@@ -183,17 +183,23 @@ model_config:
       strides: 1
       residual: False
       activation: silu
+  encoder_gauss_noise_stddev: 0.075
+  prediction_label_encode_mode: category
+  prediction_category_mode: one_hot
   prediction_embed_dim: 640
-  prediction_embed_dropout: 0
   prediction_num_rnns: 1
   prediction_rnn_units: 640
   prediction_rnn_type: lstm
   prediction_rnn_implementation: 2
   prediction_layer_norm: True
   prediction_projection_units: 0
+  prediction_gauss_noise_stddev: 0.075
   joint_dim: 640
+  prejoint_encoder_linear: True
+  prejoint_prediction_linear: False
+  postjoint_linear: False
   joint_activation: tanh
-  gauss_noise_stddev: 0.075
+  joint_mode: add
 
 learning_config:
   train_dataset_config:
@@ -239,7 +245,7 @@ learning_config:
     stage: test
 
   optimizer_config:
-    warmup_steps: 10000
+    warmup_steps: 15000
     beta_1: 0.9
     beta_2: 0.98
     epsilon: 1e-9
