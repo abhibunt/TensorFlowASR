@@ -24,7 +24,7 @@ class OneHotBlank(tf.keras.layers.Layer):
     """
 
     def __init__(self, blank, depth, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__(trainable=False, **kwargs)
         self.blank = blank
         self.depth = depth
 
