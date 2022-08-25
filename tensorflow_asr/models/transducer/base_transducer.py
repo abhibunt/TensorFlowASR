@@ -21,6 +21,7 @@ import tensorflow as tf
 from tensorflow_asr.losses.rnnt_loss import RnntLoss
 from tensorflow_asr.models.base_model import BaseModel
 from tensorflow_asr.models.layers.embedding import Embedding
+from tensorflow_asr.models.layers.one_hot_blank import OneHotBlank
 from tensorflow_asr.utils import data_util, layer_util, math_util, shape_util
 
 Hypothesis = collections.namedtuple("Hypothesis", ("index", "prediction", "states"))
@@ -31,9 +32,9 @@ BeamHypothesis = collections.namedtuple("BeamHypothesis", ("score", "indices", "
 class TransducerPrediction(tf.keras.Model):
     def __init__(
         self,
+        blank: int,
         vocab_size: int,
-        label_encode_mode: str = "category",  # either "embedding" | "category"
-        category_mode: str = "one_hot",  # either "one_hot" | "multi_hot" | "count"
+        label_encoder_mode: str = "one_hot",  # either "embedding" | "one_hot"
         embed_dim: int = 0,
         num_rnns: int = 1,
         rnn_units: int = 512,
@@ -49,26 +50,25 @@ class TransducerPrediction(tf.keras.Model):
         **kwargs,
     ):
         super().__init__(name=name, **kwargs)
-        if label_encode_mode not in ["category", "embedding"]:
-            raise ValueError("label_encode_mode must be either 'category' or 'embedding'")
-        self.label_encode_mode = label_encode_mode
+        if label_encoder_mode not in ["one_hot", "embedding"]:
+            raise ValueError("label_encode_mode must be either 'one_hot' or 'embedding'")
+        self.label_encoder_mode = label_encoder_mode
         # cudnn not support bfloat16
         dtype = tf.float32 if tf.keras.mixed_precision.global_policy().name == "mixed_bfloat16" else None
-        if self.label_encode_mode == "embedding":
+        if self.label_encoder_mode == "embedding":
             self.label_encoder = Embedding(
                 vocab_size,
                 embed_dim,
                 regularizer=kernel_regularizer,
-                name=f"{self.name}_{self.label_encode_mode}",
+                name=f"{self.name}_{self.label_encoder_mode}",
                 mask_zero=False,
                 dtype=dtype,
             )
         else:
-            self.label_encoder = tf.keras.layers.CategoryEncoding(
-                num_tokens=vocab_size,
-                output_mode=category_mode,
-                sparse=False,
-                name=f"{self.name}_{self.label_encode_mode}",
+            self.label_encoder = OneHotBlank(
+                blank=blank,
+                depth=vocab_size,
+                name=f"{self.name}_{self.label_encoder_mode}",
                 dtype=dtype,
             )
         self.gauss_noise = tf.keras.layers.GaussianNoise(stddev=gauss_noise_stddev, name=f"{name}_gaussian_noise", dtype=dtype)
@@ -144,7 +144,7 @@ class TransducerPrediction(tf.keras.Model):
             tf.Tensor: outputs with shape [1, 1, P]
             tf.Tensor: new states with shape [num_lstms, 2, 1, P]
         """
-        if tflite and self.label_encode_mode == "embedding":
+        if tflite and self.label_encoder_mode == "embedding":
             outputs = self.label_encoder.recognize_tflite(inputs)
         else:
             outputs = self.label_encoder(inputs, training=False)
@@ -257,25 +257,25 @@ class Transducer(BaseModel):
     def __init__(
         self,
         encoder: tf.keras.Model,
+        blank: int,
         vocab_size: int,
-        label_encode_mode: str = "category",
-        category_mode: str = "one_hot",
-        embed_dim: int = 512,
-        num_rnns: int = 1,
-        rnn_units: int = 320,
-        rnn_type: str = "lstm",
-        rnn_implementation: int = 2,
-        layer_norm: bool = True,
-        projection_units: int = 0,
+        prediction_label_encoder_mode: str = "one_hot",
+        prediction_embed_dim: int = 512,
+        prediction_num_rnns: int = 1,
+        prediction_rnn_units: int = 320,
+        prediction_rnn_type: str = "lstm",
+        prediction_rnn_implementation: int = 2,
+        prediction_layer_norm: bool = True,
+        prediction_projection_units: int = 0,
         prediction_trainable: bool = True,
         prediction_gauss_noise_stddev: float = 0.075,
         joint_dim: int = 1024,
         joint_activation: str = "tanh",
+        joint_mode: str = "add",
+        joint_trainable: bool = True,
         prejoint_encoder_linear: bool = True,
         prejoint_prediction_linear: bool = True,
         postjoint_linear: bool = False,
-        joint_mode: str = "add",
-        joint_trainable: bool = True,
         kernel_regularizer=None,
         bias_regularizer=None,
         name="transducer",
@@ -284,16 +284,16 @@ class Transducer(BaseModel):
         super().__init__(name=name, **kwargs)
         self.encoder = encoder
         self.predict_net = TransducerPrediction(
+            blank=blank,
             vocab_size=vocab_size,
-            label_encode_mode=label_encode_mode,
-            category_mode=category_mode,
-            embed_dim=embed_dim,
-            num_rnns=num_rnns,
-            rnn_units=rnn_units,
-            rnn_type=rnn_type,
-            rnn_implementation=rnn_implementation,
-            layer_norm=layer_norm,
-            projection_units=projection_units,
+            label_encoder_mode=prediction_label_encoder_mode,
+            embed_dim=prediction_embed_dim,
+            num_rnns=prediction_num_rnns,
+            rnn_units=prediction_rnn_units,
+            rnn_type=prediction_rnn_type,
+            rnn_implementation=prediction_rnn_implementation,
+            layer_norm=prediction_layer_norm,
+            projection_units=prediction_projection_units,
             gauss_noise_stddev=prediction_gauss_noise_stddev,
             kernel_regularizer=kernel_regularizer,
             bias_regularizer=bias_regularizer,

@@ -172,7 +172,7 @@ class CharFeaturizer(TextFeaturizer):
                 lines.extend(fin.readlines())
         else:
             lines = ENGLISH_CHARACTERS
-        self.blank = 0 if self.decoder_config.blank_at_zero else None
+        self.blank = self.decoder_config.blank_index
         self.tokens2indices = {}
         self.tokens = []
         index = 1 if self.blank == 0 else 0
@@ -586,7 +586,7 @@ class WordPieceFeaturizer(TextFeaturizer):
         decoder_config: dict,
     ):
         super().__init__(decoder_config)
-        self.blank = 0  # treat [PAD] as blank
+        self.blank = self.decoder_config.blank_index  # treat [PAD] as blank
         self.vocab = None
         with tf.io.gfile.GFile(self.decoder_config.vocabulary, "r") as voc:
             self.vocab = voc.read().splitlines()

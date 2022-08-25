@@ -80,7 +80,7 @@ def main(
     )
 
     with strategy.scope():
-        conformer = Conformer(**config.model_config, vocab_size=text_featurizer.num_classes)
+        conformer = Conformer(**config.model_config, blank=text_featurizer.blank, vocab_size=text_featurizer.num_classes)
         conformer.make(speech_featurizer.shape, prediction_shape=text_featurizer.prepand_shape, batch_size=global_batch_size)
         if pretrained:
             conformer.load_weights(pretrained, by_name=True, skip_mismatch=True)

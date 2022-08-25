@@ -27,7 +27,7 @@ LOG_0 = -np.inf
 class RnntLoss(tf.keras.losses.Loss):
     def __init__(
         self,
-        blank=0,
+        blank,
         name=None,
     ):
         if blank != 0:  # restrict blank index

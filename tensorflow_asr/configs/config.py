@@ -23,7 +23,7 @@ class DecoderConfig:
         if not config:
             config = {}
         self.beam_width = config.pop("beam_width", 0)
-        self.blank_at_zero = config.pop("blank_at_zero", True)
+        self.blank_index = config.pop("blank_index", 0)
         self.norm_score = config.pop("norm_score", True)
         self.lm_config = config.pop("lm_config", {})
 

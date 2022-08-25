@@ -27,7 +27,7 @@ decoder_config:
   vocabulary: ./vocabularies/librispeech/librispeech_train_1000.wordpiece
   vocab_size: 1000
   max_subword_length: 50
-  blank_at_zero: True
+  blank_index: 0
   beam_width: 5
   norm_score: True
 
@@ -184,8 +184,7 @@ model_config:
       residual: False
       activation: silu
   encoder_gauss_noise_stddev: 0.075
-  prediction_label_encode_mode: category
-  prediction_category_mode: one_hot
+  prediction_label_encode_mode: one_hot
   prediction_embed_dim: 640
   prediction_num_rnns: 1
   prediction_rnn_units: 640
@@ -194,9 +193,9 @@ model_config:
   prediction_layer_norm: True
   prediction_projection_units: 0
   prediction_gauss_noise_stddev: 0.075
-  joint_dim: 640
-  prejoint_encoder_linear: True
-  prejoint_prediction_linear: False
+  joint_dim: 320
+  prejoint_encoder_linear: False
+  prejoint_prediction_linear: True
   postjoint_linear: False
   joint_activation: tanh
   joint_mode: add

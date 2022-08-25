@@ -73,7 +73,9 @@ def main(
     )
 
     with strategy.scope():
-        rnn_transducer = RnnTransducer(**config.model_config, vocab_size=text_featurizer.num_classes)
+        rnn_transducer = RnnTransducer(
+            **config.model_config, blank=text_featurizer.blank, vocab_size=text_featurizer.num_classes
+        )
         rnn_transducer.make(
             speech_featurizer.shape, prediction_shape=text_featurizer.prepand_shape, batch_size=global_batch_size
         )

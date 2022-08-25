@@ -43,8 +43,7 @@ model_config:
   encoder_rnn_units: 1024
   encoder_nlayers: 8
   encoder_layer_norm: True
-  prediction_label_encode_mode: category
-  prediction_category_mode: one_hot
+  prediction_label_encode_mode: one_hot
   prediction_embed_dim: 320
   prediction_num_rnns: 2
   prediction_rnn_units: 1024
