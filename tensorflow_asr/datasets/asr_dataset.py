@@ -243,6 +243,9 @@ class ASRDataset(BaseDataset):
         if self.shuffle:
             dataset = dataset.shuffle(self.buffer_size, reshuffle_each_iteration=True)
 
+        if self.cache:
+            dataset = dataset.cache()
+
         if self.indefinite and self.total_steps:
             dataset = dataset.repeat()
 
@@ -266,9 +269,6 @@ class ASRDataset(BaseDataset):
             ),
             drop_remainder=self.drop_remainder,
         )
-
-        if self.cache:
-            dataset = dataset.cache()
 
         # PREFETCH to improve speed of input length
         dataset = dataset.prefetch(AUTOTUNE)
