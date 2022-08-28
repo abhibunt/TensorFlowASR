@@ -88,23 +88,24 @@ class CtcModel(BaseModel):
     def recognize(
         self,
         inputs: Dict[str, tf.Tensor],
+        **kwargs,
     ):
-        logits = self(inputs, training=False)
-        probs = tf.nn.softmax(logits["logits"])
-
-        def map_fn(prob):
-            return tf.numpy_function(self._perform_greedy, inp=[prob], Tout=tf.string)
-
-        return tf.map_fn(map_fn, probs, fn_output_signature=tf.TensorSpec([], dtype=tf.string))
+        outputs = self(inputs, training=False)
+        decoded = self._perform_greedy(encoded=outputs["logits"], encoded_length=outputs["logits_length"])
+        return self.text_featurizer.iextract(decoded)
 
     def _perform_greedy(
         self,
-        probs: np.ndarray,
+        encoded,
+        encoded_length,
     ):
-        from ctc_decoders import ctc_greedy_decoder
-
-        decoded = ctc_greedy_decoder(probs, vocabulary=self.text_featurizer.non_blank_tokens)
-        return tf.convert_to_tensor(decoded, dtype=tf.string)
+        decoded, _ = tf.nn.ctc_greedy_decoder(
+            inputs=tf.transpose(encoded, perm=[1, 0, 2]),
+            sequence_length=encoded_length,
+            merge_repeated=True,
+            blank_index=self.text_featurizer.blank,
+        )
+        return tf.reshape(decoded[0].values, decoded[0].dense_shape)
 
     def recognize_tflite(
         self,

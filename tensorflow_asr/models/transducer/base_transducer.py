@@ -28,6 +28,8 @@ Hypothesis = collections.namedtuple("Hypothesis", ("index", "prediction", "state
 
 BeamHypothesis = collections.namedtuple("BeamHypothesis", ("score", "indices", "prediction", "states"))
 
+JOINT_MODES = ["add", "mul"]
+
 
 class TransducerPrediction(tf.keras.Model):
     def __init__(
@@ -161,14 +163,22 @@ class TransducerPrediction(tf.keras.Model):
         return outputs, tf.stack(new_states, axis=0)
 
 
-class TransducerJointReshape(tf.keras.layers.Layer):
-    def __init__(self, axis: int = 1, name="transducer_joint_reshape", **kwargs):
+class TransducerJointMerge(tf.keras.layers.Layer):
+    def __init__(self, joint_mode: str = "add", name="transducer_joint_merge", **kwargs):
         super().__init__(name=name, trainable=False, **kwargs)
-        self.axis = axis
+        if joint_mode not in JOINT_MODES:
+            raise ValueError(f"joint_mode must in {JOINT_MODES}")
+        self.joint_mode = joint_mode
 
-    def call(self, inputs, repeats=None, **kwargs):
-        outputs = tf.expand_dims(inputs, axis=self.axis)
-        return tf.repeat(outputs, repeats=repeats, axis=self.axis)
+    def call(self, inputs, training=False):
+        enc_out, pred_out = inputs
+        enc_out = tf.expand_dims(enc_out, axis=2)  # [B, T, 1, V]
+        pred_out = tf.expand_dims(pred_out, axis=1)  # [B, 1, U, V]
+        if self.joint_mode == "add":
+            outputs = tf.add(enc_out, pred_out)  # broadcast operator
+        else:
+            outputs = tf.multiply(enc_out, pred_out)  # broadcast operator
+        return outputs  # [B, T, U, V]
 
 
 class TransducerJoint(tf.keras.Model):
@@ -211,15 +221,7 @@ class TransducerJoint(tf.keras.Model):
                 joint_dim, use_bias=False, name=f"{name}_pred", kernel_regularizer=kernel_regularizer
             )
 
-        self.enc_reshape = TransducerJointReshape(axis=2, name=f"{name}_enc_reshape")
-        self.pred_reshape = TransducerJointReshape(axis=1, name=f"{name}_pred_reshape")
-
-        if joint_mode == "add":
-            self.joint = tf.keras.layers.Add(name=f"{name}_add")
-        elif joint_mode == "concat":
-            self.joint = tf.keras.layers.Concatenate(name=f"{name}_concat")
-        else:
-            raise ValueError("joint_mode must be either 'add' or 'concat'")
+        self.joint = TransducerJointMerge(joint_mode=joint_mode, name=f"{name}_merge")
 
         if self.postjoint_linear:
             self.ffn = tf.keras.layers.Dense(
@@ -241,12 +243,10 @@ class TransducerJoint(tf.keras.Model):
             enc_out = self.ffn_enc(enc_out, training=training)  # [B, T, E] => [B, T, V]
         if self.prejoint_prediction_linear:
             pred_out = self.ffn_pred(pred_out, training=training)  # [B, U, P] => [B, U, V]
-        enc_out = self.enc_reshape(enc_out, repeats=tf.shape(pred_out)[1])
-        pred_out = self.pred_reshape(pred_out, repeats=tf.shape(enc_out)[1])
-        outputs = self.joint([enc_out, pred_out], training=training)
+        outputs = self.joint([enc_out, pred_out], training=training)  # => [B, T, U, V]
         if self.postjoint_linear:
             outputs = self.ffn(outputs, training=training)
-        outputs = self.activation(outputs, training=training)  # => [B, T, U, V]
+        outputs = self.activation(outputs, training=training)
         outputs = self.ffn_out(outputs, training=training)
         return outputs
 
@@ -454,6 +454,8 @@ class Transducer(BaseModel):
     def recognize(
         self,
         inputs: Dict[str, tf.Tensor],
+        version: int = 2,
+        **kwargs,
     ):
         """
         RNN Transducer Greedy decoding
@@ -466,12 +468,13 @@ class Transducer(BaseModel):
         """
         encoded = self.encoder(inputs["inputs"], training=False)
         encoded_length = math_util.get_reduced_length(inputs["inputs_length"], self.time_reduction_factor)
-        return self._perform_greedy_batch(encoded=encoded, encoded_length=encoded_length)
+        return self._perform_greedy_batch(encoded=encoded, encoded_length=encoded_length, version=version)
 
     @tf.function(input_signature=[tf.TensorSpec(shape=[None, None], dtype=tf.float32)])
     def recognize_from_signal(
         self,
         signals: tf.Tensor,
+        version: int = 2,
     ):
         """
         RNN Transuder Greedy Decoding From Batch of Signals
@@ -483,7 +486,7 @@ class Transducer(BaseModel):
             tf.Tensor: batch of decoded transcripts in shape [B]
         """
         inputs, inputs_length = self.preprocess(signals)
-        return self.recognize(data_util.create_inputs(inputs=inputs, inputs_length=inputs_length))
+        return self.recognize(data_util.create_inputs(inputs=inputs, inputs_length=inputs_length), version=version)
 
     def recognize_tflite(
         self,
@@ -543,8 +546,10 @@ class Transducer(BaseModel):
         encoded_length: tf.Tensor,
         parallel_iterations: int = 10,
         swap_memory: bool = False,
+        version: int = 2,
     ):
         with tf.name_scope(f"{self.name}_perform_greedy_batch"):
+            perform_greedy = self._perform_greedy if version == 1 else self._perform_greedy_v2
             total_batch = tf.shape(encoded)[0]
             batch = tf.constant(0, dtype=tf.int32)
 
@@ -560,7 +565,7 @@ class Transducer(BaseModel):
                 return tf.less(batch, total_batch)
 
             def body(batch, decoded):
-                hypothesis = self._perform_greedy(
+                hypothesis = perform_greedy(
                     encoded=encoded[batch],
                     encoded_length=encoded_length[batch],
                     predicted=tf.constant(self.text_featurizer.blank, dtype=tf.int32),

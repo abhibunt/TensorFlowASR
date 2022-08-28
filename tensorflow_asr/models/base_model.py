@@ -130,6 +130,18 @@ class BaseModel(tf.keras.Model):
         self.speech_featurizer = speech_featurizer
         self.text_featurizer = text_featurizer
 
+    @property
+    def greedy_decoding_version(self):
+        if not hasattr(self, "_greedy_decoding_version"):
+            self._greedy_decoding_version = 2
+        return self._greedy_decoding_version
+
+    @greedy_decoding_version.setter
+    def greedy_decoding_version(self, version: int = 2):
+        if not isinstance(version, int):
+            raise ValueError("version must be an positive ingeter")
+        self._greedy_decoding_version = version
+
     # -------------------------------- STEP FUNCTIONS -------------------------------------
 
     def train_step(self, batch):
@@ -191,7 +203,7 @@ class BaseModel(tf.keras.Model):
         """
         inputs, y_true = batch
         labels = self.text_featurizer.iextract(y_true["labels"])
-        greedy_decoding = self.recognize(inputs)
+        greedy_decoding = self.recognize(inputs, version=self._greedy_decoding_version)
         if self.text_featurizer.decoder_config.beam_width == 0:
             beam_search_decoding = tf.map_fn(lambda _: tf.convert_to_tensor("", dtype=tf.string), labels)
         else:
