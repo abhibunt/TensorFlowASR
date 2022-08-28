@@ -453,7 +453,6 @@ class Transducer(BaseModel):
     def recognize(
         self,
         inputs: Dict[str, tf.Tensor],
-        version: int = 2,
         **kwargs,
     ):
         """
@@ -467,13 +466,12 @@ class Transducer(BaseModel):
         """
         encoded = self.encoder(inputs["inputs"], training=False)
         encoded_length = math_util.get_reduced_length(inputs["inputs_length"], self.time_reduction_factor)
-        return self._perform_greedy_batch(encoded=encoded, encoded_length=encoded_length, version=version)
+        return self._perform_greedy_batch(encoded=encoded, encoded_length=encoded_length)
 
     @tf.function(input_signature=[tf.TensorSpec(shape=[None, None], dtype=tf.float32)])
     def recognize_from_signal(
         self,
         signals: tf.Tensor,
-        version: int = 2,
     ):
         """
         RNN Transuder Greedy Decoding From Batch of Signals
@@ -485,7 +483,7 @@ class Transducer(BaseModel):
             tf.Tensor: batch of decoded transcripts in shape [B]
         """
         inputs, inputs_length = self.preprocess(signals)
-        return self.recognize(data_util.create_inputs(inputs=inputs, inputs_length=inputs_length), version=version)
+        return self.recognize(data_util.create_inputs(inputs=inputs, inputs_length=inputs_length))
 
     def recognize_tflite(
         self,
@@ -545,10 +543,8 @@ class Transducer(BaseModel):
         encoded_length: tf.Tensor,
         parallel_iterations: int = 10,
         swap_memory: bool = False,
-        version: int = 2,
     ):
         with tf.name_scope(f"{self.name}_perform_greedy_batch"):
-            perform_greedy = self._perform_greedy if version == 1 else self._perform_greedy_v2
             total_batch = tf.shape(encoded)[0]
             batch = tf.constant(0, dtype=tf.int32)
 
@@ -564,7 +560,7 @@ class Transducer(BaseModel):
                 return tf.less(batch, total_batch)
 
             def body(batch, decoded):
-                hypothesis = perform_greedy(
+                hypothesis = self._perform_greedy(
                     encoded=encoded[batch],
                     encoded_length=encoded_length[batch],
                     predicted=tf.constant(self.text_featurizer.blank, dtype=tf.int32),
