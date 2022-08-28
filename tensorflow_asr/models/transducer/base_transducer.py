@@ -150,7 +150,6 @@ class TransducerPrediction(tf.keras.Model):
             outputs = self.label_encoder.recognize_tflite(inputs)
         else:
             outputs = self.label_encoder(inputs, training=False)
-        outputs = self.do(outputs, training=False)
         new_states = []
         for i, rnn in enumerate(self.rnns):
             outputs = rnn(outputs, training=False, initial_state=tf.unstack(states[i], axis=0))

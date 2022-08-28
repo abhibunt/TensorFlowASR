@@ -203,7 +203,7 @@ class BaseModel(tf.keras.Model):
         """
         inputs, y_true = batch
         labels = self.text_featurizer.iextract(y_true["labels"])
-        greedy_decoding = self.recognize(inputs, version=self._greedy_decoding_version)
+        greedy_decoding = self.recognize(inputs, version=self.greedy_decoding_version)
         if self.text_featurizer.decoder_config.beam_width == 0:
             beam_search_decoding = tf.map_fn(lambda _: tf.convert_to_tensor("", dtype=tf.string), labels)
         else:

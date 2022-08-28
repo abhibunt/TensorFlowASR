@@ -54,7 +54,7 @@ def main(
         wordpiece=wordpiece,
     )
 
-    conformer = Conformer(**config.model_config, vocab_size=text_featurizer.num_classes)
+    conformer = Conformer(**config.model_config, blank=text_featurizer.blank, vocab_size=text_featurizer.num_classes)
     conformer.make(speech_featurizer.shape)
     conformer.load_weights(saved, by_name=True)
     conformer.summary()
