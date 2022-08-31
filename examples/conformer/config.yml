@@ -43,7 +43,7 @@ model_config:
   encoder_positional_encoding: sinusoid
   encoder_dmodel: 144
   encoder_num_blocks: 16
-  encoder_head_size: 36
+  encoder_head_size: 36 # == dmodel // num_heads
   encoder_num_heads: 4
   encoder_mha_type: relmha
   encoder_kernel_size: 32
@@ -58,7 +58,7 @@ model_config:
   prediction_rnn_implementation: 2
   prediction_layer_norm: True
   prediction_projection_units: 0
-  prediction_gauss_noise_stddev: 0.075
+  prediction_gauss_noise_stddev: 0
   joint_dim: 320
   prejoint_encoder_linear: True
   prejoint_prediction_linear: True

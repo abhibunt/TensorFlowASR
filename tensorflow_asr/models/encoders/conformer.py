@@ -14,11 +14,9 @@
 
 import tensorflow as tf
 
-from tensorflow_asr.models.activations.glu import GLU
 from tensorflow_asr.models.layers.multihead_attention import MultiHeadAttention, RelPositionMultiHeadAttention
 from tensorflow_asr.models.layers.positional_encoding import PositionalEncoding, PositionalEncodingConcat
 from tensorflow_asr.models.layers.subsampling import Conv2dSubsampling, VggSubsampling
-from tensorflow_asr.utils import shape_util
 
 L2 = tf.keras.regularizers.l2(1e-6)
 
@@ -77,6 +75,7 @@ class FFModule(tf.keras.layers.Layer):
 class MHSAModule(tf.keras.layers.Layer):
     def __init__(
         self,
+        dmodel,
         head_size,
         num_heads,
         dropout=0.0,
@@ -97,6 +96,7 @@ class MHSAModule(tf.keras.layers.Layer):
                 name=f"{name}_mhsa",
                 head_size=head_size,
                 num_heads=num_heads,
+                output_size=dmodel,
                 kernel_regularizer=kernel_regularizer,
                 bias_regularizer=bias_regularizer,
             )
@@ -105,6 +105,7 @@ class MHSAModule(tf.keras.layers.Layer):
                 name=f"{name}_mhsa",
                 head_size=head_size,
                 num_heads=num_heads,
+                output_size=dmodel,
                 kernel_regularizer=kernel_regularizer,
                 bias_regularizer=bias_regularizer,
             )
@@ -147,18 +148,20 @@ class ConvModule(tf.keras.layers.Layer):
     ):
         super(ConvModule, self).__init__(name=name, **kwargs)
         self.ln = tf.keras.layers.LayerNormalization()
-        self.pw_conv_1 = tf.keras.layers.Conv2D(
-            filters=2 * input_dim,
-            kernel_size=1,
-            strides=1,
-            padding="valid",
+        self.pw_conv_1 = tf.keras.layers.Dense(
+            input_dim,
             name=f"{name}_pw_conv_1",
             kernel_regularizer=kernel_regularizer,
             bias_regularizer=bias_regularizer,
         )
-        self.glu = GLU(name=f"{name}_glu")
-        self.dw_conv = tf.keras.layers.DepthwiseConv2D(
-            kernel_size=(kernel_size, 1),
+        self.pw_conv_gated = tf.keras.layers.Dense(
+            input_dim,
+            name=f"{name}_pw_conv_gated",
+            kernel_regularizer=kernel_regularizer,
+            bias_regularizer=bias_regularizer,
+        )
+        self.dw_conv = tf.keras.layers.DepthwiseConv1D(
+            kernel_size=kernel_size,
             strides=1,
             padding="same",
             name=f"{name}_dw_conv",
@@ -175,11 +178,8 @@ class ConvModule(tf.keras.layers.Layer):
             tf.nn.swish,
             name=f"{name}_swish_activation",
         )
-        self.pw_conv_2 = tf.keras.layers.Conv2D(
-            filters=input_dim,
-            kernel_size=1,
-            strides=1,
-            padding="valid",
+        self.pw_conv_2 = tf.keras.layers.Dense(
+            input_dim,
             name=f"{name}_pw_conv_2",
             kernel_regularizer=kernel_regularizer,
             bias_regularizer=bias_regularizer,
@@ -194,15 +194,13 @@ class ConvModule(tf.keras.layers.Layer):
         **kwargs,
     ):
         outputs = self.ln(inputs, training=training)
-        B, T, E = shape_util.shape_list(outputs)
-        outputs = tf.reshape(outputs, [B, T, 1, E])
-        outputs = self.pw_conv_1(outputs, training=training)
-        outputs = self.glu(outputs)
+        act_outputs = self.pw_conv_1(outputs, training=training)
+        gated_outputs = self.pw_conv_gated(outputs, training=training)
+        outputs = tf.multiply(act_outputs, tf.nn.sigmoid(gated_outputs))
         outputs = self.dw_conv(outputs, training=training)
         outputs = self.bn(outputs, training=training)
         outputs = self.swish(outputs)
         outputs = self.pw_conv_2(outputs, training=training)
-        outputs = tf.reshape(outputs, [B, T, E])
         outputs = self.do(outputs, training=training)
         outputs = self.res_add([inputs, outputs])
         return outputs
@@ -235,6 +233,7 @@ class ConformerBlock(tf.keras.layers.Layer):
         )
         self.mhsam = MHSAModule(
             mha_type=mha_type,
+            dmodel=input_dim,
             head_size=head_size,
             num_heads=num_heads,
             dropout=dropout,
