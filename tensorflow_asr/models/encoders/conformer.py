@@ -350,7 +350,7 @@ class ConformerEncoder(tf.keras.Model):
         num_heads=4,
         kernel_size=32,
         depth_multiplier=1,
-        padding="same",
+        padding="causal",
         fc_factor=0.5,
         dropout=0.0,
         gauss_noise_stddev=0.075,  # variational noise, from http://arxiv.org/abs/1211.3711
