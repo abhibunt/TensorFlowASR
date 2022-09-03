@@ -85,6 +85,7 @@ def main(
         jasper.summary()
 
     callbacks = [
+        tf.keras.callbacks.TerminateOnNaN(),
         tf.keras.callbacks.ModelCheckpoint(**config.learning_config.running_config.checkpoint),
         tf.keras.callbacks.BackupAndRestore(config.learning_config.running_config.states_dir),
         tf.keras.callbacks.TensorBoard(**config.learning_config.running_config.tensorboard),
