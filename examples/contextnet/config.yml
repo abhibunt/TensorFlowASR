@@ -42,6 +42,7 @@ model_config:
       strides: 1
       residual: False
       activation: silu
+      padding: causal
     # C1-C2
     - nlayers: 5
       kernel_size: 5
@@ -49,12 +50,14 @@ model_config:
       strides: 1
       residual: True
       activation: silu
+      padding: causal
     - nlayers: 5
       kernel_size: 5
       filters: 256
       strides: 1
       residual: True
       activation: silu
+      padding: causal
     # C3
     - nlayers: 5
       kernel_size: 5
@@ -62,6 +65,7 @@ model_config:
       strides: 2
       residual: True
       activation: silu
+      padding: causal
     # C4-C6
     - nlayers: 5
       kernel_size: 5
@@ -69,18 +73,21 @@ model_config:
       strides: 1
       residual: True
       activation: silu
+      padding: causal
     - nlayers: 5
       kernel_size: 5
       filters: 256
       strides: 1
       residual: True
       activation: silu
+      padding: causal
     - nlayers: 5
       kernel_size: 5
       filters: 256
       strides: 1
       residual: True
       activation: silu
+      padding: causal
     # C7
     - nlayers: 5
       kernel_size: 5
@@ -88,6 +95,7 @@ model_config:
       strides: 2
       residual: True
       activation: silu
+      padding: causal
     # C8 - C10
     - nlayers: 5
       kernel_size: 5
@@ -95,18 +103,21 @@ model_config:
       strides: 1
       residual: True
       activation: silu
+      padding: causal
     - nlayers: 5
       kernel_size: 5
       filters: 256
       strides: 1
       residual: True
       activation: silu
+      padding: causal
     - nlayers: 5
       kernel_size: 5
       filters: 256
       strides: 1
       residual: True
       activation: silu
+      padding: causal
     # C11 - C13
     - nlayers: 5
       kernel_size: 5
@@ -114,18 +125,21 @@ model_config:
       strides: 1
       residual: True
       activation: silu
+      padding: causal
     - nlayers: 5
       kernel_size: 5
       filters: 512
       strides: 1
       residual: True
       activation: silu
+      padding: causal
     - nlayers: 5
       kernel_size: 5
       filters: 512
       strides: 1
       residual: True
       activation: silu
+      padding: causal
     # C14
     - nlayers: 5
       kernel_size: 5
@@ -133,6 +147,7 @@ model_config:
       strides: 2
       residual: True
       activation: silu
+      padding: causal
     # C15 - C21
     - nlayers: 5
       kernel_size: 5
@@ -140,42 +155,49 @@ model_config:
       strides: 1
       residual: True
       activation: silu
+      padding: causal
     - nlayers: 5
       kernel_size: 5
       filters: 512
       strides: 1
       residual: True
       activation: silu
+      padding: causal
     - nlayers: 5
       kernel_size: 5
       filters: 512
       strides: 1
       residual: True
       activation: silu
+      padding: causal
     - nlayers: 5
       kernel_size: 5
       filters: 512
       strides: 1
       residual: True
       activation: silu
+      padding: causal
     - nlayers: 5
       kernel_size: 5
       filters: 512
       strides: 1
       residual: True
       activation: silu
+      padding: causal
     - nlayers: 5
       kernel_size: 5
       filters: 512
       strides: 1
       residual: True
       activation: silu
+      padding: causal
     - nlayers: 5
       kernel_size: 5
       filters: 512
       strides: 1
       residual: True
       activation: silu
+      padding: causal
     # C22
     - nlayers: 1
       kernel_size: 5
@@ -183,17 +205,17 @@ model_config:
       strides: 1
       residual: False
       activation: silu
+      padding: causal
   encoder_gauss_noise_stddev: 0.075
-  prediction_label_encode_mode: one_hot
+  prediction_label_encode_mode: embedding
   prediction_embed_dim: 640
   prediction_num_rnns: 1
-  prediction_rnn_units: 640
+  prediction_rnn_units: 512
   prediction_rnn_type: lstm
   prediction_rnn_implementation: 2
   prediction_layer_norm: True
   prediction_projection_units: 0
-  prediction_gauss_noise_stddev: 0.075
-  joint_dim: 640
+  joint_dim: 512
   prejoint_encoder_linear: True
   prejoint_prediction_linear: True
   postjoint_linear: False
@@ -244,10 +266,13 @@ learning_config:
     stage: test
 
   optimizer_config:
-    warmup_steps: 15000
     beta_1: 0.9
     beta_2: 0.98
     epsilon: 1e-9
+
+  learning_rate_config:
+    warmup_steps: 15000
+    max_lr: 0.0025
 
   running_config:
     batch_size: 2

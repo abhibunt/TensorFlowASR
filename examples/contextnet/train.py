@@ -83,11 +83,7 @@ def main(
         if pretrained:
             contextnet.load_weights(pretrained, by_name=True, skip_mismatch=True)
         optimizer = tf.keras.optimizers.Adam(
-            TransformerSchedule(
-                d_model=contextnet.dmodel,
-                warmup_steps=config.learning_config.optimizer_config.pop("warmup_steps", 15000),
-                max_lr=0.0025,
-            ),
+            TransformerSchedule(d_model=contextnet.dmodel, **config.learning_config.learning_rate_config),
             **config.learning_config.optimizer_config
         )
         contextnet.compile(

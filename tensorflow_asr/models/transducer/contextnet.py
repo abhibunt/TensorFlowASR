@@ -39,7 +39,6 @@ class ContextNet(Transducer):
         prediction_layer_norm: bool = True,
         prediction_projection_units: int = 0,
         prediction_trainable: bool = True,
-        prediction_gauss_noise_stddev: float = 0.075,  # variational noise, from http://arxiv.org/abs/1211.3711
         joint_dim: int = 1024,
         joint_activation: str = "tanh",
         prejoint_encoder_linear: bool = True,
@@ -72,7 +71,6 @@ class ContextNet(Transducer):
             prediction_rnn_implementation=prediction_rnn_implementation,
             prediction_layer_norm=prediction_layer_norm,
             prediction_trainable=prediction_trainable,
-            prediction_gauss_noise_stddev=prediction_gauss_noise_stddev,
             prediction_projection_units=prediction_projection_units,
             joint_dim=joint_dim,
             joint_activation=joint_activation,

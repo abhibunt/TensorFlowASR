@@ -211,7 +211,6 @@ class RnnTransducer(Transducer):
         prediction_layer_norm: bool = True,
         prediction_projection_units: int = 640,
         prediction_trainable: bool = True,
-        prediction_gauss_noise_stddev: float = 0.075,  # variational noise, from http://arxiv.org/abs/1211.3711
         joint_dim: int = 640,
         joint_activation: str = "tanh",
         prejoint_encoder_linear: bool = True,
@@ -248,7 +247,6 @@ class RnnTransducer(Transducer):
             prediction_layer_norm=prediction_layer_norm,
             prediction_projection_units=prediction_projection_units,
             prediction_trainable=prediction_trainable,
-            prediction_gauss_noise_stddev=prediction_gauss_noise_stddev,
             joint_dim=joint_dim,
             joint_activation=joint_activation,
             prejoint_encoder_linear=prejoint_encoder_linear,

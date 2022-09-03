@@ -44,7 +44,6 @@ class TransducerPrediction(tf.keras.Model):
         rnn_implementation: int = 2,
         layer_norm: bool = True,
         projection_units: int = 0,
-        gauss_noise_stddev: float = 0.075,
         kernel_regularizer=None,
         bias_regularizer=None,
         dtype=None,
@@ -73,7 +72,6 @@ class TransducerPrediction(tf.keras.Model):
                 name=f"{self.name}_{self.label_encoder_mode}",
                 dtype=dtype,
             )
-        self.gauss_noise = tf.keras.layers.GaussianNoise(stddev=gauss_noise_stddev, name=f"{name}_gaussian_noise", dtype=dtype)
         # Initialize rnn layers
         RnnClass = layer_util.get_rnn(rnn_type)
         self.rnns = []
@@ -124,7 +122,6 @@ class TransducerPrediction(tf.keras.Model):
         # use tf.gather_nd instead of tf.gather for tflite conversion
         outputs, prediction_length = inputs
         outputs = self.label_encoder(outputs, training=training)
-        outputs = self.gauss_noise(outputs, training=training)
         mask = tf.sequence_mask(prediction_length, maxlen=tf.shape(outputs)[1])
         for i, rnn in enumerate(self.rnns):
             outputs = rnn(outputs, training=training, mask=mask)
@@ -267,7 +264,6 @@ class Transducer(BaseModel):
         prediction_layer_norm: bool = True,
         prediction_projection_units: int = 0,
         prediction_trainable: bool = True,
-        prediction_gauss_noise_stddev: float = 0.075,
         joint_dim: int = 1024,
         joint_activation: str = "tanh",
         joint_mode: str = "add",
@@ -293,7 +289,6 @@ class Transducer(BaseModel):
             rnn_implementation=prediction_rnn_implementation,
             layer_norm=prediction_layer_norm,
             projection_units=prediction_projection_units,
-            gauss_noise_stddev=prediction_gauss_noise_stddev,
             kernel_regularizer=kernel_regularizer,
             bias_regularizer=bias_regularizer,
             trainable=prediction_trainable,

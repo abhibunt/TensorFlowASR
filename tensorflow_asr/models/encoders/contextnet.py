@@ -48,6 +48,7 @@ class ConvModule(tf.keras.layers.Layer):
         strides: int = 1,
         filters: int = 256,
         activation: str = "silu",
+        padding: str = "causal",
         kernel_regularizer=None,
         bias_regularizer=None,
         **kwargs,
@@ -58,7 +59,7 @@ class ConvModule(tf.keras.layers.Layer):
             filters=filters,
             kernel_size=kernel_size,
             strides=strides,
-            padding="same",
+            padding=padding,
             depthwise_regularizer=kernel_regularizer,
             pointwise_regularizer=kernel_regularizer,
             bias_regularizer=bias_regularizer,
@@ -86,6 +87,7 @@ class SEModule(tf.keras.layers.Layer):
         strides: int = 1,
         filters: int = 256,
         activation: str = "silu",
+        padding: str = "causal",
         kernel_regularizer=None,
         bias_regularizer=None,
         **kwargs,
@@ -96,10 +98,12 @@ class SEModule(tf.keras.layers.Layer):
             strides=strides,
             filters=filters,
             activation=activation,
+            padding=padding,
             kernel_regularizer=kernel_regularizer,
             bias_regularizer=bias_regularizer,
             name=f"{self.name}_conv_module",
         )
+        self.global_avg_pool = tf.keras.layers.GlobalAveragePooling1D(keepdims=True, name=f"{self.name}_global_avg_pool")
         self.activation = get_activation(activation)
         self.fc1 = tf.keras.layers.Dense(filters // 8, name=f"{self.name}_fc1")
         self.fc2 = tf.keras.layers.Dense(filters, name=f"{self.name}_fc2")
@@ -111,17 +115,17 @@ class SEModule(tf.keras.layers.Layer):
         **kwargs,
     ):
         features, input_length = inputs
-        outputs = self.conv(features, training=training)
+        outputs = self.conv(features, training=training)  # [B, T, E]
 
-        se = tf.divide(tf.reduce_sum(outputs, axis=1), tf.expand_dims(tf.cast(input_length, dtype=outputs.dtype), axis=1))
+        mask = tf.sequence_mask(input_length, maxlen=tf.shape(outputs)[1])
+        se = self.global_avg_pool(outputs, mask=mask)  # [B, 1, E]
         se = self.fc1(se, training=training)
         se = self.activation(se)
         se = self.fc2(se, training=training)
-        se = self.activation(se)
         se = tf.nn.sigmoid(se)
-        se = tf.expand_dims(se, axis=1)
 
-        outputs = tf.multiply(outputs, se)
+        se = tf.tile(se, [1, tf.shape(outputs)[1], 1])  # [B, 1, E] => [B, T, E]
+        outputs = tf.multiply(outputs, se)  # [B, T, E]
         return outputs
 
 
@@ -135,6 +139,7 @@ class ConvBlock(tf.keras.layers.Layer):
         residual: bool = True,
         activation: str = "silu",
         alpha: float = 1.0,
+        padding: str = "causal",
         kernel_regularizer=None,
         bias_regularizer=None,
         **kwargs,
@@ -153,6 +158,7 @@ class ConvBlock(tf.keras.layers.Layer):
                     strides=1,
                     filters=filters,
                     activation=activation,
+                    padding=padding,
                     kernel_regularizer=kernel_regularizer,
                     bias_regularizer=bias_regularizer,
                     name=f"{self.name}_conv_module_{i}",
@@ -164,6 +170,7 @@ class ConvBlock(tf.keras.layers.Layer):
             strides=strides,
             filters=filters,
             activation=activation,
+            padding=padding,
             kernel_regularizer=kernel_regularizer,
             bias_regularizer=bias_regularizer,
             name=f"{self.name}_conv_module_{nlayers - 1}",
@@ -174,6 +181,7 @@ class ConvBlock(tf.keras.layers.Layer):
             strides=1,
             filters=filters,
             activation=activation,
+            padding=padding,
             kernel_regularizer=kernel_regularizer,
             bias_regularizer=bias_regularizer,
             name=f"{self.name}_se",
@@ -186,6 +194,7 @@ class ConvBlock(tf.keras.layers.Layer):
                 strides=strides,
                 filters=filters,
                 activation="linear",
+                padding=padding,
                 kernel_regularizer=kernel_regularizer,
                 bias_regularizer=bias_regularizer,
                 name=f"{self.name}_residual",

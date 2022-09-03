@@ -86,6 +86,7 @@ class LearningConfig:
         self.eval_dataset_config = DatasetConfig(config.pop("eval_dataset_config", {}))
         self.test_dataset_config = DatasetConfig(config.pop("test_dataset_config", {}))
         self.optimizer_config = config.pop("optimizer_config", {})
+        self.learning_rate_config = config.pop("learning_rate_config", {})
         self.running_config = RunningConfig(config.pop("running_config", {}))
         for k, v in config.items():
             setattr(self, k, v)

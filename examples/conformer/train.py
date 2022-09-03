@@ -87,8 +87,8 @@ def main(
         optimizer = tf.keras.optimizers.Adam(
             TransformerSchedule(
                 d_model=conformer.dmodel,
-                warmup_steps=config.learning_config.optimizer_config.pop("warmup_steps", 10000),
-                max_lr=(0.05 / math.sqrt(conformer.dmodel)),
+                warmup_steps=config.learning_config.learning_rate_config.get("warmup_steps"),
+                max_lr=(config.learning_config.learning_rate_config.get("max_lr_numerator") / math.sqrt(conformer.dmodel)),
             ),
             **config.learning_config.optimizer_config,
         )
