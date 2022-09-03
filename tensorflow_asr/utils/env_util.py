@@ -13,9 +13,11 @@
 # limitations under the License.
 
 import logging
+import random
 import warnings
 from typing import List, Union
 
+import numpy as np
 import tensorflow as tf
 
 logger = tf.get_logger()
@@ -102,3 +104,20 @@ def setup_mxp(
     policy = "mixed_bfloat16" if has_devices("TPU") else "mixed_float16"
     tf.keras.mixed_precision.set_global_policy(policy)
     logger.info(f"USING mixed precision policy {policy}")
+
+
+def setup_seed(
+    seed: int = 42,
+):
+    """
+    The seed is given an integer value to ensure that the results of pseudo-random generation are reproducible
+    Why 42?
+    "It was a joke. It had to be a number, an ordinary, smallish number, and I chose that one. I sat at my desk, stared into the garden and thought 42 will do!"
+    - Douglas Adams's popular 1979 science-fiction novel The Hitchhiker's Guide to the Galaxy
+
+    Args:
+        seed (int, optional): integer. Defaults to 42.
+    """
+    random.seed(seed)
+    np.random.seed(seed)
+    tf.random.set_seed(seed)

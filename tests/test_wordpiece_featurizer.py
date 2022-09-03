@@ -5,8 +5,8 @@ import tensorflow as tf
 from tensorflow_asr.featurizers.text_featurizers import WordPieceFeaturizer
 
 decoder_config = {
-    "vocabulary": f"{os.path.dirname(__file__)}/../vocabularies/librispeech/librispeech_train_4_1000.wordpiece",
-    "max_subword_length": 4,
+    "vocabulary": f"{os.path.dirname(__file__)}/../vocabularies/librispeech/librispeech_train_1000.wordpiece",
+    "max_subword_length": 50,
     "unknown_token": "[UNK]",
 }
 
@@ -16,6 +16,8 @@ text = "but it would have broken down after ten miles of that hard trail dawn ca
 def test_wordpiece_featurizer():
     featurizer = WordPieceFeaturizer(decoder_config=decoder_config)
     print(text)
+    indices = featurizer.tf_extract(text)
+    print(indices.numpy())
     indices = featurizer.tf_extract(text)
     print(indices.numpy())
     batch_indices = tf.stack([indices, indices], axis=0)

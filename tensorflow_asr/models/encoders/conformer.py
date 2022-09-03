@@ -14,6 +14,8 @@
 
 import tensorflow as tf
 
+from tensorflow_asr.models.activations.glu import GLU
+from tensorflow_asr.models.layers.depthwise_conv1d import DepthwiseConv1D
 from tensorflow_asr.models.layers.multihead_attention import MultiHeadAttention, RelPositionMultiHeadAttention
 from tensorflow_asr.models.layers.positional_encoding import PositionalEncoding, PositionalEncodingConcat
 from tensorflow_asr.models.layers.subsampling import Conv2dSubsampling, VggSubsampling
@@ -22,6 +24,23 @@ L2 = tf.keras.regularizers.l2(1e-6)
 
 
 class FFModule(tf.keras.layers.Layer):
+    r"""
+    architecture::
+      input
+      /   \
+      |   ln(.)                   # input_dim
+      |   fflayer(.)              # 4 * input_dim
+      |   swish(.)
+      |   dropout(.)
+      |   fflayer(.)              # input_dim
+      |   dropout(.)
+      |   * 1/2
+      \   /
+        +
+        |
+      output
+    """
+
     def __init__(
         self,
         input_dim,
@@ -73,6 +92,19 @@ class FFModule(tf.keras.layers.Layer):
 
 
 class MHSAModule(tf.keras.layers.Layer):
+    r"""
+    architecture::
+      input
+      /   \
+      |   ln(.)                   # input_dim
+      |   mhsa(.)                 # head_size = dmodel // num_heads
+      |   dropout(.)
+      \   /
+        +
+        |
+      output
+    """
+
     def __init__(
         self,
         dmodel,
@@ -135,12 +167,33 @@ class MHSAModule(tf.keras.layers.Layer):
 
 
 class ConvModule(tf.keras.layers.Layer):
+    r"""
+    architecture::
+      input
+      /   \
+      |   ln(.)                   # input_dim
+      |   fflayer(.)              # 2 * input_dim
+      |    |
+      |   glu(.)                  # input_dim
+      |   depthwise_conv_1d(.)
+      |   bnorm(.)
+      |   swish(.)
+      |    |
+      |   fflayer(.)
+      |   dropout(.)
+      \   /
+        +
+        |
+      output
+    """
+
     def __init__(
         self,
         input_dim,
         kernel_size=32,
         dropout=0.0,
         depth_multiplier=1,
+        padding="same",
         kernel_regularizer=L2,
         bias_regularizer=L2,
         name="conv_module",
@@ -149,21 +202,16 @@ class ConvModule(tf.keras.layers.Layer):
         super(ConvModule, self).__init__(name=name, **kwargs)
         self.ln = tf.keras.layers.LayerNormalization()
         self.pw_conv_1 = tf.keras.layers.Dense(
-            input_dim,
+            2 * input_dim,
             name=f"{name}_pw_conv_1",
             kernel_regularizer=kernel_regularizer,
             bias_regularizer=bias_regularizer,
         )
-        self.pw_conv_gated = tf.keras.layers.Dense(
-            input_dim,
-            name=f"{name}_pw_conv_gated",
-            kernel_regularizer=kernel_regularizer,
-            bias_regularizer=bias_regularizer,
-        )
-        self.dw_conv = tf.keras.layers.DepthwiseConv1D(
+        self.glu = GLU(axis=-1, name=f"{name}_glu_activation")
+        self.dw_conv = DepthwiseConv1D(
             kernel_size=kernel_size,
             strides=1,
-            padding="same",
+            padding=padding,
             name=f"{name}_dw_conv",
             depth_multiplier=depth_multiplier,
             depthwise_regularizer=kernel_regularizer,
@@ -194,9 +242,8 @@ class ConvModule(tf.keras.layers.Layer):
         **kwargs,
     ):
         outputs = self.ln(inputs, training=training)
-        act_outputs = self.pw_conv_1(outputs, training=training)
-        gated_outputs = self.pw_conv_gated(outputs, training=training)
-        outputs = tf.multiply(act_outputs, tf.nn.sigmoid(gated_outputs))
+        outputs = self.pw_conv_1(outputs, training=training)
+        outputs = self.glu(outputs, training=training)
         outputs = self.dw_conv(outputs, training=training)
         outputs = self.bn(outputs, training=training)
         outputs = self.swish(outputs)
@@ -207,6 +254,15 @@ class ConvModule(tf.keras.layers.Layer):
 
 
 class ConformerBlock(tf.keras.layers.Layer):
+    """
+    architecture::
+      x = x + 1/2 * FFN(x)
+      x = x + MHSA(x)
+      x = x + Lconv(x)
+      x = x + 1/2 * FFN(x)
+      y = ln(x)
+    """
+
     def __init__(
         self,
         input_dim,
@@ -217,6 +273,7 @@ class ConformerBlock(tf.keras.layers.Layer):
         mha_type="relmha",
         kernel_size=32,
         depth_multiplier=1,
+        padding="same",
         kernel_regularizer=L2,
         bias_regularizer=L2,
         name="conformer_block",
@@ -247,6 +304,7 @@ class ConformerBlock(tf.keras.layers.Layer):
             dropout=dropout,
             name=f"{name}_conv_module",
             depth_multiplier=depth_multiplier,
+            padding=padding,
             kernel_regularizer=kernel_regularizer,
             bias_regularizer=bias_regularizer,
         )
@@ -292,6 +350,7 @@ class ConformerEncoder(tf.keras.Model):
         num_heads=4,
         kernel_size=32,
         depth_multiplier=1,
+        padding="same",
         fc_factor=0.5,
         dropout=0.0,
         gauss_noise_stddev=0.075,  # variational noise, from http://arxiv.org/abs/1211.3711
@@ -354,6 +413,7 @@ class ConformerEncoder(tf.keras.Model):
                 mha_type=mha_type,
                 kernel_size=kernel_size,
                 depth_multiplier=depth_multiplier,
+                padding=padding,
                 kernel_regularizer=kernel_regularizer,
                 bias_regularizer=bias_regularizer,
                 name=f"{name}_block_{i}",

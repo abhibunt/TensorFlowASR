@@ -596,7 +596,7 @@ class WordPieceFeaturizer(TextFeaturizer):
             vocab=self.vocab,
             token_out_type=tf.int32,
             unknown_token=self.decoder_config.unknown_token,
-            no_pretokenization=True,
+            no_pretokenization=False,
             support_detokenization=True,
         )
         self.num_classes = self.decoder_config.vocab_size
@@ -613,8 +613,8 @@ class WordPieceFeaturizer(TextFeaturizer):
         Returns:
             sequence of ints in tf.Tensor
         """
-        text = self.preprocess_text(text).split()
-        indices = self.tokenizer.tokenize(text).merge_dims(0, 1)
+        text = self.preprocess_text(text)
+        indices = self.tokenizer.tokenize([text]).merge_dims(0, 1)
         return indices
 
     def tf_extract(
@@ -622,7 +622,7 @@ class WordPieceFeaturizer(TextFeaturizer):
         text: tf.Tensor,
     ) -> tf.Tensor:
         text = self.tf_preprocess_text(text)
-        text = tf.strings.split(text)
+        text = tf.expand_dims(text, axis=0)
         indices = self.tokenizer.tokenize(text).merge_dims(0, 1)
         return indices
 

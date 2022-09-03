@@ -44,7 +44,7 @@ def main(
     jit_compile: bool = False,
     ga_steps: int = None,
 ):
-    tf.keras.backend.clear_session()
+    env_util.setup_seed()
     strategy = env_util.setup_strategy(devices)
     env_util.setup_mxp(mxp=mxp)
 
