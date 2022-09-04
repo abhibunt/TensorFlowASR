@@ -42,6 +42,7 @@ class TransducerPrediction(tf.keras.Model):
         rnn_units: int = 512,
         rnn_type: str = "lstm",
         rnn_implementation: int = 2,
+        rnn_unroll: bool = False,
         layer_norm: bool = True,
         projection_units: int = 0,
         kernel_regularizer=None,
@@ -55,7 +56,7 @@ class TransducerPrediction(tf.keras.Model):
             raise ValueError("label_encode_mode must be either 'one_hot' or 'embedding'")
         self.label_encoder_mode = label_encoder_mode
         # cudnn not support bfloat16
-        dtype = tf.float32 if tf.keras.mixed_precision.global_policy().name == "mixed_bfloat16" else None
+        dtype = tf.float32 if tf.keras.mixed_precision.global_policy().name == "mixed_bfloat16" and not rnn_unroll else None
         if self.label_encoder_mode == "embedding":
             self.label_encoder = Embedding(
                 vocab_size,
@@ -84,6 +85,7 @@ class TransducerPrediction(tf.keras.Model):
                 name=f"{name}_{rnn_type}_{i}",
                 return_state=True,
                 implementation=rnn_implementation,
+                unroll=rnn_unroll,
                 kernel_regularizer=kernel_regularizer,
                 bias_regularizer=bias_regularizer,
                 dtype=dtype,
@@ -261,6 +263,7 @@ class Transducer(BaseModel):
         prediction_rnn_units: int = 320,
         prediction_rnn_type: str = "lstm",
         prediction_rnn_implementation: int = 2,
+        prediction_rnn_unroll: bool = False,
         prediction_layer_norm: bool = True,
         prediction_projection_units: int = 0,
         prediction_trainable: bool = True,
@@ -287,6 +290,7 @@ class Transducer(BaseModel):
             rnn_units=prediction_rnn_units,
             rnn_type=prediction_rnn_type,
             rnn_implementation=prediction_rnn_implementation,
+            rnn_unroll=prediction_rnn_unroll,
             layer_norm=prediction_layer_norm,
             projection_units=prediction_projection_units,
             kernel_regularizer=kernel_regularizer,
