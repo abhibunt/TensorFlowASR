@@ -22,6 +22,8 @@ speech_config:
   normalize_signal: True
   normalize_feature: True
   normalize_per_frame: False
+  center: False
+  top_db: null
 
 decoder_config:
   vocabulary: null

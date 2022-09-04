@@ -259,12 +259,12 @@ class SpeechFeaturizer:
         self.num_feature_bins = speech_config.get("num_feature_bins", 80)
         self.feature_type = speech_config.get("feature_type", "log_mel_spectrogram")
         self.preemphasis = speech_config.get("preemphasis", None)
-        self.top_db = speech_config.get("top_db", 80.0)
+        self.top_db = speech_config.get("top_db", None)
         # Normalization
         self.normalize_signal = speech_config.get("normalize_signal", True)
         self.normalize_feature = speech_config.get("normalize_feature", True)
         self.normalize_per_frame = speech_config.get("normalize_per_frame", False)
-        self.center = speech_config.get("center", True)
+        self.center = speech_config.get("center", False)
         # Length
         self.max_length = 0
 
