@@ -215,6 +215,7 @@ model_config:
   prediction_rnn_units: 512
   prediction_rnn_type: lstm
   prediction_rnn_implementation: 2
+  prediction_rnn_unroll: False # False to use with GPU Cuda
   prediction_layer_norm: True
   prediction_projection_units: 0
   joint_dim: 512
@@ -280,7 +281,7 @@ learning_config:
     batch_size: 2
     num_epochs: 100
     checkpoint:
-      filepath: D:/Models/local/contextnet/checkpoints/{epoch:02d}.h5
+      filepath: D:/Models/local/contextnet/checkpoints/{epoch:02d}/
       save_best_only: False
       save_weights_only: True
       save_freq: epoch

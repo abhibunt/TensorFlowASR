@@ -72,10 +72,10 @@ class RunningConfig:
                 if v and v.get("filepath"):
                     file_util.preprocess_paths(v.get("filepath"))
             elif k == "states_dir" and v:
-                file_util.preprocess_paths(v)
+                file_util.preprocess_paths(v, isdir=True)
             elif k == "tensorboard":
                 if v and v.get("log_dir"):
-                    file_util.preprocess_paths(v.get("log_dir"))
+                    file_util.preprocess_paths(v.get("log_dir"), isdir=True)
 
 
 class LearningConfig:
