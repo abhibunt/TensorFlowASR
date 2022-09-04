@@ -227,14 +227,11 @@ class ContextNetEncoder(tf.keras.Model):
         self,
         blocks: List[dict] = [],
         alpha: float = 1.0,
-        gauss_noise_stddev=0.075,  # variational noise, from http://arxiv.org/abs/1211.3711
         kernel_regularizer=None,
         bias_regularizer=None,
         **kwargs,
     ):
         super(ContextNetEncoder, self).__init__(**kwargs)
-
-        self.gauss_noise = tf.keras.layers.GaussianNoise(stddev=gauss_noise_stddev, name=f"{self.name}_gaussian_noise")
 
         self.reshape = Reshape(name=f"{self.name}_reshape")
 
@@ -257,7 +254,6 @@ class ContextNetEncoder(tf.keras.Model):
         **kwargs,
     ):
         outputs, input_length = inputs
-        outputs = self.gauss_noise(outputs, training=training)
         outputs = self.reshape(outputs)
         for block in self.blocks:
             outputs, input_length = block([outputs, input_length], training=training)

@@ -52,7 +52,6 @@ model_config:
   encoder_fc_factor: 0.5
   encoder_dropout: 0.1
   encoder_padding: causal
-  encoder_gauss_noise_stddev: 0.075
   prediction_label_encode_mode: embedding
   prediction_embed_dim: 320
   prediction_num_rnns: 1
@@ -72,6 +71,10 @@ learning_config:
   train_dataset_config:
     use_tf: True
     augmentation_config:
+      prob: 0.5
+      signal_augment:
+        gauss_noise:
+          stddev: 0.075
       feature_augment:
         time_masking:
           num_masks: 10

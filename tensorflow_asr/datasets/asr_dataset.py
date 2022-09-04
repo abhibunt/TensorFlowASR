@@ -237,11 +237,11 @@ class ASRDataset(BaseDataset):
         dataset: tf.data.Dataset,
         batch_size: int,
     ):
+        if self.cache:
+            dataset = dataset.cache()  # cache original (unchanged data)
+
         dataset = dataset.map(self.parse, num_parallel_calls=AUTOTUNE)
         self.total_steps = math_util.get_num_batches(self.total_steps, batch_size, drop_remainders=self.drop_remainder)
-
-        if self.cache:
-            dataset = dataset.cache()
 
         if self.shuffle:
             dataset = dataset.shuffle(self.buffer_size, reshuffle_each_iteration=True)

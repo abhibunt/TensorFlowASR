@@ -34,7 +34,6 @@ class Conformer(Transducer):
         encoder_fc_factor: float = 0.5,
         encoder_dropout: float = 0,
         encoder_trainable: bool = True,
-        encoder_gauss_noise_stddev: float = 0.075,  # variational noise, from http://arxiv.org/abs/1211.3711
         prediction_label_encode_mode: str = "one_hot",
         prediction_embed_dim: int = 512,
         prediction_num_rnns: int = 1,
@@ -71,7 +70,6 @@ class Conformer(Transducer):
                 padding=encoder_padding,
                 fc_factor=encoder_fc_factor,
                 dropout=encoder_dropout,
-                gauss_noise_stddev=encoder_gauss_noise_stddev,
                 kernel_regularizer=kernel_regularizer,
                 bias_regularizer=bias_regularizer,
                 trainable=encoder_trainable,

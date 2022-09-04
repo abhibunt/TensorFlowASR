@@ -353,15 +353,12 @@ class ConformerEncoder(tf.keras.Model):
         padding="causal",
         fc_factor=0.5,
         dropout=0.0,
-        gauss_noise_stddev=0.075,  # variational noise, from http://arxiv.org/abs/1211.3711
         kernel_regularizer=L2,
         bias_regularizer=L2,
         name="conformer_encoder",
         **kwargs,
     ):
         super(ConformerEncoder, self).__init__(name=name, **kwargs)
-
-        self.gauss_noise = tf.keras.layers.GaussianNoise(stddev=gauss_noise_stddev, name=f"{name}_gaussian_noise")
 
         subsampling_name = subsampling.pop("type", "conv2d")
         if subsampling_name == "vgg":
@@ -428,8 +425,7 @@ class ConformerEncoder(tf.keras.Model):
         **kwargs,
     ):
         # input with shape [B, T, V1, V2]
-        outputs = self.gauss_noise(inputs, training=training)
-        outputs = self.conv_subsampling(outputs, training=training)
+        outputs = self.conv_subsampling(inputs, training=training)
         outputs = self.linear(outputs, training=training)
         pe = self.pe(outputs)
         outputs = self.do(outputs, training=training)

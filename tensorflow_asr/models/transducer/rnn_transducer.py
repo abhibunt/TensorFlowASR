@@ -110,14 +110,11 @@ class RnnTransducerEncoder(tf.keras.Model):
         rnn_type: str = "lstm",
         rnn_units: int = 2048,
         layer_norm: bool = True,
-        gauss_noise_stddev=0.075,  # variational noise, from http://arxiv.org/abs/1211.3711
         kernel_regularizer=None,
         bias_regularizer=None,
         **kwargs,
     ):
         super().__init__(**kwargs)
-
-        self.gauss_noise = tf.keras.layers.GaussianNoise(stddev=gauss_noise_stddev, name=f"{self.name}_gaussian_noise")
 
         self.reshape = Reshape(name=f"{self.name}_reshape")
 
@@ -161,8 +158,7 @@ class RnnTransducerEncoder(tf.keras.Model):
         training=False,
         **kwargs,
     ):
-        outputs = self.gauss_noise(inputs, training=training)
-        outputs = self.reshape(outputs)
+        outputs = self.reshape(inputs)
         for block in self.blocks:
             outputs = block(outputs, training=training, **kwargs)
         return outputs
@@ -202,7 +198,6 @@ class RnnTransducer(Transducer):
         encoder_rnn_units: int = 2048,
         encoder_layer_norm: bool = True,
         encoder_trainable: bool = True,
-        encoder_gauss_noise_stddev: float = 0.075,  # variational noise, from http://arxiv.org/abs/1211.3711
         prediction_label_encode_mode: str = "one_hot",
         prediction_embed_dim: int = 320,
         prediction_num_rnns: int = 2,
@@ -233,7 +228,6 @@ class RnnTransducer(Transducer):
                 rnn_type=encoder_rnn_type,
                 rnn_units=encoder_rnn_units,
                 layer_norm=encoder_layer_norm,
-                gauss_noise_stddev=encoder_gauss_noise_stddev,
                 kernel_regularizer=kernel_regularizer,
                 bias_regularizer=bias_regularizer,
                 trainable=encoder_trainable,

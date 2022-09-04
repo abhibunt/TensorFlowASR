@@ -208,7 +208,6 @@ model_config:
       residual: False
       activation: silu
       padding: causal
-  encoder_gauss_noise_stddev: 0.075
   prediction_label_encode_mode: embedding
   prediction_embed_dim: 640
   prediction_num_rnns: 1
@@ -229,6 +228,10 @@ learning_config:
   train_dataset_config:
     use_tf: True
     augmentation_config:
+      prob: 0.5
+      signal_augment:
+        gauss_noise:
+          stddev: 0.075
       feature_augment:
         time_masking:
           num_masks: 10
@@ -281,7 +284,7 @@ learning_config:
     batch_size: 2
     num_epochs: 100
     checkpoint:
-      filepath: D:/Models/local/contextnet/checkpoints/{epoch:02d}/
+      filepath: D:/Models/local/contextnet/checkpoints/{epoch:02d}.h5
       save_best_only: False
       save_weights_only: True
       save_freq: epoch

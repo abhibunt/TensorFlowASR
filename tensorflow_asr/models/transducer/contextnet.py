@@ -29,7 +29,6 @@ class ContextNet(Transducer):
         encoder_blocks: List[dict],
         encoder_alpha: float = 0.5,
         encoder_trainable: bool = True,
-        encoder_gauss_noise_stddev: float = 0.075,  # variational noise, from http://arxiv.org/abs/1211.3711
         prediction_label_encode_mode: str = "one_hot",
         prediction_embed_dim: int = 512,
         prediction_num_rnns: int = 1,
@@ -56,7 +55,6 @@ class ContextNet(Transducer):
             encoder=ContextNetEncoder(
                 blocks=encoder_blocks,
                 alpha=encoder_alpha,
-                gauss_noise_stddev=encoder_gauss_noise_stddev,
                 kernel_regularizer=kernel_regularizer,
                 bias_regularizer=bias_regularizer,
                 trainable=encoder_trainable,
