@@ -240,11 +240,11 @@ class ASRDataset(BaseDataset):
         dataset = dataset.map(self.parse, num_parallel_calls=AUTOTUNE)
         self.total_steps = math_util.get_num_batches(self.total_steps, batch_size, drop_remainders=self.drop_remainder)
 
-        if self.shuffle:
-            dataset = dataset.shuffle(self.buffer_size, reshuffle_each_iteration=True)
-
         if self.cache:
             dataset = dataset.cache()
+
+        if self.shuffle:
+            dataset = dataset.shuffle(self.buffer_size, reshuffle_each_iteration=True)
 
         if self.indefinite and self.total_steps:
             dataset = dataset.repeat()
