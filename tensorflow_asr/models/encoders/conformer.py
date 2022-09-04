@@ -18,7 +18,7 @@ from tensorflow_asr.models.activations.glu import GLU
 from tensorflow_asr.models.layers.depthwise_conv1d import DepthwiseConv1D
 from tensorflow_asr.models.layers.multihead_attention import MultiHeadAttention, RelPositionMultiHeadAttention
 from tensorflow_asr.models.layers.positional_encoding import PositionalEncoding, PositionalEncodingConcat
-from tensorflow_asr.models.layers.subsampling import Conv2dSubsampling, VggSubsampling
+from tensorflow_asr.models.layers.subsampling import Conv1dSubsampling, Conv2dSubsampling, VggSubsampling
 
 L2 = tf.keras.regularizers.l2(1e-6)
 
@@ -365,6 +365,8 @@ class ConformerEncoder(tf.keras.Model):
             subsampling_class = VggSubsampling
         elif subsampling_name == "conv2d":
             subsampling_class = Conv2dSubsampling
+        elif subsampling_name == "conv1d":
+            subsampling_class = Conv1dSubsampling
         else:
             raise ValueError("subsampling must be either  'conv2d' or 'vgg'")
 

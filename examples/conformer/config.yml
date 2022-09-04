@@ -38,10 +38,11 @@ decoder_config:
 model_config:
   name: conformer
   encoder_subsampling:
-    type: conv2d
+    type: conv1d
     filters: 144
     kernel_size: 3
     strides: 2
+    padding: causal
   encoder_positional_encoding: sinusoid
   encoder_dmodel: 144
   encoder_num_blocks: 16
@@ -52,7 +53,7 @@ model_config:
   encoder_fc_factor: 0.5
   encoder_dropout: 0.1
   encoder_padding: causal
-  prediction_label_encode_mode: embedding
+  prediction_label_encode_mode: one_hot
   prediction_embed_dim: 320
   prediction_num_rnns: 1
   prediction_rnn_units: 320

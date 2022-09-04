@@ -24,7 +24,7 @@ class TimeReduction(tf.keras.layers.Layer):
         name: str = "TimeReduction",
         **kwargs,
     ):
-        super(TimeReduction, self).__init__(name=name, **kwargs)
+        super().__init__(name=name, **kwargs)
         self.time_reduction_factor = factor
 
     def padding(
@@ -56,7 +56,7 @@ class VggSubsampling(tf.keras.layers.Layer):
         name="VggSubsampling",
         **kwargs,
     ):
-        super(VggSubsampling, self).__init__(name=name, **kwargs)
+        super().__init__(name=name, **kwargs)
         self.conv1 = tf.keras.layers.Conv2D(
             filters=filters[0],
             kernel_size=kernel_size,
@@ -124,17 +124,18 @@ class Conv2dSubsampling(tf.keras.layers.Layer):
         filters: int,
         strides: list or tuple or int = 2,
         kernel_size: int or list or tuple = 3,
+        padding: str = "same",
         kernel_regularizer=None,
         bias_regularizer=None,
         name="Conv2dSubsampling",
         **kwargs,
     ):
-        super(Conv2dSubsampling, self).__init__(name=name, **kwargs)
+        super().__init__(name=name, **kwargs)
         self.conv1 = tf.keras.layers.Conv2D(
             filters=filters,
             kernel_size=kernel_size,
             strides=strides,
-            padding="same",
+            padding=padding,
             name=f"{name}_1",
             kernel_regularizer=kernel_regularizer,
             bias_regularizer=bias_regularizer,
@@ -143,7 +144,7 @@ class Conv2dSubsampling(tf.keras.layers.Layer):
             filters=filters,
             kernel_size=kernel_size,
             strides=strides,
-            padding="same",
+            padding=padding,
             name=f"{name}_2",
             kernel_regularizer=kernel_regularizer,
             bias_regularizer=bias_regularizer,
@@ -161,3 +162,50 @@ class Conv2dSubsampling(tf.keras.layers.Layer):
         outputs = self.conv2(outputs, training=training)
         outputs = tf.nn.relu(outputs)
         return math_util.merge_two_last_dims(outputs)
+
+
+class Conv1dSubsampling(tf.keras.layers.Layer):
+    def __init__(
+        self,
+        filters: int,
+        strides: int = 2,
+        kernel_size: int = 3,
+        padding: str = "causal",
+        kernel_regularizer=None,
+        bias_regularizer=None,
+        name="Conv1dSubsampling",
+        **kwargs,
+    ):
+        super().__init__(name=name, **kwargs)
+        self.conv1 = tf.keras.layers.Conv1D(
+            filters=filters,
+            kernel_size=kernel_size,
+            strides=strides,
+            padding=padding,
+            name=f"{name}_1",
+            kernel_regularizer=kernel_regularizer,
+            bias_regularizer=bias_regularizer,
+        )
+        self.conv2 = tf.keras.layers.Conv1D(
+            filters=filters,
+            kernel_size=kernel_size,
+            strides=strides,
+            padding=padding,
+            name=f"{name}_2",
+            kernel_regularizer=kernel_regularizer,
+            bias_regularizer=bias_regularizer,
+        )
+        self.time_reduction_factor = self.conv1.strides[0] * self.conv2.strides[0]
+
+    def call(
+        self,
+        inputs,
+        training=False,
+        **kwargs,
+    ):
+        outputs = math_util.merge_two_last_dims(inputs)
+        outputs = self.conv1(outputs, training=training)
+        outputs = tf.nn.relu(outputs)
+        outputs = self.conv2(outputs, training=training)
+        outputs = tf.nn.relu(outputs)
+        return outputs
