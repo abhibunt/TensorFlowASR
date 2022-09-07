@@ -52,9 +52,10 @@ class DatasetConfig:
         self.shuffle = config.pop("shuffle", False)
         self.cache = config.pop("cache", False)
         self.drop_remainder = config.pop("drop_remainder", True)
-        self.buffer_size = config.pop("buffer_size", 100)
+        self.buffer_size = config.pop("buffer_size", 1000)
         self.use_tf = config.pop("use_tf", False)
         self.augmentations = Augmentation(config.pop("augmentation_config", {}))
+        self.enabled = config.pop("enabled", True)
         for k, v in config.items():
             setattr(self, k, v)
 

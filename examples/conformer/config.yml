@@ -70,6 +70,7 @@ model_config:
 
 learning_config:
   train_dataset_config:
+    enabled: True
     use_tf: True
     augmentation_config:
       prob: 0.5
@@ -94,6 +95,7 @@ learning_config:
     stage: train
 
   eval_dataset_config:
+    enabled: False
     use_tf: True
     data_paths:
       - E:/MLDL/Datasets/ASR/LibriSpeech/dev-clean/transcripts.tsv

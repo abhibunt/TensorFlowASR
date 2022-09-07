@@ -49,6 +49,7 @@ class ASRDataset(BaseDataset):
         indefinite: bool = False,
         drop_remainder: bool = True,
         use_tf: bool = False,
+        enabled: bool = True,
         buffer_size: int = BUFFER_SIZE,
         **kwargs,
     ):
@@ -61,6 +62,7 @@ class ASRDataset(BaseDataset):
             buffer_size=buffer_size,
             drop_remainder=drop_remainder,
             use_tf=use_tf,
+            enabled=enabled,
             indefinite=indefinite,
         )
         self.entries = []
@@ -107,6 +109,8 @@ class ASRDataset(BaseDataset):
         metadata: Union[str, dict] = None,
     ):
         if metadata is None:
+            return
+        if not self.enabled:
             return
         content = None
         if isinstance(metadata, dict):
@@ -278,6 +282,8 @@ class ASRDataset(BaseDataset):
         self,
         batch_size: int,
     ):
+        if not self.enabled:
+            return None
         self.read_entries()
         if not self.total_steps or self.total_steps == 0:
             return None
@@ -304,6 +310,7 @@ class ASRTFRecordDataset(ASRDataset):
         cache: bool = False,
         shuffle: bool = False,
         use_tf: bool = False,
+        enabled: bool = True,
         indefinite: bool = False,
         drop_remainder: bool = True,
         buffer_size: int = BUFFER_SIZE,
@@ -321,6 +328,7 @@ class ASRTFRecordDataset(ASRDataset):
             buffer_size=buffer_size,
             drop_remainder=drop_remainder,
             use_tf=use_tf,
+            enabled=enabled,
             indefinite=indefinite,
         )
         if not self.stage:
@@ -391,6 +399,8 @@ class ASRTFRecordDataset(ASRDataset):
         self,
         batch_size: int,
     ):
+        if not self.enabled:
+            return None
         have_data = self.create_tfrecords()
         if not have_data:
             return None
@@ -420,9 +430,13 @@ class ASRSliceDataset(ASRDataset):
         self,
         batch_size: int,
     ):
+        if not self.enabled:
+            return None
         self.read_entries()
         if not self.total_steps or self.total_steps == 0:
             return None
+
         dataset = tf.data.Dataset.from_tensor_slices(self.entries)
         dataset = dataset.map(self.load, num_parallel_calls=AUTOTUNE)
+
         return self.process(dataset, batch_size)
