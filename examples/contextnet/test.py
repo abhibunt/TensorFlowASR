@@ -52,7 +52,7 @@ def main(
         wordpiece=wordpiece,
     )
 
-    contextnet = ContextNet(**config.model_config, vocab_size=text_featurizer.num_classes)
+    contextnet = ContextNet(**config.model_config, blank=text_featurizer.blank, vocab_size=text_featurizer.num_classes)
     contextnet.make(speech_featurizer.shape)
     contextnet.load_weights(saved, by_name=True)
     contextnet.summary()

@@ -196,16 +196,6 @@ class TransducerJoint(tf.keras.Model):
     ):
         super().__init__(name=name, **kwargs)
 
-        activation = activation.lower()
-        if activation == "linear":
-            self.activation = tf.keras.layers.Activation(tf.keras.activation.linear, name=f"{name}_linear")
-        elif activation == "relu":
-            self.activation = tf.keras.layers.Activation(tf.nn.relu, name=f"{name}_relu")
-        elif activation == "tanh":
-            self.activation = tf.keras.layers.Activation(tf.nn.tanh, name=f"{name}_tanh")
-        else:
-            raise ValueError("activation must be either 'linear', 'relu' or 'tanh'")
-
         self.prejoint_encoder_linear = prejoint_encoder_linear
         self.prejoint_prediction_linear = prejoint_prediction_linear
         self.postjoint_linear = postjoint_linear
@@ -220,6 +210,16 @@ class TransducerJoint(tf.keras.Model):
             )
 
         self.joint = TransducerJointMerge(joint_mode=joint_mode, name=f"{name}_merge")
+
+        activation = activation.lower()
+        if activation == "linear":
+            self.activation = tf.keras.layers.Activation(tf.keras.activation.linear, name=f"{name}_linear")
+        elif activation == "relu":
+            self.activation = tf.keras.layers.Activation(tf.nn.relu, name=f"{name}_relu")
+        elif activation == "tanh":
+            self.activation = tf.keras.layers.Activation(tf.nn.tanh, name=f"{name}_tanh")
+        else:
+            raise ValueError("activation must be either 'linear', 'relu' or 'tanh'")
 
         if self.postjoint_linear:
             self.ffn = tf.keras.layers.Dense(
