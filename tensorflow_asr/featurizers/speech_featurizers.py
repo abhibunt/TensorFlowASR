@@ -323,6 +323,10 @@ class SpeechFeaturizer:
 
 
 class NumpySpeechFeaturizer(SpeechFeaturizer):
+    """
+    Deprecated, no where to use
+    """
+
     def __init__(self, speech_config: dict):
         super(NumpySpeechFeaturizer, self).__init__(speech_config)
         self.delta = speech_config.get("delta", False)
