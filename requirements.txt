@@ -16,21 +16,31 @@ black==22.6.0
 flake8==4.0.1
 
 # extra=tf2.8
-tensorflow~=2.8
-tensorflow-text~=2.8
-tensorflow-io~=0.25
+tensorflow>=2.8.0,<2.9.0
+tensorflow-text>=2.8.0,<2.9.0
+tensorflow-io>=0.25.0,<0.26.0
 
 # extra=tf2.8-gpu
-tensorflow-gpu~=2.8
-tensorflow-text~=2.8
-tensorflow-io~=0.25
+tensorflow-gpu>=2.8.0,<2.9.0
+tensorflow-text>=2.8.0,<2.9.0
+tensorflow-io>=0.25.0,<0.26.0
 
 # extra=tf2.9
-tensorflow~=2.9
-tensorflow-text~=2.9
-tensorflow-io~=0.26
+tensorflow>=2.9.0,<2.10.0
+tensorflow-text>=2.9.0,<2.10.0
+tensorflow-io>=0.26.0,<2.27.0
 
 # extra=tf2.9-gpu
-tensorflow-gpu~=2.9
-tensorflow-text~=2.9
-tensorflow-io~=0.26
+tensorflow-gpu>=2.9.0,<2.10.0
+tensorflow-text>=2.9.0,<2.10.0
+tensorflow-io>=0.26.0,<2.27.0
+
+# extra=tf2.10
+tensorflow>=2.10.0,<2.11.0
+tensorflow-text>=2.10.0,<2.11.0
+tensorflow-io>=0.27.0,<2.28.0
+
+# extra=tf2.10-gpu
+tensorflow-gpu>=2.10.0,<2.11.0
+tensorflow-text>=2.10.0,<2.11.0
+tensorflow-io>=0.27.0,<2.28.0
