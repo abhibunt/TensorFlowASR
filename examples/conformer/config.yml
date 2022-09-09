@@ -38,11 +38,14 @@ decoder_config:
 model_config:
   name: conformer
   encoder_subsampling:
-    type: conv1d
-    filters: 144
+    type: vgg
+    filters:
+      - 64
+      - 128
     kernel_size: 3
     strides: 2
-    padding: causal
+    padding: same
+    activation: relu
   encoder_positional_encoding: sinusoid
   encoder_dmodel: 144
   encoder_num_blocks: 16
@@ -52,15 +55,15 @@ model_config:
   encoder_kernel_size: 32
   encoder_fc_factor: 0.5
   encoder_dropout: 0.1
-  encoder_padding: causal
-  prediction_label_encode_mode: one_hot
+  encoder_padding: same
+  prediction_label_encode_mode: embedding
   prediction_embed_dim: 320
   prediction_num_rnns: 1
   prediction_rnn_units: 320
   prediction_rnn_type: lstm
   prediction_rnn_implementation: 2
   prediction_rnn_unroll: False # False to use with CUDA or dynamic length, True to use with TPU and static length
-  prediction_layer_norm: False
+  prediction_layer_norm: True
   prediction_projection_units: 0
   joint_dim: 320
   prejoint_encoder_linear: True

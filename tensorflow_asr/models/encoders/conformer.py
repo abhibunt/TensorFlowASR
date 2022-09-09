@@ -14,7 +14,6 @@
 
 import tensorflow as tf
 
-from tensorflow_asr.models.activations.glu import GLU
 from tensorflow_asr.models.layers.depthwise_conv1d import DepthwiseConv1D
 from tensorflow_asr.models.layers.multihead_attention import MultiHeadAttention, RelPositionMultiHeadAttention
 from tensorflow_asr.models.layers.positional_encoding import PositionalEncoding, PositionalEncodingConcat
@@ -172,14 +171,14 @@ class ConvModule(tf.keras.layers.Layer):
       input
       /   \
       |   ln(.)                   # input_dim
-      |   pw_conv1d(.)            # 2 * input_dim
+      |   fflayer(.)              # 2 * input_dim
       |    |
       |   glu(.)                  # input_dim
       |   depthwise_conv_1d(.)
       |   bnorm(.)
       |   swish(.)
       |    |
-      |   pw_conv1d(.)
+      |   fflayer(.)
       |   dropout(.)
       \   /
         +
@@ -201,16 +200,18 @@ class ConvModule(tf.keras.layers.Layer):
     ):
         super(ConvModule, self).__init__(name=name, **kwargs)
         self.ln = tf.keras.layers.LayerNormalization()
-        self.pw_conv_1 = tf.keras.layers.Conv1D(
-            filters=2 * input_dim,
-            kernel_size=1,
-            strides=1,
-            padding="valid",
+        self.pw_conv_1 = tf.keras.layers.Dense(
+            input_dim,
             name=f"{name}_pw_conv_1",
             kernel_regularizer=kernel_regularizer,
             bias_regularizer=bias_regularizer,
         )
-        self.glu = GLU(axis=-1, name=f"{name}_glu_activation")
+        self.pw_conv_1_gated = tf.keras.layers.Dense(
+            input_dim,
+            name=f"{name}_pw_conv_1_gated",
+            kernel_regularizer=kernel_regularizer,
+            bias_regularizer=bias_regularizer,
+        )
         self.dw_conv = DepthwiseConv1D(
             kernel_size=kernel_size,
             strides=1,
@@ -225,15 +226,9 @@ class ConvModule(tf.keras.layers.Layer):
             gamma_regularizer=kernel_regularizer,
             beta_regularizer=bias_regularizer,
         )
-        self.swish = tf.keras.layers.Activation(
-            tf.nn.swish,
-            name=f"{name}_swish_activation",
-        )
-        self.pw_conv_2 = tf.keras.layers.Conv1D(
-            filters=input_dim,
-            kernel_size=1,
-            strides=1,
-            padding="valid",
+        self.swish = tf.keras.layers.Activation(tf.nn.swish, name=f"{name}_swish_activation")
+        self.pw_conv_2 = tf.keras.layers.Dense(
+            input_dim,
             name=f"{name}_pw_conv_2",
             kernel_regularizer=kernel_regularizer,
             bias_regularizer=bias_regularizer,
@@ -248,8 +243,9 @@ class ConvModule(tf.keras.layers.Layer):
         **kwargs,
     ):
         outputs = self.ln(inputs, training=training)
-        outputs = self.pw_conv_1(outputs, training=training)
-        outputs = self.glu(outputs, training=training)
+        act = self.pw_conv_1(outputs, training=training)
+        gated = self.pw_conv_1_gated(outputs, training=training)
+        outputs = tf.multiply(act, tf.nn.sigmoid(gated))
         outputs = self.dw_conv(outputs, training=training)
         outputs = self.bn(outputs, training=training)
         outputs = self.swish(outputs)

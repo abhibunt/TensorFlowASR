@@ -51,6 +51,8 @@ class VggSubsampling(tf.keras.layers.Layer):
         filters: tuple or list = (32, 64),
         kernel_size: int or list or tuple = 3,
         strides: int or list or tuple = 2,
+        padding: str = "same",
+        activation: str = "relu",
         kernel_regularizer=None,
         bias_regularizer=None,
         name="VggSubsampling",
@@ -61,40 +63,44 @@ class VggSubsampling(tf.keras.layers.Layer):
             filters=filters[0],
             kernel_size=kernel_size,
             strides=1,
-            padding="same",
+            padding=padding,
             name=f"{name}_conv_1",
             kernel_regularizer=kernel_regularizer,
             bias_regularizer=bias_regularizer,
+            activation=activation,
         )
         self.conv2 = tf.keras.layers.Conv2D(
             filters=filters[0],
             kernel_size=kernel_size,
             strides=1,
-            padding="same",
+            padding=padding,
             name=f"{name}_conv_2",
             kernel_regularizer=kernel_regularizer,
             bias_regularizer=bias_regularizer,
+            activation=activation,
         )
-        self.maxpool1 = tf.keras.layers.MaxPool2D(pool_size=strides, padding="same", name=f"{name}_maxpool_1")
+        self.maxpool1 = tf.keras.layers.MaxPool2D(pool_size=strides, padding=padding, name=f"{name}_maxpool_1")
         self.conv3 = tf.keras.layers.Conv2D(
             filters=filters[1],
             kernel_size=kernel_size,
             strides=1,
-            padding="same",
+            padding=padding,
             name=f"{name}_conv_3",
             kernel_regularizer=kernel_regularizer,
             bias_regularizer=bias_regularizer,
+            activation=activation,
         )
         self.conv4 = tf.keras.layers.Conv2D(
             filters=filters[1],
             kernel_size=kernel_size,
             strides=1,
-            padding="same",
+            padding=padding,
             name=f"{name}_conv_4",
             kernel_regularizer=kernel_regularizer,
             bias_regularizer=bias_regularizer,
+            activation=activation,
         )
-        self.maxpool2 = tf.keras.layers.MaxPool2D(pool_size=strides, padding="same", name=f"{name}_maxpool_2")
+        self.maxpool2 = tf.keras.layers.MaxPool2D(pool_size=strides, padding=padding, name=f"{name}_maxpool_2")
         self.time_reduction_factor = self.maxpool1.pool_size[0] * self.maxpool2.pool_size[0]
 
     def call(
@@ -104,15 +110,11 @@ class VggSubsampling(tf.keras.layers.Layer):
         **kwargs,
     ):
         outputs = self.conv1(inputs, training=training)
-        outputs = tf.nn.relu(outputs)
         outputs = self.conv2(outputs, training=training)
-        outputs = tf.nn.relu(outputs)
         outputs = self.maxpool1(outputs, training=training)
 
         outputs = self.conv3(outputs, training=training)
-        outputs = tf.nn.relu(outputs)
         outputs = self.conv4(outputs, training=training)
-        outputs = tf.nn.relu(outputs)
         outputs = self.maxpool2(outputs, training=training)
 
         return math_util.merge_two_last_dims(outputs)
@@ -125,6 +127,7 @@ class Conv2dSubsampling(tf.keras.layers.Layer):
         strides: list or tuple or int = 2,
         kernel_size: int or list or tuple = 3,
         padding: str = "same",
+        activation: str = "relu",
         kernel_regularizer=None,
         bias_regularizer=None,
         name="Conv2dSubsampling",
@@ -139,6 +142,7 @@ class Conv2dSubsampling(tf.keras.layers.Layer):
             name=f"{name}_1",
             kernel_regularizer=kernel_regularizer,
             bias_regularizer=bias_regularizer,
+            activation=activation,
         )
         self.conv2 = tf.keras.layers.Conv2D(
             filters=filters,
@@ -148,6 +152,7 @@ class Conv2dSubsampling(tf.keras.layers.Layer):
             name=f"{name}_2",
             kernel_regularizer=kernel_regularizer,
             bias_regularizer=bias_regularizer,
+            activation=activation,
         )
         self.time_reduction_factor = self.conv1.strides[0] * self.conv2.strides[0]
 
@@ -158,9 +163,7 @@ class Conv2dSubsampling(tf.keras.layers.Layer):
         **kwargs,
     ):
         outputs = self.conv1(inputs, training=training)
-        outputs = tf.nn.relu(outputs)
         outputs = self.conv2(outputs, training=training)
-        outputs = tf.nn.relu(outputs)
         return math_util.merge_two_last_dims(outputs)
 
 
@@ -171,6 +174,7 @@ class Conv1dSubsampling(tf.keras.layers.Layer):
         strides: int = 2,
         kernel_size: int = 3,
         padding: str = "causal",
+        activation: str = "relu",
         kernel_regularizer=None,
         bias_regularizer=None,
         name="Conv1dSubsampling",
@@ -185,6 +189,7 @@ class Conv1dSubsampling(tf.keras.layers.Layer):
             name=f"{name}_1",
             kernel_regularizer=kernel_regularizer,
             bias_regularizer=bias_regularizer,
+            activation=activation,
         )
         self.conv2 = tf.keras.layers.Conv1D(
             filters=filters,
@@ -194,6 +199,7 @@ class Conv1dSubsampling(tf.keras.layers.Layer):
             name=f"{name}_2",
             kernel_regularizer=kernel_regularizer,
             bias_regularizer=bias_regularizer,
+            activation=activation,
         )
         self.time_reduction_factor = self.conv1.strides[0] * self.conv2.strides[0]
 
@@ -205,7 +211,5 @@ class Conv1dSubsampling(tf.keras.layers.Layer):
     ):
         outputs = math_util.merge_two_last_dims(inputs)
         outputs = self.conv1(outputs, training=training)
-        outputs = tf.nn.relu(outputs)
         outputs = self.conv2(outputs, training=training)
-        outputs = tf.nn.relu(outputs)
         return outputs

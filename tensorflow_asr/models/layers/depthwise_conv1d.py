@@ -6,7 +6,6 @@ from tensorflow.python.ops import array_ops
 class DepthwiseConv1D(tf.keras.layers.DepthwiseConv1D):
     """
     Causal padding supported DepthwiseConv1D
-    Slightly modified with input_shape specific for ASR
     """
 
     def _validate_init(self):  # removed check padding causal
@@ -28,12 +27,12 @@ class DepthwiseConv1D(tf.keras.layers.DepthwiseConv1D):
 
         if self.data_format == "channels_last":  # default
             strides = (1,) + self.strides * 2 + (1,)
-            spatial_start_dim = 2  # [B, T, 1, E]
+            spatial_start_dim = 1  # [B, 1, T, E]
         else:
             strides = (1, 1) + self.strides * 2
-            spatial_start_dim = 3  # [B, E, T, 1]
+            spatial_start_dim = 2  # [B, E, 1, T]
         inputs = tf.expand_dims(inputs, spatial_start_dim)
-        depthwise_kernel = tf.expand_dims(self.depthwise_kernel, axis=1)  # (kernel_size, 1) across T dimension
+        depthwise_kernel = tf.expand_dims(self.depthwise_kernel, axis=0)  # (1, kernel_size) across T dimension
         dilation_rate = (1,) + self.dilation_rate
 
         outputs = tf.nn.depthwise_conv2d(
