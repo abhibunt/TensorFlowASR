@@ -63,7 +63,7 @@ def setup_tpu(
     tf.config.experimental_connect_to_cluster(resolver)
     tf.tpu.experimental.initialize_tpu_system(resolver)
     logger.info(f"All TPUs: {tf.config.list_logical_devices('TPU')}")
-    return tf.distribute.experimental.TPUStrategy(resolver)
+    return tf.distribute.TPUStrategy(resolver)
 
 
 def setup_strategy(
