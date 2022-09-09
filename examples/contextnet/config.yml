@@ -228,16 +228,18 @@ learning_config:
   train_dataset_config:
     use_tf: True
     augmentation_config:
-      prob: 0.5
       signal_augment:
         gauss_noise:
+          prob: 0.5
           stddev: 0.075
       feature_augment:
         time_masking:
+          prob: 0.5
           num_masks: 10
           mask_factor: 100
           p_upperbound: 0.05
         freq_masking:
+          prob: 0.5
           num_masks: 1
           mask_factor: 27
     data_paths:
