@@ -50,6 +50,7 @@ class VggSubsampling(tf.keras.layers.Layer):
         self,
         filters: tuple or list = (32, 64),
         kernel_size: int or list or tuple = 3,
+        pool_size: int or list or tuple = 2,
         strides: int or list or tuple = 2,
         padding: str = "same",
         activation: str = "relu",
@@ -79,7 +80,9 @@ class VggSubsampling(tf.keras.layers.Layer):
             bias_regularizer=bias_regularizer,
             activation=activation,
         )
-        self.maxpool1 = tf.keras.layers.MaxPool2D(pool_size=strides, padding=padding, name=f"{name}_maxpool_1")
+        self.maxpool1 = tf.keras.layers.MaxPool2D(
+            pool_size=pool_size, strides=strides, padding=padding, name=f"{name}_maxpool_1"
+        )
         self.conv3 = tf.keras.layers.Conv2D(
             filters=filters[1],
             kernel_size=kernel_size,
@@ -100,7 +103,9 @@ class VggSubsampling(tf.keras.layers.Layer):
             bias_regularizer=bias_regularizer,
             activation=activation,
         )
-        self.maxpool2 = tf.keras.layers.MaxPool2D(pool_size=strides, padding=padding, name=f"{name}_maxpool_2")
+        self.maxpool2 = tf.keras.layers.MaxPool2D(
+            pool_size=pool_size, strides=strides, padding=padding, name=f"{name}_maxpool_2"
+        )
         self.time_reduction_factor = self.maxpool1.pool_size[0] * self.maxpool2.pool_size[0]
 
     def call(

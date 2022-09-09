@@ -43,6 +43,7 @@ model_config:
       - 64
       - 128
     kernel_size: 3
+    pool_size: 2
     strides: 2
     padding: same
     activation: relu
