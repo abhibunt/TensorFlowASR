@@ -19,7 +19,13 @@ from tensorflow_asr.utils import shape_util
 
 
 class FreqMasking(AugmentationMethod):
-    def __init__(self, num_masks: int = 1, mask_factor: float = 27):
+    def __init__(
+        self,
+        num_masks: int = 1,
+        mask_factor: float = 27,
+        prob: float = 0.5,
+    ):
+        super().__init__(prob=prob)
         self.num_masks = num_masks
         self.mask_factor = mask_factor
 
@@ -50,7 +56,14 @@ class FreqMasking(AugmentationMethod):
 
 
 class TimeMasking(AugmentationMethod):
-    def __init__(self, num_masks: int = 1, mask_factor: float = 100, p_upperbound: float = 1.0):
+    def __init__(
+        self,
+        num_masks: int = 1,
+        mask_factor: float = 100,
+        p_upperbound: float = 1.0,
+        prob: float = 0.5,
+    ):
+        super().__init__(prob=prob)
         self.num_masks = num_masks
         self.mask_factor = mask_factor
         self.p_upperbound = p_upperbound

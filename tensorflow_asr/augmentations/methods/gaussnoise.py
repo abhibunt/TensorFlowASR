@@ -18,7 +18,13 @@ from tensorflow_asr.augmentations.methods.base_method import AugmentationMethod
 
 
 class GaussNoise(AugmentationMethod):
-    def __init__(self, mean: float = 0.0, stddev: float = 0.075):
+    def __init__(
+        self,
+        mean: float = 0.0,
+        stddev: float = 0.075,
+        prob: float = 0.5,
+    ):
+        super().__init__(prob=prob)
         self.mean = mean
         self.stddev = stddev
 
