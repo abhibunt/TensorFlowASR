@@ -23,7 +23,6 @@ def prepare_training_datasets(
     speech_featurizer: SpeechFeaturizer,
     text_featurizer: TextFeaturizer,
     tfrecords: bool = False,
-    metadata: str = None,
 ):
     if tfrecords:
         train_dataset = asr_dataset.ASRTFRecordDataset(
@@ -51,8 +50,6 @@ def prepare_training_datasets(
             **vars(config.learning_config.eval_dataset_config),
             indefinite=True
         )
-    train_dataset.load_metadata(metadata)
-    eval_dataset.load_metadata(metadata)
     return train_dataset, eval_dataset
 
 

@@ -36,8 +36,6 @@ def main(
     wordpiece: bool = True,
     bs: int = None,
     spx: int = 1,
-    metadata: str = None,
-    static_length: bool = False,
     devices: list = [0],
     mxp: bool = False,
     pretrained: str = None,
@@ -62,12 +60,7 @@ def main(
         speech_featurizer=speech_featurizer,
         text_featurizer=text_featurizer,
         tfrecords=tfrecords,
-        metadata=metadata,
     )
-
-    if not static_length:
-        speech_featurizer.reset_length()
-        text_featurizer.reset_length()
 
     train_data_loader, eval_data_loader, global_batch_size = dataset_helpers.prepare_training_data_loaders(
         config=config,

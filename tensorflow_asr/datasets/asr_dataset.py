@@ -50,6 +50,7 @@ class ASRDataset(BaseDataset):
         drop_remainder: bool = True,
         use_tf: bool = False,
         enabled: bool = True,
+        metadata: str = None,
         buffer_size: int = BUFFER_SIZE,
         **kwargs,
     ):
@@ -63,11 +64,14 @@ class ASRDataset(BaseDataset):
             drop_remainder=drop_remainder,
             use_tf=use_tf,
             enabled=enabled,
+            metadata=metadata,
             indefinite=indefinite,
         )
         self.entries = []
         self.speech_featurizer = speech_featurizer
         self.text_featurizer = text_featurizer
+        if self.metadata:
+            self.load_metadata(metadata=metadata)
 
     # -------------------------------- metadata -------------------------------------
 
@@ -311,6 +315,7 @@ class ASRTFRecordDataset(ASRDataset):
         shuffle: bool = False,
         use_tf: bool = False,
         enabled: bool = True,
+        metadata: str = None,
         indefinite: bool = False,
         drop_remainder: bool = True,
         buffer_size: int = BUFFER_SIZE,
@@ -329,6 +334,7 @@ class ASRTFRecordDataset(ASRDataset):
             drop_remainder=drop_remainder,
             use_tf=use_tf,
             enabled=enabled,
+            metadata=metadata,
             indefinite=indefinite,
         )
         if not self.stage:

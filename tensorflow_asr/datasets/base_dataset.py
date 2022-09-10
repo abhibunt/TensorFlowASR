@@ -34,6 +34,7 @@ class BaseDataset:
         drop_remainder: bool = True,
         use_tf: bool = False,
         enabled: bool = True,
+        metadata: str = None,
         stage: str = "train",
         **kwargs
     ):
@@ -52,6 +53,7 @@ class BaseDataset:
         self.drop_remainder = drop_remainder  # whether to drop remainder for multi gpu training
         self.indefinite = indefinite  # Whether to make dataset repeat indefinitely -> avoid the potential last partial batch
         self.total_steps = None  # for better training visualization
+        self.metadata = metadata
 
     def parse(self, *args, **kwargs):
         raise NotImplementedError()
