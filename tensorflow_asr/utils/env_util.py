@@ -20,13 +20,15 @@ from typing import List, Union
 import numpy as np
 import tensorflow as tf
 
-logger = tf.get_logger()
+logger = logging.getLogger(__name__)
 
 
 def setup_environment():
     """Setting tensorflow running environment"""
     warnings.simplefilter("ignore")
-    logger.setLevel(logging.INFO)
+    logging.basicConfig(format="%(levelname)s - %(module)s - %(message)s", level=logging.INFO)
+    logging.captureWarnings(True)
+    tf.get_logger().setLevel(logging.INFO)
     return logger
 
 

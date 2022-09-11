@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
+
 import tensorflow as tf
 from tqdm import tqdm
 
@@ -19,7 +21,7 @@ from tensorflow_asr.datasets.asr_dataset import ASRSliceDataset
 from tensorflow_asr.models.base_model import BaseModel
 from tensorflow_asr.utils import app_util, file_util
 
-logger = tf.get_logger()
+logger = logging.getLogger(__name__)
 
 
 def run_testing(

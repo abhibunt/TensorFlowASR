@@ -1,3 +1,4 @@
+# pylint: disable=not-callable
 # Copyright 2020 Huy Le Nguyen (@usimarit)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,13 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
+
 import tensorflow as tf
 from tqdm import tqdm
 
 from tensorflow_asr.metrics.error_rates import ErrorRate
 from tensorflow_asr.utils import file_util, metric_util
 
-logger = tf.get_logger()
+logger = logging.getLogger(__name__)
 
 
 def evaluate_results(

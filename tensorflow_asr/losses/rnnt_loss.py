@@ -1,3 +1,4 @@
+# pylint: disable=no-name-in-module,unexpected-keyword-arg,no-value-for-parameter
 # Copyright 2020 Huy Le Nguyen (@usimarit) and M. Yusuf Sarıgöz (@monatis)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,13 +14,15 @@
 # limitations under the License.
 # RNNT loss implementation in pure TensorFlow is borrowed from [iamjanvijay's repo](https://github.com/iamjanvijay/rnnt)
 
+import logging
+
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.ops.gen_array_ops import matrix_diag_part_v2
 
 from tensorflow_asr.utils import env_util
 
-logger = tf.get_logger()
+logger = logging.getLogger(__name__)
 
 LOG_0 = -np.inf
 
@@ -235,12 +238,7 @@ def compute_rnnt_loss_and_grad_helper(logits, labels, label_length, logit_length
     # Compute gradients of loss w.r.t. blank log-probabilities.
     grads_blank = (
         -tf.exp(
-            (
-                alpha[:, :-1, :]
-                + beta[:, 1:, :]
-                - tf.reshape(final_state_probs, shape=[batch_size, 1, 1])
-                + blank_probs[:, :-1, :]
-            )
+            (alpha[:, :-1, :] + beta[:, 1:, :] - tf.reshape(final_state_probs, shape=[batch_size, 1, 1]) + blank_probs[:, :-1, :])
             * grad_blank_mask
         )
         * grad_blank_mask

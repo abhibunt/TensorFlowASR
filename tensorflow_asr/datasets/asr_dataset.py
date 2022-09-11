@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import json
+import logging
 import os
 from typing import Union
 
@@ -31,7 +32,7 @@ from tensorflow_asr.featurizers.speech_featurizers import (
 from tensorflow_asr.featurizers.text_featurizers import TextFeaturizer
 from tensorflow_asr.utils import data_util, feature_util, file_util, math_util
 
-logger = tf.get_logger()
+logger = logging.getLogger(__name__)
 
 
 class ASRDataset(BaseDataset):
