@@ -660,19 +660,15 @@ class WordPieceFeaturizer(TextFeaturizer):
         Returns:
             sequence of ints in tf.Tensor
         """
-        text = self.preprocess_text(text)
-        text = tft.regex_split(text, delim_regex_pattern="\\s", keep_delim_regex_pattern="\\s")
-        text = text.merge_dims(0, 1)
-        indices = self.tokenizer.tokenize(text).merge_dims(0, 1)
-        return indices
+        return self.tf_extract(text)
 
     def tf_extract(
         self,
         text: tf.Tensor,
     ) -> tf.Tensor:
         text = self.tf_preprocess_text(text)
-        text = tft.regex_split(text, delim_regex_pattern="\\s", keep_delim_regex_pattern="\\s")
-        text = text.merge_dims(0, 1)
+        text = tf.strings.regex_replace(text, "\\s", "| |")
+        text = tf.strings.split(text, "|")
         indices = self.tokenizer.tokenize(text).merge_dims(0, 1)
         return indices
 
