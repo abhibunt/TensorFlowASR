@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 def setup_environment():
     """Setting tensorflow running environment"""
     warnings.simplefilter("ignore")
-    logging.basicConfig(format="%(levelname)s - %(module)s - %(message)s", level=logging.INFO)
+    logging.basicConfig(format="%(asctime)s:%(levelname)s:%(module)s: %(message)s", level=logging.INFO)
     logging.captureWarnings(True)
     tf.get_logger().setLevel(logging.INFO)
     return logger
