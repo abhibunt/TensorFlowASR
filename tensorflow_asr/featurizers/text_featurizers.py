@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import codecs
+import logging
 import os
 import unicodedata
 from multiprocessing import cpu_count
@@ -25,9 +26,10 @@ import tensorflow_text as tft
 from tensorflow_text.tools.wordpiece_vocab import bert_vocab_from_dataset as bert_vocab
 
 from tensorflow_asr.configs.config import DecoderConfig
-from tensorflow_asr.utils import file_util
 
-logger = tf.get_logger()
+logger = logging.getLogger(__name__)
+
+TEXT_FEATURIZER_TYPES = ["characters", "wordpiece", "subwords", "sentencepiece"]
 
 ENGLISH_CHARACTERS = [
     " ",
@@ -62,12 +64,9 @@ ENGLISH_CHARACTERS = [
 
 
 class TextFeaturizer:
-    def __init__(
-        self,
-        decoder_config: dict,
-    ):
+    def __init__(self, decoder_config: DecoderConfig):
         self.scorer = None
-        self.decoder_config = DecoderConfig(decoder_config)
+        self.decoder_config = decoder_config
         self.blank = None
         self.tokens2indices = {}
         self.tokens = []
@@ -102,17 +101,11 @@ class TextFeaturizer:
         text = tf.strings.strip(text)  # remove trailing whitespace
         return text
 
-    def add_scorer(
-        self,
-        scorer: any = None,
-    ):
+    def add_scorer(self, scorer: any = None):
         """Add scorer to this instance"""
         self.scorer = scorer
 
-    def normalize_indices(
-        self,
-        indices: tf.Tensor,
-    ) -> tf.Tensor:
+    def normalize_indices(self, indices: tf.Tensor) -> tf.Tensor:
         """
         Remove -1 in indices by replacing them with blanks
         Args:
@@ -126,23 +119,20 @@ class TextFeaturizer:
             blank_like = self.blank * tf.ones_like(indices, dtype=tf.int32)
             return tf.where(indices == minus_one, blank_like, indices)
 
-    def prepand_blank(
-        self,
-        text: tf.Tensor,
-    ) -> tf.Tensor:
+    def prepand_blank(self, text: tf.Tensor) -> tf.Tensor:
         """Prepand blank index for transducer models"""
-        return tf.concat([[self.blank], text], axis=0)
+        return tf.concat([[self.blank], text], 0)
 
-    def extract(self, text):
+    def extract(self, text: str) -> tf.Tensor:
         raise NotImplementedError()
 
-    def tf_extract(self, text):
+    def tf_extract(self, text: tf.Tensor) -> tf.Tensor:
         raise NotImplementedError()
 
-    def iextract(self, indices):
+    def iextract(self, indices: tf.Tensor) -> tf.Tensor:
         raise NotImplementedError()
 
-    def indices2upoints(self, indices):
+    def indices2upoints(self, indices: tf.Tensor) -> tf.Tensor:
         raise NotImplementedError()
 
 
@@ -153,21 +143,8 @@ class CharFeaturizer(TextFeaturizer):
     converted to a sequence of integer indexes.
     """
 
-    def __init__(
-        self,
-        decoder_config: dict,
-    ):
-        """
-        decoder_config = {
-            "vocabulary": str,
-            "blank_at_zero": bool,
-            "beam_width": int,
-            "lm_config": {
-                ...
-            }
-        }
-        """
-        super(CharFeaturizer, self).__init__(decoder_config)
+    def __init__(self, decoder_config: DecoderConfig):
+        super().__init__(decoder_config)
         self.__init_vocabulary()
 
     def __init_vocabulary(self):
@@ -196,10 +173,7 @@ class CharFeaturizer(TextFeaturizer):
         self.tokens = tf.convert_to_tensor(self.tokens, dtype=tf.string)
         self.upoints = tf.strings.unicode_decode(self.tokens, "UTF-8").to_tensor(shape=[None, 1])
 
-    def extract(
-        self,
-        text: str,
-    ) -> tf.Tensor:
+    def extract(self, text: str) -> tf.Tensor:
         """
         Convert string to a list of integers
         Args:
@@ -213,10 +187,10 @@ class CharFeaturizer(TextFeaturizer):
         indices = [self.tokens2indices[token] for token in text]
         return tf.convert_to_tensor(indices, dtype=tf.int32)
 
-    def iextract(
-        self,
-        indices: tf.Tensor,
-    ) -> tf.Tensor:
+    def tf_extract(self, text):
+        return self.extract(text)
+
+    def iextract(self, indices: tf.Tensor) -> tf.Tensor:
         """
         Convert list of indices to string
         Args:
@@ -232,10 +206,7 @@ class CharFeaturizer(TextFeaturizer):
         return tokens
 
     @tf.function(input_signature=[tf.TensorSpec([None], dtype=tf.int32)])
-    def indices2upoints(
-        self,
-        indices: tf.Tensor,
-    ) -> tf.Tensor:
+    def indices2upoints(self, indices: tf.Tensor) -> tf.Tensor:
         """
         Transform Predicted Indices to Unicode Code Points (for using tflite)
         Args:
@@ -257,24 +228,8 @@ class SubwordFeaturizer(TextFeaturizer):
     converted to a sequence of integer indexes.
     """
 
-    def __init__(
-        self,
-        decoder_config: dict,
-        subwords=None,
-    ):
-        """
-        decoder_config = {
-            "vocab_size": int,
-            "max_subword_length": 4,
-            "max_corpus_chars": None,
-            "reserved_tokens": None,
-            "beam_width": int,
-            "lm_config": {
-                ...
-            }
-        }
-        """
-        super(SubwordFeaturizer, self).__init__(decoder_config)
+    def __init__(self, decoder_config: DecoderConfig, subwords=None):
+        super().__init__(decoder_config)
         self.subwords = self.__load_subwords() if subwords is None else subwords
         self.blank = 0  # subword treats blank as 0
         self.num_classes = self.subwords.vocab_size
@@ -295,16 +250,10 @@ class SubwordFeaturizer(TextFeaturizer):
         return tds.deprecated.text.SubwordTextEncoder.load_from_file(filename_prefix)
 
     @classmethod
-    def build_from_corpus(
-        cls,
-        decoder_config: dict,
-        corpus_files: list = None,
-    ):
-        dconf = DecoderConfig(decoder_config.copy())
-        corpus_files = dconf.corpus_files if corpus_files is None or len(corpus_files) == 0 else corpus_files
-
+    def build_from_corpus(cls, decoder_config: DecoderConfig):
         def corpus_generator():
-            for file in corpus_files:
+            for file in decoder_config.corpus_files:
+                logger.info(f"Reading {file} ...")
                 with open(file, "r", encoding="utf-8") as f:
                     lines = f.read().splitlines()
                     lines = lines[1:]
@@ -312,39 +261,22 @@ class SubwordFeaturizer(TextFeaturizer):
                     line = line.split("\t")
                     yield line[-1]
 
+        def write_vocab_file(filepath, subwords):
+            filename_prefix = os.path.splitext(filepath)[0]
+            return subwords.save_to_file(filename_prefix)
+
         subwords = tds.deprecated.text.SubwordTextEncoder.build_from_corpus(
             corpus_generator(),
-            dconf.vocab_size,
-            dconf.max_token_length,
-            dconf.max_unique_chars,
-            dconf.reserved_tokens,
+            decoder_config.vocab_size,
+            decoder_config.max_token_length,
+            decoder_config.max_unique_chars,
+            decoder_config.reserved_tokens,
         )
+        write_vocab_file(decoder_config.vocabulary, subwords)
+
         return cls(decoder_config, subwords)
 
-    @classmethod
-    def load_from_file(
-        cls,
-        decoder_config: dict,
-        filename: str = None,
-    ):
-        dconf = DecoderConfig(decoder_config.copy())
-        filename = dconf.vocabulary if filename is None else file_util.preprocess_paths(filename)
-        filename_prefix = os.path.splitext(filename)[0]
-        subwords = tds.deprecated.text.SubwordTextEncoder.load_from_file(filename_prefix)
-        return cls(decoder_config, subwords)
-
-    def save_to_file(
-        self,
-        filename: str = None,
-    ):
-        filename = self.decoder_config.vocabulary if filename is None else file_util.preprocess_paths(filename)
-        filename_prefix = os.path.splitext(filename)[0]
-        return self.subwords.save_to_file(filename_prefix)
-
-    def extract(
-        self,
-        text: str,
-    ) -> tf.Tensor:
+    def extract(self, text: str) -> tf.Tensor:
         """
         Convert string to a list of integers
         Args:
@@ -357,10 +289,10 @@ class SubwordFeaturizer(TextFeaturizer):
         indices = self.subwords.encode(text)
         return tf.convert_to_tensor(indices, dtype=tf.int32)
 
-    def iextract(
-        self,
-        indices: tf.Tensor,
-    ) -> tf.Tensor:
+    def tf_extract(self, text: tf.Tensor) -> tf.Tensor:
+        return self.extract(text)
+
+    def iextract(self, indices: tf.Tensor) -> tf.Tensor:
         """
         Convert list of indices to string
         Args:
@@ -396,10 +328,7 @@ class SubwordFeaturizer(TextFeaturizer):
             return transcripts.stack()
 
     @tf.function(input_signature=[tf.TensorSpec([None], dtype=tf.int32)])
-    def indices2upoints(
-        self,
-        indices: tf.Tensor,
-    ) -> tf.Tensor:
+    def indices2upoints(self, indices: tf.Tensor) -> tf.Tensor:
         """
         Transform Predicted Indices to Unicode Code Points (for using tflite)
         Args:
@@ -424,11 +353,7 @@ class SentencePieceFeaturizer(TextFeaturizer):
     EOS_TOKEN, EOS_TOKEN_ID = "</s>", 3
     PAD_TOKEN, PAD_TOKEN_ID = "<pad>", 0  # unused, by default
 
-    def __init__(
-        self,
-        decoder_config: dict,
-        model=None,
-    ):
+    def __init__(self, decoder_config: DecoderConfig, model=None):
         super().__init__(decoder_config)
         self.model = self.__load_model() if model is None else model
         self.blank = 0  # treats blank as 0 (pad)
@@ -439,7 +364,7 @@ class SentencePieceFeaturizer(TextFeaturizer):
     def __load_model(self):
         filename_prefix = os.path.splitext(self.decoder_config.vocabulary)[0]
         processor = sp.SentencePieceProcessor()
-        processor.load(filename_prefix + ".model")
+        processor.load(filename_prefix + ".model")  # pylint: disable=no-member
         return processor
 
     def __init_vocabulary(self):
@@ -452,20 +377,16 @@ class SentencePieceFeaturizer(TextFeaturizer):
         self.upoints = self.upoints.to_tensor()  # [num_classes, max_subword_length]
 
     @classmethod
-    def build_from_corpus(
-        cls,
-        decoder_config: dict,
-    ):
+    def build_from_corpus(cls, decoder_config: DecoderConfig):
         """
         --model_prefix: output model name prefix. <model_name>.model and <model_name>.vocab are generated.
         --vocab_size: vocabulary size, e.g., 8000, 16000, or 32000
         --model_type: model type. Choose from unigram (default), bpe, char, or word.
         The input sentence must be pretokenized when using word type."""
-        decoder_cfg = DecoderConfig(decoder_config)
         # Train SentencePiece Model
 
         def corpus_iterator():
-            for file in decoder_cfg.corpus_files:
+            for file in decoder_config.corpus_files:
                 with open(file, "r", encoding="utf-8") as f:
                     lines = f.read().splitlines()
                     lines = lines[1:]
@@ -475,9 +396,9 @@ class SentencePieceFeaturizer(TextFeaturizer):
 
         sp.SentencePieceTrainer.Train(
             sentence_iterator=corpus_iterator(),
-            model_prefix=decoder_cfg.output_path_prefix,
-            model_type=decoder_cfg.model_type,
-            vocab_size=decoder_cfg.vocab_size,
+            model_prefix=decoder_config.output_path_prefix,
+            model_type=decoder_config.model_type,
+            vocab_size=decoder_config.vocab_size,
             num_threads=cpu_count(),
             unk_id=cls.UNK_TOKEN_ID,
             bos_id=cls.BOS_TOKEN_ID,
@@ -487,7 +408,7 @@ class SentencePieceFeaturizer(TextFeaturizer):
         )
         # Export fairseq dictionary
         processor = sp.SentencePieceProcessor()
-        processor.Load(decoder_cfg.output_path_prefix + ".model")
+        processor.Load(decoder_config.output_path_prefix + ".model")
         vocab = {i: processor.IdToPiece(i) for i in range(processor.GetPieceSize())}
         assert (
             vocab.get(cls.UNK_TOKEN_ID) == cls.UNK_TOKEN
@@ -495,30 +416,13 @@ class SentencePieceFeaturizer(TextFeaturizer):
             and vocab.get(cls.EOS_TOKEN_ID) == cls.EOS_TOKEN
         )
         vocab = {i: s for i, s in vocab.items() if s not in {cls.UNK_TOKEN, cls.BOS_TOKEN, cls.EOS_TOKEN, cls.PAD_TOKEN}}
-        with open(decoder_cfg.output_path_prefix + ".txt", "w") as f_out:
+        with open(decoder_config.output_path_prefix + ".txt", "w", encoding="utf-8") as f_out:
             for _, s in sorted(vocab.items(), key=lambda x: x[0]):
                 f_out.write(f"{s} 1\n")
 
         return cls(decoder_config, processor)
 
-    @classmethod
-    def load_from_file(
-        cls,
-        decoder_config: dict,
-        filename: str = None,
-    ):
-        if filename is not None:
-            filename_prefix = os.path.splitext(file_util.preprocess_paths(filename))[0]
-        else:
-            filename_prefix = decoder_config.get("output_path_prefix", None)
-        processor = sp.SentencePieceProcessor()
-        processor.load(filename_prefix + ".model")
-        return cls(decoder_config, processor)
-
-    def extract(
-        self,
-        text: str,
-    ) -> tf.Tensor:
+    def extract(self, text: str) -> tf.Tensor:
         """
         Convert string to a list of integers
         # encode: text => id
@@ -535,10 +439,10 @@ class SentencePieceFeaturizer(TextFeaturizer):
         indices = self.model.encode_as_ids(text)
         return tf.convert_to_tensor(indices, dtype=tf.int32)
 
-    def iextract(
-        self,
-        indices: tf.Tensor,
-    ) -> tf.Tensor:
+    def tf_extract(self, text: tf.Tensor) -> tf.Tensor:
+        return self.extract(text)
+
+    def iextract(self, indices: tf.Tensor) -> tf.Tensor:
         """
         Convert list of indices to string
         # decode: id => text
@@ -567,10 +471,7 @@ class SentencePieceFeaturizer(TextFeaturizer):
         return text
 
     @tf.function(input_signature=[tf.TensorSpec([None], dtype=tf.int32)])
-    def indices2upoints(
-        self,
-        indices: tf.Tensor,
-    ) -> tf.Tensor:
+    def indices2upoints(self, indices: tf.Tensor) -> tf.Tensor:
         """
         Transform Predicted Indices to Unicode Code Points (for using tflite)
         Args:
@@ -586,10 +487,7 @@ class SentencePieceFeaturizer(TextFeaturizer):
 
 
 class WordPieceFeaturizer(TextFeaturizer):
-    def __init__(
-        self,
-        decoder_config: dict,
-    ):
+    def __init__(self, decoder_config: DecoderConfig):
         super().__init__(decoder_config)
         self.blank = self.decoder_config.blank_index  # treat [PAD] as blank
         self.vocab = None
@@ -607,14 +505,9 @@ class WordPieceFeaturizer(TextFeaturizer):
         self.num_classes = self.decoder_config.vocab_size
 
     @classmethod
-    def build_from_corpus(
-        cls,
-        decoder_config: dict,
-    ):
-        dconf = DecoderConfig(decoder_config.copy())
-
+    def build_from_corpus(cls, decoder_config: DecoderConfig):
         def corpus_generator():
-            for file_path in dconf.corpus_files:
+            for file_path in decoder_config.corpus_files:
                 logger.info(f"Reading {file_path} ...")
                 with tf.io.gfile.GFile(file_path, "r") as f:
                     temp_lines = f.read().splitlines()
@@ -623,35 +516,32 @@ class WordPieceFeaturizer(TextFeaturizer):
                         yield data
 
         def write_vocab_file(filepath, vocab):
-            with open(filepath, "w") as f:
+            with tf.io.gfile.GFile(filepath, "w") as f:
                 for token in vocab:
                     print(token, file=f)
 
         dataset = tf.data.Dataset.from_generator(corpus_generator, output_signature=tf.TensorSpec(shape=(), dtype=tf.string))
         vocab = bert_vocab.bert_vocab_from_dataset(
             dataset.batch(1000).prefetch(2),
-            vocab_size=dconf.vocab_size,
-            reserved_tokens=dconf.reserved_tokens,
+            vocab_size=decoder_config.vocab_size,
+            reserved_tokens=decoder_config.reserved_tokens,
             bert_tokenizer_params=dict(
                 lower_case=False,  # keep original from dataset
                 keep_whitespace=True,  # according to papers
-                normalization_form=dconf.normalization_form,
+                normalization_form=decoder_config.normalization_form,
                 preserve_unused_token=False,
             ),
             learn_params=dict(
-                max_token_length=dconf.max_token_length,
-                max_unique_chars=dconf.max_unique_chars,
-                num_iterations=dconf.num_iterations,
+                max_token_length=decoder_config.max_token_length,
+                max_unique_chars=decoder_config.max_unique_chars,
+                num_iterations=decoder_config.num_iterations,
             ),
         )
-        write_vocab_file(dconf.vocabulary, vocab)
+        write_vocab_file(decoder_config.vocabulary, vocab)
 
         return cls(decoder_config)
 
-    def extract(
-        self,
-        text: str,
-    ) -> tf.Tensor:
+    def extract(self, text: str) -> tf.Tensor:
         """
         Convert string to a list of integers
         Args:
@@ -662,20 +552,14 @@ class WordPieceFeaturizer(TextFeaturizer):
         """
         return self.tf_extract(text)
 
-    def tf_extract(
-        self,
-        text: tf.Tensor,
-    ) -> tf.Tensor:
+    def tf_extract(self, text: tf.Tensor) -> tf.Tensor:
         text = self.tf_preprocess_text(text)
         text = tf.strings.regex_replace(text, "\\s", "| |")
         text = tf.strings.split(text, "|")
         indices = self.tokenizer.tokenize(text).merge_dims(0, 1)
         return indices
 
-    def iextract(
-        self,
-        indices: tf.Tensor,
-    ) -> tf.Tensor:
+    def iextract(self, indices: tf.Tensor) -> tf.Tensor:
         """
         Convert list of indices to string
         Args:
@@ -691,10 +575,7 @@ class WordPieceFeaturizer(TextFeaturizer):
         return transcripts
 
     @tf.function(input_signature=[tf.TensorSpec([None], dtype=tf.int32)])
-    def indices2upoints(
-        self,
-        indices: tf.Tensor,
-    ) -> tf.Tensor:
+    def indices2upoints(self, indices: tf.Tensor) -> tf.Tensor:
         """
         Transform Predicted Indices to Unicode Code Points (for using tflite)
         Args:

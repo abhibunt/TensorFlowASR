@@ -282,7 +282,6 @@ class RnnTransducer(Transducer):
 
     # -------------------------------- GREEDY -------------------------------------
 
-    @tf.function
     def recognize(
         self,
         inputs: Dict[str, tf.Tensor],
@@ -358,7 +357,6 @@ class RnnTransducer(Transducer):
 
     # -------------------------------- BEAM SEARCH -------------------------------------
 
-    @tf.function
     def recognize_beam(
         self,
         inputs: Dict[str, tf.Tensor],

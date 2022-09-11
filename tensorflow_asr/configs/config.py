@@ -18,29 +18,53 @@ from tensorflow_asr.augmentations.augmentation import Augmentation
 from tensorflow_asr.utils import file_util
 
 
+class SpeechConfig:
+    def __init__(self, config: dict = None):
+        if not config:
+            config = {}
+        self.sample_rate: int = config.pop("sample_rate", 16000)
+        self.frame_ms: int = config.pop("frame_ms", 25)
+        self.frame_length = int(self.sample_rate * (self.frame_ms / 1000))
+        self.stride_ms: int = config.pop("stride_ms", 10)
+        self.frame_step = int(self.sample_rate * (self.stride_ms / 1000))
+        self.num_feature_bins: int = config.pop("num_feature_bins", 80)
+        self.feature_type: str = config.pop("feature_type", "log_mel_spectrogram")
+        self.preemphasis: float = config.pop("preemphasis", 0.97)
+        self.normalize_signal: bool = config.pop("normalize_signal", False)
+        self.normalize_feature: bool = config.pop("normalize_feature", False)
+        self.normalize_per_frame: bool = config.pop("normalize_per_frame", False)
+        self.center: bool = config.pop("center", False)
+        self.top_db: float = config.pop("top_db", None)
+        self.amin: float = config.pop("amin", 1e-10)
+        for k, v in config.items():
+            setattr(self, k, v)
+
+
 class DecoderConfig:
     def __init__(self, config: dict = None):
         if not config:
             config = {}
-        self.blank_index = config.pop("blank_index", 0)
-        self.unknown_token = config.pop("unknown_token", "[PAD]")
-        self.unknown_index = config.pop("unknown_index", self.blank_index)
+        self.type: str = config.pop("type", "wordpiece")
 
-        self.beam_width = config.pop("beam_width", 0)
-        self.norm_score = config.pop("norm_score", True)
-        self.lm_config = config.pop("lm_config", {})
+        self.blank_index: int = config.pop("blank_index", 0)
+        self.unknown_token: str = config.pop("unknown_token", "[PAD]")
+        self.unknown_index: int = config.pop("unknown_index", self.blank_index)
 
-        self.vocabulary = file_util.preprocess_paths(config.pop("vocabulary", None))
-        self.vocab_size = config.pop("vocab_size", 1000)
-        self.max_token_length = config.pop("max_token_length", 50)
-        self.max_unique_chars = config.pop("max_unique_chars", None)
-        self.num_iterations = config.pop("num_iterations", 4)
-        self.reserved_tokens = config.pop("reserved_tokens", None)
-        self.normalization_form = config.pop("normalization_form", "NFKC")
+        self.beam_width: int = config.pop("beam_width", 0)
+        self.norm_score: bool = config.pop("norm_score", True)
+        self.lm_config: dict = config.pop("lm_config", {})
+
+        self.vocabulary: str = file_util.preprocess_paths(config.pop("vocabulary", None))
+        self.vocab_size: int = config.pop("vocab_size", 1000)
+        self.max_token_length: int = config.pop("max_token_length", 50)
+        self.max_unique_chars: int = config.pop("max_unique_chars", None)
+        self.num_iterations: int = config.pop("num_iterations", 4)
+        self.reserved_tokens: list = config.pop("reserved_tokens", None)
+        self.normalization_form: str = config.pop("normalization_form", "NFKC")
 
         self.corpus_files = file_util.preprocess_paths(config.pop("corpus_files", []))
-        self.output_path_prefix = file_util.preprocess_paths(config.pop("output_path_prefix", None))
-        self.model_type = config.pop("model_type", None)
+        self.output_path_prefix: str = file_util.preprocess_paths(config.pop("output_path_prefix", None))
+        self.model_type: str = config.pop("model_type", None)
 
         for k, v in config.items():
             setattr(self, k, v)
@@ -50,18 +74,18 @@ class DatasetConfig:
     def __init__(self, config: dict = None):
         if not config:
             config = {}
-        self.enabled = config.pop("enabled", True)
-        self.stage = config.pop("stage", None)
+        self.enabled: bool = config.pop("enabled", True)
+        self.stage: str = config.pop("stage", None)
         self.data_paths = file_util.preprocess_paths(config.pop("data_paths", None), enabled=self.enabled)
-        self.tfrecords_dir = file_util.preprocess_paths(config.pop("tfrecords_dir", None), isdir=True, enabled=self.enabled)
-        self.tfrecords_shards = config.pop("tfrecords_shards", 16)
-        self.shuffle = config.pop("shuffle", False)
-        self.cache = config.pop("cache", False)
-        self.drop_remainder = config.pop("drop_remainder", True)
-        self.buffer_size = config.pop("buffer_size", 1000)
-        self.use_tf = config.pop("use_tf", False)
+        self.tfrecords_dir: str = file_util.preprocess_paths(config.pop("tfrecords_dir", None), isdir=True, enabled=self.enabled)
+        self.tfrecords_shards: int = config.pop("tfrecords_shards", 16)
+        self.shuffle: bool = config.pop("shuffle", False)
+        self.cache: bool = config.pop("cache", False)
+        self.drop_remainder: bool = config.pop("drop_remainder", True)
+        self.buffer_size: int = config.pop("buffer_size", 1000)
+        self.use_tf: bool = config.pop("use_tf", False)
         self.augmentations = Augmentation(config.pop("augmentation_config", {}))
-        self.metadata = config.pop("metadata", None)
+        self.metadata: str = config.pop("metadata", None)
         for k, v in config.items():
             setattr(self, k, v)
 
@@ -70,9 +94,12 @@ class RunningConfig:
     def __init__(self, config: dict = None):
         if not config:
             config = {}
-        self.batch_size = config.pop("batch_size", 1)
-        self.accumulation_steps = config.pop("accumulation_steps", 1)
-        self.num_epochs = config.pop("num_epochs", 20)
+        self.batch_size: int = config.pop("batch_size", 1)
+        self.accumulation_steps: int = config.pop("accumulation_steps", 1)
+        self.num_epochs: int = config.pop("num_epochs", 20)
+        self.checkpoint: dict = {}
+        self.states_dir: str = None
+        self.tensorboard: dict = {}
         for k, v in config.items():
             setattr(self, k, v)
             if k == "checkpoint":
@@ -92,8 +119,8 @@ class LearningConfig:
         self.train_dataset_config = DatasetConfig(config.pop("train_dataset_config", {}))
         self.eval_dataset_config = DatasetConfig(config.pop("eval_dataset_config", {}))
         self.test_dataset_config = DatasetConfig(config.pop("test_dataset_config", {}))
-        self.optimizer_config = config.pop("optimizer_config", {})
-        self.learning_rate_config = config.pop("learning_rate_config", {})
+        self.optimizer_config: dict = config.pop("optimizer_config", {})
+        self.learning_rate_config: dict = config.pop("learning_rate_config", {})
         self.running_config = RunningConfig(config.pop("running_config", {}))
         for k, v in config.items():
             setattr(self, k, v)
@@ -104,9 +131,9 @@ class Config:
 
     def __init__(self, data: Union[str, dict]):
         config = data if isinstance(data, dict) else file_util.load_yaml(file_util.preprocess_paths(data))
-        self.speech_config = config.pop("speech_config", {})
-        self.decoder_config = config.pop("decoder_config", {})
-        self.model_config = config.pop("model_config", {})
+        self.speech_config = SpeechConfig(config.pop("speech_config", {}))
+        self.decoder_config = DecoderConfig(config.pop("decoder_config", {}))
+        self.model_config: dict = config.pop("model_config", {})
         self.learning_config = LearningConfig(config.pop("learning_config", {}))
         for k, v in config.items():
             setattr(self, k, v)

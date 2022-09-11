@@ -31,9 +31,6 @@ def main(
     saved: str = None,
     mxp: bool = False,
     bs: int = None,
-    sentence_piece: bool = False,
-    subwords: bool = False,
-    wordpiece: bool = True,
     device: int = 0,
     cpu: bool = False,
     output: str = "test.tsv",
@@ -45,12 +42,7 @@ def main(
 
     config = Config(config_path)
 
-    speech_featurizer, text_featurizer = featurizer_helpers.prepare_featurizers(
-        config=config,
-        subwords=subwords,
-        sentence_piece=sentence_piece,
-        wordpiece=wordpiece,
-    )
+    speech_featurizer, text_featurizer = featurizer_helpers.prepare_featurizers(config=config)
 
     conformer = Conformer(**config.model_config, blank=text_featurizer.blank, vocab_size=text_featurizer.num_classes)
     conformer.make(speech_featurizer.shape)

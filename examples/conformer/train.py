@@ -32,9 +32,6 @@ DEFAULT_YAML = os.path.join(os.path.abspath(os.path.dirname(__file__)), "config.
 def main(
     config_path: str = DEFAULT_YAML,
     tfrecords: bool = False,
-    sentence_piece: bool = False,
-    subwords: bool = False,
-    wordpiece: bool = False,
     bs: int = None,
     spx: int = 1,
     devices: list = [0],
@@ -49,12 +46,7 @@ def main(
 
     config = Config(config_path)
 
-    speech_featurizer, text_featurizer = featurizer_helpers.prepare_featurizers(
-        config=config,
-        subwords=subwords,
-        sentence_piece=sentence_piece,
-        wordpiece=wordpiece,
-    )
+    speech_featurizer, text_featurizer = featurizer_helpers.prepare_featurizers(config=config)
 
     train_dataset, eval_dataset = dataset_helpers.prepare_training_datasets(
         config=config,

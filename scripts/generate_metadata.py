@@ -28,18 +28,13 @@ def main(
     *transcripts,
     stage: str = "train",
     config_path: str = None,
-    wordpiece: bool = True,
-    sentence_piece: bool = False,
-    subwords: bool = False,
     metadata: str = None,
 ):
     transcripts = preprocess_paths(transcripts)
 
     config = Config(config_path)
 
-    speech_featurizer, text_featurizer = featurizer_helpers.prepare_featurizers(
-        config=config, subwords=subwords, sentence_piece=sentence_piece, wordpiece=wordpiece
-    )
+    speech_featurizer, text_featurizer = featurizer_helpers.prepare_featurizers(config=config)
 
     dataset = ASRDataset(
         data_paths=transcripts,

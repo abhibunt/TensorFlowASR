@@ -30,13 +30,12 @@ DEFAULT_YAML = os.path.join(os.path.abspath(os.path.dirname(__file__)), "config.
 def main(
     config_path: str = DEFAULT_YAML,
     tfrecords: bool = False,
-    sentence_piece: bool = False,
-    subwords: bool = True,
     bs: int = None,
     spx: int = 1,
     devices: list = [0],
     mxp: bool = False,
     pretrained: str = None,
+    jit_compile: bool = True,
 ):
     env_util.setup_seed()
     strategy = env_util.setup_strategy(devices)
@@ -44,11 +43,7 @@ def main(
 
     config = Config(config_path)
 
-    speech_featurizer, text_featurizer = featurizer_helpers.prepare_featurizers(
-        config=config,
-        subwords=subwords,
-        sentence_piece=sentence_piece,
-    )
+    speech_featurizer, text_featurizer = featurizer_helpers.prepare_featurizers(config=config)
 
     train_dataset, eval_dataset = dataset_helpers.prepare_training_datasets(
         config=config,
@@ -78,6 +73,7 @@ def main(
             optimizer=config.learning_config.optimizer_config,
             steps_per_execution=spx,
             blank=text_featurizer.blank,
+            jit_compile=jit_compile,
         )
         rnn_transducer.summary()
 

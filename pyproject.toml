@@ -1,6 +1,6 @@
 [tool.black]
-line-length = 127
+line-length = 130
 
 [tool.isort]
 profile = "black"
-line_length = 127
+line_length = 130

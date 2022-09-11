@@ -41,9 +41,7 @@ def main(
 
     config = Config(config_path)
 
-    speech_featurizer, text_featurizer = featurizer_helpers.prepare_featurizers(
-        config=config, subwords=subwords, sentence_piece=sentence_piece, wordpiece=wordpiece
-    )
+    speech_featurizer, text_featurizer = featurizer_helpers.prepare_featurizers(config=config)
 
     tfrecord_dataset = ASRTFRecordDataset(
         data_paths=data_paths,

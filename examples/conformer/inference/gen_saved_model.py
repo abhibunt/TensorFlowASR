@@ -1,3 +1,4 @@
+# pylint: disable=no-member
 # Copyright 2020 Huy Le Nguyen (@usimarit)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,30 +30,22 @@ DEFAULT_YAML = os.path.join(os.path.abspath(os.path.dirname(__file__)), "config.
 
 def main(
     config_path: str = DEFAULT_YAML,
-    h5: str = None,
-    sentence_piece: bool = False,
-    subwords: bool = False,
-    wordpiece: bool = False,
+    saved: str = None,
     output_dir: str = None,
 ):
-    assert h5 and output_dir
+    assert saved and output_dir
     tf.random.set_seed(0)
     tf.keras.backend.clear_session()
 
     logger.info("Load config and featurizers ...")
     config = Config(config_path)
-    speech_featurizer, text_featurizer = featurizer_helpers.prepare_featurizers(
-        config=config,
-        subwords=subwords,
-        sentence_piece=sentence_piece,
-        wordpiece=wordpiece,
-    )
+    speech_featurizer, text_featurizer = featurizer_helpers.prepare_featurizers(config=config)
 
     logger.info("Build and load model ...")
     conformer = Conformer(**config.model_config, vocab_size=text_featurizer.num_classes)
     conformer.make(speech_featurizer.shape)
     conformer.add_featurizers(speech_featurizer, text_featurizer)
-    conformer.load_weights(h5, by_name=True)
+    conformer.load_weights(saved, by_name=True)
     conformer.summary()
 
     logger.info("Save model ...")

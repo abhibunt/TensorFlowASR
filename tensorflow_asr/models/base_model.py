@@ -1,3 +1,4 @@
+# pylint: disable=attribute-defined-outside-init
 # Copyright 2020 Huy Le Nguyen (@usimarit)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -77,10 +78,7 @@ class BaseModel(tf.keras.Model):
             self._tfasr_metrics = {}
         return list(self._tfasr_metrics.values())
 
-    def add_metric(
-        self,
-        metric: tf.keras.metrics.Metric,
-    ):
+    def add_metric(self, metric: tf.keras.metrics.Metric):
         if not hasattr(self, "_tfasr_metrics"):
             self._tfasr_metrics = {}
         self._tfasr_metrics[metric.name] = metric
@@ -115,11 +113,7 @@ class BaseModel(tf.keras.Model):
         self.add_metric(metric=tf.keras.metrics.Mean(name="loss", dtype=tf.float32))
         super().compile(optimizer=optimizer, loss=loss, run_eagerly=run_eagerly, **kwargs)
 
-    def add_featurizers(
-        self,
-        speech_featurizer: SpeechFeaturizer,
-        text_featurizer: TextFeaturizer,
-    ):
+    def add_featurizers(self, speech_featurizer: SpeechFeaturizer, text_featurizer: TextFeaturizer):
         """
         Function to add featurizer to model to convert to end2end tflite
         Args:
@@ -210,9 +204,5 @@ class BaseModel(tf.keras.Model):
 
     # ---------------------------------- TFLITE ---------------------------------- #
 
-    def make_tflite_function(
-        self,
-        *args,
-        **kwargs,
-    ):
+    def make_tflite_function(self, *args, **kwargs):
         pass

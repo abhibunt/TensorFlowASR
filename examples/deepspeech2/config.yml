@@ -19,20 +19,36 @@ speech_config:
   num_feature_bins: 80
   feature_type: spectrogram
   preemphasis: 0.97
-  normalize_signal: True
-  normalize_feature: True
+  normalize_signal: False
+  normalize_feature: False
   normalize_per_frame: False
   center: False
   top_db: null
 
 decoder_config:
-  vocabulary: null
-  blank_at_zero: False
-  beam_width: 500
-  lm_config:
-    model_path: null
-    alpha: 2.0
-    beta: 1.0
+  type: wordpiece
+
+  blank_index: 0
+  unknown_token: "[PAD]"
+  unknown_index: 0
+
+  beam_width: 0
+  norm_score: True
+  lm_config: null
+
+  vocabulary: ./vocabularies/librispeech/wordpiece/train_1000_50.tokens
+  vocab_size: 1000
+  max_token_length: 50
+  max_unique_chars: 1000
+  reserved_tokens:
+    - "[PAD]"
+  normalization_form: NFKC
+  num_iterations: 4
+
+  corpus_files:
+    - E:/MLDL/Datasets/ASR/LibriSpeech/train-clean-100/transcripts.tsv
+    - E:/MLDL/Datasets/ASR/LibriSpeech/train-clean-360/transcripts.tsv
+    - E:/MLDL/Datasets/ASR/LibriSpeech/train-other-500/transcripts.tsv
 
 model_config:
   name: deepspeech2
@@ -61,6 +77,7 @@ learning_config:
     buffer_size: 100
     drop_remainder: True
     stage: train
+    metadata: ./vocabularies/librispeech/wordpiece/train_1000_50.metadata.json
 
   eval_dataset_config:
     use_tf: True
@@ -72,6 +89,7 @@ learning_config:
     buffer_size: 100
     drop_remainder: True
     stage: eval
+    metadata: ./vocabularies/librispeech/wordpiece/train_1000_50.metadata.json
 
   test_dataset_config:
     use_tf: True

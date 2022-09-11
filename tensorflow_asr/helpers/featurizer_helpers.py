@@ -12,31 +12,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import tensorflow as tf
+import logging
 
 from tensorflow_asr.configs.config import Config
 from tensorflow_asr.featurizers import speech_featurizers, text_featurizers
 
-logger = tf.get_logger()
+logger = logging.getLogger(__name__)
 
 
 def prepare_featurizers(
     config: Config,
-    subwords: bool = False,
-    sentence_piece: bool = False,
-    wordpiece: bool = True,
 ):
     speech_featurizer = speech_featurizers.TFSpeechFeaturizer(config.speech_config)
-    if sentence_piece:
+    if config.decoder_config.type == "sentencepiece":
         logger.info("Loading SentencePiece model ...")
         text_featurizer = text_featurizers.SentencePieceFeaturizer(config.decoder_config)
-    elif subwords:
+    elif config.decoder_config.type == "subwords":
         logger.info("Loading subwords ...")
         text_featurizer = text_featurizers.SubwordFeaturizer(config.decoder_config)
-    elif wordpiece:
+    elif config.decoder_config.type == "wordpiece":
         logger.info("Loading wordpiece ...")
         text_featurizer = text_featurizers.WordPieceFeaturizer(config.decoder_config)
-    else:
+    elif config.decoder_config.type == "characters":
         logger.info("Use characters ...")
         text_featurizer = text_featurizers.CharFeaturizer(config.decoder_config)
+    else:
+        raise ValueError(f"type must be in {text_featurizers.TEXT_FEATURIZER_TYPES}, received {config.decoder_config.type}")
     return speech_featurizer, text_featurizer

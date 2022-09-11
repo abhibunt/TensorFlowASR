@@ -56,7 +56,7 @@ class Conformer(Transducer):
         name: str = "conformer",
         **kwargs,
     ):
-        super(Conformer, self).__init__(
+        super().__init__(
             encoder=ConformerEncoder(
                 subsampling=encoder_subsampling,
                 positional_encoding=encoder_positional_encoding,

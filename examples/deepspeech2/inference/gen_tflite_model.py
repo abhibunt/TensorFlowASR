@@ -39,11 +39,7 @@ def main(
     tf.compat.v1.enable_control_flow_v2()
 
     config = Config(config_path)
-    speech_featurizer, text_featurizer = featurizer_helpers.prepare_featurizers(
-        config=config,
-        subwords=subwords,
-        sentence_piece=sentence_piece,
-    )
+    speech_featurizer, text_featurizer = featurizer_helpers.prepare_featurizers(config=config)
 
     deepspeech2 = DeepSpeech2(**config.model_config, vocab_size=text_featurizer.num_classes)
     deepspeech2.make(speech_featurizer.shape)

@@ -19,12 +19,7 @@ config = Config(config_path)
 tf.random.set_seed(0)
 tf.keras.backend.clear_session()
 
-speech_featurizer, text_featurizer = featurizer_helpers.prepare_featurizers(
-    config=config,
-    subwords=False,
-    sentence_piece=False,
-    wordpiece=True,
-)
+speech_featurizer, text_featurizer = featurizer_helpers.prepare_featurizers(config=config)
 
 h5 = f"{os.path.dirname(__file__)}/../../../models/wordpiece-conformer-v2/21.h5"
 

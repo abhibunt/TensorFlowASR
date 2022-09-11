@@ -20,7 +20,7 @@ import tensorflow as tf
 from tensorflow_asr.configs.config import Config
 from tensorflow_asr.helpers import exec_helpers, featurizer_helpers
 from tensorflow_asr.models.transducer.conformer import Conformer
-from tensorflow_asr.utils import env_util
+from tensorflow_asr.utils import env_util, file_util
 
 logger = env_util.setup_environment()
 
@@ -29,27 +29,19 @@ DEFAULT_YAML = os.path.join(os.path.abspath(os.path.dirname(__file__)), "config.
 
 def main(
     config_path: str = DEFAULT_YAML,
-    h5: str = None,
-    subwords: bool = False,
-    sentence_piece: bool = False,
-    wordpiece: bool = True,
+    saved: str = None,
     output: str = None,
 ):
-    assert h5 and output
+    assert saved and output
     tf.keras.backend.clear_session()
     tf.compat.v1.enable_control_flow_v2()
 
     config = Config(config_path)
-    speech_featurizer, text_featurizer = featurizer_helpers.prepare_featurizers(
-        config=config,
-        subwords=subwords,
-        sentence_piece=sentence_piece,
-        wordpiece=wordpiece,
-    )
+    speech_featurizer, text_featurizer = featurizer_helpers.prepare_featurizers(config=config)
 
     conformer = Conformer(**config.model_config, vocab_size=text_featurizer.num_classes)
     conformer.make(speech_featurizer.shape)
-    conformer.load_weights(h5, by_name=True)
+    conformer.load_weights(saved, by_name=file_util.is_hdf5_filepath(saved))
     conformer.summary()
     conformer.add_featurizers(speech_featurizer, text_featurizer)
 

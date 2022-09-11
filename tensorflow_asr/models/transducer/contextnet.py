@@ -51,7 +51,7 @@ class ContextNet(Transducer):
         name: str = "contextnet",
         **kwargs,
     ):
-        super(ContextNet, self).__init__(
+        super().__init__(
             encoder=ContextNetEncoder(
                 blocks=encoder_blocks,
                 alpha=encoder_alpha,

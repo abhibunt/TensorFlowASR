@@ -26,6 +26,8 @@ speech_config:
   top_db: null
 
 decoder_config:
+  type: wordpiece
+
   blank_index: 0
   unknown_token: "[PAD]"
   unknown_index: 0

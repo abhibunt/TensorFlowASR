@@ -119,7 +119,7 @@ class TransducerPrediction(tf.keras.Model):
             states.append(tf.stack(rnn.get_initial_state(tf.zeros([1, 1, 1], dtype=tf.float32)), axis=0))
         return tf.stack(states, axis=0)
 
-    def call(self, inputs, training=False, **kwargs):
+    def call(self, inputs, training=False):
         # inputs has shape [B, U]
         # use tf.gather_nd instead of tf.gather for tflite conversion
         outputs, prediction_length = inputs
@@ -168,7 +168,7 @@ class TransducerJointMerge(tf.keras.layers.Layer):
             raise ValueError(f"joint_mode must in {JOINT_MODES}")
         self.joint_mode = joint_mode
 
-    def call(self, inputs, training=False):
+    def call(self, inputs):
         enc_out, pred_out = inputs
         enc_out = tf.expand_dims(enc_out, axis=2)  # [B, T, 1, V]
         pred_out = tf.expand_dims(pred_out, axis=1)  # [B, 1, U, V]
@@ -233,7 +233,7 @@ class TransducerJoint(tf.keras.Model):
             bias_regularizer=bias_regularizer,
         )
 
-    def call(self, inputs, training=False, **kwargs):
+    def call(self, inputs, training=False):
         # enc has shape [B, T, E]
         # pred has shape [B, U, P]
         enc_out, pred_out = inputs
@@ -241,7 +241,7 @@ class TransducerJoint(tf.keras.Model):
             enc_out = self.ffn_enc(enc_out, training=training)  # [B, T, E] => [B, T, V]
         if self.prejoint_prediction_linear:
             pred_out = self.ffn_pred(pred_out, training=training)  # [B, U, P] => [B, U, V]
-        outputs = self.joint([enc_out, pred_out], training=training)  # => [B, T, U, V]
+        outputs = self.joint([enc_out, pred_out])  # => [B, T, U, V]
         if self.postjoint_linear:
             outputs = self.ffn(outputs, training=training)
         outputs = self.activation(outputs, training=training)
@@ -313,12 +313,7 @@ class Transducer(BaseModel):
         )
         self.time_reduction_factor = 1
 
-    def make(
-        self,
-        input_shape,
-        prediction_shape=[None],
-        batch_size=None,
-    ):
+    def make(self, input_shape, prediction_shape=[None], batch_size=None):
         inputs = tf.keras.Input(shape=input_shape, batch_size=batch_size, dtype=tf.float32)
         inputs_length = tf.keras.Input(shape=[], batch_size=batch_size, dtype=tf.int32)
         predictions = tf.keras.Input(shape=prediction_shape, batch_size=batch_size, dtype=tf.int32)
@@ -345,12 +340,7 @@ class Transducer(BaseModel):
         loss = RnntLoss(blank=blank)
         super().compile(loss=loss, optimizer=optimizer, run_eagerly=run_eagerly, mxp=mxp, ga_steps=ga_steps, **kwargs)
 
-    def call(
-        self,
-        inputs,
-        training=False,
-        **kwargs,
-    ):
+    def call(self, inputs, training=False, **kwargs):
         enc = self.encoder(inputs["inputs"], training=training, **kwargs)
         pred = self.predict_net([inputs["predictions"], inputs["predictions_length"]], training=training, **kwargs)
         logits = self.joint_net([enc, pred], training=training, **kwargs)
@@ -361,10 +351,7 @@ class Transducer(BaseModel):
 
     # -------------------------------- INFERENCES -------------------------------------
 
-    def preprocess(
-        self,
-        signals: tf.Tensor,
-    ):
+    def preprocess(self, signals: tf.Tensor):
         with tf.name_scope(f"{self.name}_preprocess"):
             batch = tf.constant(0, dtype=tf.int32)
             total_batch = tf.shape(signals)[0]
@@ -404,10 +391,7 @@ class Transducer(BaseModel):
 
             return inputs.stack(), inputs_length.stack()
 
-    def encoder_inference(
-        self,
-        features: tf.Tensor,
-    ):
+    def encoder_inference(self, features: tf.Tensor):
         """Infer function for encoder (or encoders)
 
         Args:
@@ -421,13 +405,7 @@ class Transducer(BaseModel):
             outputs = self.encoder(outputs, training=False)
             return tf.squeeze(outputs, axis=0)
 
-    def decoder_inference(
-        self,
-        encoded: tf.Tensor,
-        predicted: tf.Tensor,
-        states: tf.Tensor,
-        tflite: bool = False,
-    ):
+    def decoder_inference(self, encoded: tf.Tensor, predicted: tf.Tensor, states: tf.Tensor, tflite: bool = False):
         """Infer function for decoder
 
         Args:
@@ -448,12 +426,7 @@ class Transducer(BaseModel):
 
     # -------------------------------- GREEDY -------------------------------------
 
-    @tf.function
-    def recognize(
-        self,
-        inputs: Dict[str, tf.Tensor],
-        **kwargs,
-    ):
+    def recognize(self, inputs: Dict[str, tf.Tensor]):
         """
         RNN Transducer Greedy decoding
         Args:
@@ -468,10 +441,7 @@ class Transducer(BaseModel):
         return self._perform_greedy_batch(encoded=encoded, encoded_length=encoded_length)
 
     @tf.function(input_signature=[tf.TensorSpec(shape=[None, None], dtype=tf.float32)])
-    def recognize_from_signal(
-        self,
-        signals: tf.Tensor,
-    ):
+    def recognize_from_signal(self, signals: tf.Tensor):
         """
         RNN Transuder Greedy Decoding From Batch of Signals
 
@@ -484,12 +454,7 @@ class Transducer(BaseModel):
         inputs, inputs_length = self.preprocess(signals)
         return self.recognize(data_util.create_inputs(inputs=inputs, inputs_length=inputs_length))
 
-    def recognize_tflite(
-        self,
-        signal,
-        predicted,
-        states,
-    ):
+    def recognize_tflite(self, signal, predicted, states):
         """
         Function to convert to tflite using greedy decoding (default streaming mode)
         Args:
@@ -508,12 +473,7 @@ class Transducer(BaseModel):
         transcript = self.text_featurizer.indices2upoints(hypothesis.prediction)
         return transcript, hypothesis.index, hypothesis.states
 
-    def recognize_tflite_with_timestamp(
-        self,
-        signal,
-        predicted,
-        states,
-    ):
+    def recognize_tflite_with_timestamp(self, signal, predicted, states):
         features = self.speech_featurizer.tf_extract(signal)
         encoded = self.encoder_inference(features)
         hypothesis = self._perform_greedy(encoded, tf.shape(encoded)[0], predicted, states, tflite=True)
@@ -714,12 +674,7 @@ class Transducer(BaseModel):
 
     # -------------------------------- BEAM SEARCH -------------------------------------
 
-    @tf.function
-    def recognize_beam(
-        self,
-        inputs: Dict[str, tf.Tensor],
-        lm: bool = False,
-    ):
+    def recognize_beam(self, inputs: Dict[str, tf.Tensor], lm: bool = False):
         """
         RNN Transducer Beam Search
         Args:
@@ -983,10 +938,7 @@ class Transducer(BaseModel):
 
     # -------------------------------- TFLITE -------------------------------------
 
-    def make_tflite_function(
-        self,
-        timestamp: bool = False,
-    ):
+    def make_tflite_function(self, timestamp: bool = False):
         tflite_func = self.recognize_tflite_with_timestamp if timestamp else self.recognize_tflite
         return tf.function(
             tflite_func,

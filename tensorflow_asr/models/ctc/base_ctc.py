@@ -42,11 +42,7 @@ class CtcModel(BaseModel):
             self.decoder = decoder
         self.time_reduction_factor = 1
 
-    def make(
-        self,
-        input_shape,
-        batch_size=None,
-    ):
+    def make(self, input_shape, batch_size=None):
         inputs = tf.keras.Input(input_shape, batch_size=batch_size, dtype=tf.float32)
         inputs_length = tf.keras.Input(shape=[], batch_size=batch_size, dtype=tf.int32)
         self(
@@ -69,12 +65,7 @@ class CtcModel(BaseModel):
         loss = CtcLoss(blank=blank)
         super().compile(loss=loss, optimizer=optimizer, run_eagerly=run_eagerly, mxp=mxp, ga_steps=ga_steps, **kwargs)
 
-    def call(
-        self,
-        inputs,
-        training=False,
-        **kwargs,
-    ):
+    def call(self, inputs, training=False, **kwargs):
         logits = self.encoder(inputs["inputs"], training=training, **kwargs)
         logits = self.decoder(logits, training=training, **kwargs)
         return data_util.create_logits(
@@ -84,21 +75,12 @@ class CtcModel(BaseModel):
 
     # -------------------------------- GREEDY -------------------------------------
 
-    @tf.function
-    def recognize(
-        self,
-        inputs: Dict[str, tf.Tensor],
-        **kwargs,
-    ):
+    def recognize(self, inputs: Dict[str, tf.Tensor]):
         outputs = self(inputs, training=False)
         decoded = self._perform_greedy(encoded=outputs["logits"], encoded_length=outputs["logits_length"])
         return self.text_featurizer.iextract(decoded)
 
-    def _perform_greedy(
-        self,
-        encoded,
-        encoded_length,
-    ):
+    def _perform_greedy(self, encoded, encoded_length):
         decoded, _ = tf.nn.ctc_greedy_decoder(
             inputs=tf.transpose(encoded, perm=[1, 0, 2]),
             sequence_length=encoded_length,
@@ -107,10 +89,7 @@ class CtcModel(BaseModel):
         )
         return tf.reshape(decoded[0].values, decoded[0].dense_shape)
 
-    def recognize_tflite(
-        self,
-        signal,
-    ):
+    def recognize_tflite(self, signal):
         """
         Function to convert to tflite using greedy decoding
         Args:
@@ -126,49 +105,26 @@ class CtcModel(BaseModel):
         input_length = tf.expand_dims(input_length, axis=0)
         logits = self.encoder(features, training=False)
         logits = self.decoder(logits, training=False)
-        probs = tf.nn.softmax(logits)
-        decoded = tf.keras.backend.ctc_decode(y_pred=probs, input_length=input_length, greedy=True)
-        decoded = tf.cast(decoded[0][0][0], dtype=tf.int32)
+        decoded = self._perform_greedy(encoded=logits, encoded_length=input_length)
+        decoded = tf.cast(decoded[0], dtype=tf.int32)
         transcript = self.text_featurizer.indices2upoints(decoded)
         return transcript
 
     # -------------------------------- BEAM SEARCH -------------------------------------
 
-    @tf.function
-    def recognize_beam(
-        self,
-        inputs: Dict[str, tf.Tensor],
-        lm: bool = False,
-    ):
+    def recognize_beam(self, inputs: Dict[str, tf.Tensor], lm: bool = False):
         logits = self(inputs, training=False)
-        probs = tf.nn.softmax(logits["logits"])
+        return self._perform_beam_search(encoded=logits["logits"], encoded_length=logits["logits_length"])
 
-        def map_fn(prob):
-            return tf.numpy_function(self._perform_beam_search, inp=[prob, lm], Tout=tf.string)
-
-        return tf.map_fn(map_fn, probs, dtype=tf.string)
-
-    def _perform_beam_search(
-        self,
-        probs: np.ndarray,
-        lm: bool = False,
-    ):
-        from ctc_decoders import ctc_beam_search_decoder
-
-        decoded = ctc_beam_search_decoder(
-            probs_seq=probs,
-            vocabulary=self.text_featurizer.non_blank_tokens,
-            beam_size=self.text_featurizer.decoder_config.beam_width,
-            ext_scoring_func=self.text_featurizer.scorer if lm else None,
+    def _perform_beam_search(self, encoded: np.ndarray, encoded_length):
+        decoded, _ = tf.nn.ctc_beam_search_decoder(
+            inputs=tf.transpose(encoded, perm=[1, 0, 2]),
+            sequence_length=encoded_length,
+            beam_width=self.text_featurizer.decoder_config.beam_width,
         )
-        decoded = decoded[0][-1]
+        return tf.reshape(decoded[0].values, decoded[0].dense_shape)
 
-        return tf.convert_to_tensor(decoded, dtype=tf.string)
-
-    def recognize_beam_tflite(
-        self,
-        signal,
-    ):
+    def recognize_beam_tflite(self, signal):
         """
         Function to convert to tflite using beam search decoding
         Args:
@@ -184,23 +140,14 @@ class CtcModel(BaseModel):
         input_length = tf.expand_dims(input_length, axis=0)
         logits = self.encoder(features, training=False)
         logits = self.decoder(logits, training=False)
-        probs = tf.nn.softmax(logits)
-        decoded = tf.keras.backend.ctc_decode(
-            y_pred=probs,
-            input_length=input_length,
-            greedy=False,
-            beam_width=self.text_featurizer.decoder_config.beam_width,
-        )
-        decoded = tf.cast(decoded[0][0][0], dtype=tf.int32)
+        decoded = self._perform_beam_search(encoded=logits, encoded_length=input_length)
+        decoded = tf.cast(decoded[0], dtype=tf.int32)
         transcript = self.text_featurizer.indices2upoints(decoded)
         return transcript
 
     # -------------------------------- TFLITE -------------------------------------
 
-    def make_tflite_function(
-        self,
-        greedy: bool = False,
-    ):
+    def make_tflite_function(self, greedy: bool = False):
         if greedy:
             return tf.function(
                 self.recognize_tflite,
