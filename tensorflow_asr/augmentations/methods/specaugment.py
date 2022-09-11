@@ -49,7 +49,7 @@ class FreqMasking(AugmentationMethod):
                     tf.zeros([T, f, V], dtype=spectrogram.dtype),
                     tf.ones([T, F - f0 - f, V], dtype=spectrogram.dtype),
                 ],
-                axis=1,
+                1,
             )
             spectrogram = spectrogram * mask
         return spectrogram
@@ -88,7 +88,7 @@ class TimeMasking(AugmentationMethod):
                     tf.zeros([t, F, V], dtype=spectrogram.dtype),
                     tf.ones([T - t0 - t, F, V], dtype=spectrogram.dtype),
                 ],
-                axis=0,
+                0,
             )
             spectrogram = spectrogram * mask
         return spectrogram

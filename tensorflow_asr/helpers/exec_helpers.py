@@ -35,7 +35,7 @@ def run_testing(
         if overwrite:
             results = model.predict(test_data_loader, verbose=1)
             logger.info(f"Saving result to {output} ...")
-            with open(filepath, "w") as openfile:
+            with tf.io.gfile.GFile(filepath, "w") as openfile:
                 openfile.write("PATH\tDURATION\tGROUNDTRUTH\tGREEDY\tBEAMSEARCH\n")
                 progbar = tqdm(total=test_dataset.total_steps, unit="batch")
                 for i, pred in enumerate(results):

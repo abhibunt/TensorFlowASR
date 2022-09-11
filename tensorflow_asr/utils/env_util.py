@@ -83,7 +83,6 @@ def setup_strategy(
         return setup_tpu(tpu_address)
     except (ValueError, tf.errors.NotFoundError) as e:
         logger.warn(e)
-        pass
     setup_devices(devices)
     return tf.distribute.MirroredStrategy()
 
@@ -112,7 +111,8 @@ def setup_seed(
     """
     The seed is given an integer value to ensure that the results of pseudo-random generation are reproducible
     Why 42?
-    "It was a joke. It had to be a number, an ordinary, smallish number, and I chose that one. I sat at my desk, stared into the garden and thought 42 will do!"
+    "It was a joke. It had to be a number, an ordinary, smallish number, and I chose that one.
+    I sat at my desk, stared into the garden and thought 42 will do!"
     - Douglas Adams's popular 1979 science-fiction novel The Hitchhiker's Guide to the Galaxy
 
     Args:

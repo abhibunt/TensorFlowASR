@@ -95,8 +95,8 @@ class ASRDataset(BaseDataset):
             with tf.io.gfile.GFile(metadata, "r") as f:
                 try:
                     content = json.loads(f.read())
-                except json.JSONDecodeError:
-                    raise ValueError(f"File {metadata} is currently not in json format. Please update the file")
+                except json.JSONDecodeError as e:
+                    raise ValueError(f"File {metadata} is currently not in json format. Please update the file") from e
         else:
             content = {}
         content[self.stage] = {
@@ -126,8 +126,8 @@ class ASRDataset(BaseDataset):
                 with tf.io.gfile.GFile(metadata, "r") as f:
                     try:
                         content = json.loads(f.read()).get(self.stage, {})
-                    except json.JSONDecodeError:
-                        raise ValueError(f"File {metadata} must be in json format")
+                    except json.JSONDecodeError as e:
+                        raise ValueError(f"File {metadata} must be in json format") from e
         if not content:
             return
         self.speech_featurizer.update_length(int(content.get("max_input_length", 0)))
@@ -173,7 +173,7 @@ class ASRDataset(BaseDataset):
         with tf.device("/CPU:0"):
 
             def fn(_path: bytes, _audio: bytes, _transcript: bytes):
-                signal = read_raw_audio(_audio, sample_rate=self.speech_featurizer.sample_rate)
+                signal = read_raw_audio(_audio, sample_rate=self.speech_featurizer.speech_config.sample_rate)
                 signal = self.augmentations.signal_augment(signal)
                 features = self.speech_featurizer.extract(signal.numpy())
                 features = self.augmentations.feature_augment(features)
@@ -201,7 +201,7 @@ class ASRDataset(BaseDataset):
         transcript: tf.Tensor,
     ):
         with tf.device("/CPU:0"):
-            signal = tf_read_raw_audio(audio, self.speech_featurizer.sample_rate)
+            signal = tf_read_raw_audio(audio, self.speech_featurizer.speech_config.sample_rate)
             signal = self.augmentations.signal_augment(signal)
             features = self.speech_featurizer.tf_extract(signal)
             features = self.augmentations.feature_augment(features)
