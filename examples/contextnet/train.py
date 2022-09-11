@@ -21,7 +21,7 @@ from tensorflow_asr.configs.config import Config
 from tensorflow_asr.helpers import dataset_helpers, featurizer_helpers
 from tensorflow_asr.models.transducer.contextnet import ContextNet
 from tensorflow_asr.optimizers.schedules import TransformerSchedule
-from tensorflow_asr.utils import env_util
+from tensorflow_asr.utils import env_util, file_util
 
 logger = env_util.setup_environment()
 
@@ -66,7 +66,7 @@ def main(
         contextnet = ContextNet(**config.model_config, blank=text_featurizer.blank, vocab_size=text_featurizer.num_classes)
         contextnet.make(speech_featurizer.shape, prediction_shape=text_featurizer.prepand_shape, batch_size=global_batch_size)
         if pretrained:
-            contextnet.load_weights(pretrained, by_name=True, skip_mismatch=True)
+            contextnet.load_weights(pretrained, by_name=file_util.is_hdf5_filepath(pretrained), skip_mismatch=True)
         optimizer = tf.keras.optimizers.Adam(
             TransformerSchedule(d_model=contextnet.dmodel, **config.learning_config.learning_rate_config),
             **config.learning_config.optimizer_config
