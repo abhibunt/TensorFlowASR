@@ -152,10 +152,6 @@ class ASRDataset(BaseDataset):
             with tf.io.gfile.GFile(file_path, "r") as f:
                 for line in f.read().splitlines()[1:]:  # Skip the header of tsv file
                     self.entries.append(line.split("\t", 2))  # The files is "\t" seperated
-        # with tqdm.tqdm(total=len(self.entries), desc="Convert transcript to indices") as pbar:
-        #     for i, line in enumerate(self.entries):
-        #         self.entries[i].append(" ".join([str(x) for x in self.text_featurizer.extract(line[-1]).numpy()]))
-        #         pbar.update(1)
         self.entries = np.array(self.entries)
         if self.shuffle:
             np.random.shuffle(self.entries)  # Mix transcripts.tsv

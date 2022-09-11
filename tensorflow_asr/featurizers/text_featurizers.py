@@ -22,9 +22,12 @@ import sentencepiece as sp
 import tensorflow as tf
 import tensorflow_datasets as tds
 import tensorflow_text as tft
+from tensorflow_text.tools.wordpiece_vocab import bert_vocab_from_dataset as bert_vocab
 
 from tensorflow_asr.configs.config import DecoderConfig
 from tensorflow_asr.utils import file_util
+
+logger = tf.get_logger()
 
 ENGLISH_CHARACTERS = [
     " ",
@@ -89,11 +92,13 @@ class TextFeaturizer:
         self.max_length = 0
 
     def preprocess_text(self, text):
-        text = unicodedata.normalize("NFC", text.lower())
+        text = unicodedata.normalize(self.decoder_config.normalization_form, text.lower())
         return text.strip("\n").strip()  # remove trailing newline
 
     def tf_preprocess_text(self, text: tf.Tensor):
-        text = tf.strings.lower(text)
+        text = tft.normalize_utf8(text, self.decoder_config.normalization_form)
+        text = tf.strings.regex_replace(text, r"\p{Cc}|\p{Cf}", " ")
+        text = tf.strings.lower(text, encoding="utf-8")
         text = tf.strings.strip(text)  # remove trailing whitespace
         return text
 
@@ -310,8 +315,8 @@ class SubwordFeaturizer(TextFeaturizer):
         subwords = tds.deprecated.text.SubwordTextEncoder.build_from_corpus(
             corpus_generator(),
             dconf.vocab_size,
-            dconf.max_subword_length,
-            dconf.max_corpus_chars,
+            dconf.max_token_length,
+            dconf.max_unique_chars,
             dconf.reserved_tokens,
         )
         return cls(decoder_config, subwords)
@@ -424,7 +429,7 @@ class SentencePieceFeaturizer(TextFeaturizer):
         decoder_config: dict,
         model=None,
     ):
-        super(SentencePieceFeaturizer, self).__init__(decoder_config)
+        super().__init__(decoder_config)
         self.model = self.__load_model() if model is None else model
         self.blank = 0  # treats blank as 0 (pad)
         # vocab size
@@ -601,6 +606,48 @@ class WordPieceFeaturizer(TextFeaturizer):
         )
         self.num_classes = self.decoder_config.vocab_size
 
+    @classmethod
+    def build_from_corpus(
+        cls,
+        decoder_config: dict,
+    ):
+        dconf = DecoderConfig(decoder_config.copy())
+
+        def corpus_generator():
+            for file_path in dconf.corpus_files:
+                logger.info(f"Reading {file_path} ...")
+                with tf.io.gfile.GFile(file_path, "r") as f:
+                    temp_lines = f.read().splitlines()
+                    for line in temp_lines[1:]:  # Skip the header of tsv file
+                        data = line.split("\t", 2)[-1]  # get only transcript
+                        yield data
+
+        def write_vocab_file(filepath, vocab):
+            with open(filepath, "w") as f:
+                for token in vocab:
+                    print(token, file=f)
+
+        dataset = tf.data.Dataset.from_generator(corpus_generator, output_signature=tf.TensorSpec(shape=(), dtype=tf.string))
+        vocab = bert_vocab.bert_vocab_from_dataset(
+            dataset.batch(1000).prefetch(2),
+            vocab_size=dconf.vocab_size,
+            reserved_tokens=dconf.reserved_tokens,
+            bert_tokenizer_params=dict(
+                lower_case=False,  # keep original from dataset
+                keep_whitespace=True,  # according to papers
+                normalization_form=dconf.normalization_form,
+                preserve_unused_token=False,
+            ),
+            learn_params=dict(
+                max_token_length=dconf.max_token_length,
+                max_unique_chars=dconf.max_unique_chars,
+                num_iterations=dconf.num_iterations,
+            ),
+        )
+        write_vocab_file(dconf.vocabulary, vocab)
+
+        return cls(decoder_config)
+
     def extract(
         self,
         text: str,
@@ -613,8 +660,10 @@ class WordPieceFeaturizer(TextFeaturizer):
         Returns:
             sequence of ints in tf.Tensor
         """
-        text = self.preprocess_text(text).split()
-        indices = self.tokenizer.tokenize([text]).merge_dims(0, 1)
+        text = self.preprocess_text(text)
+        text = tft.regex_split(text, delim_regex_pattern="\\s", keep_delim_regex_pattern="\\s")
+        text = text.merge_dims(0, 1)
+        indices = self.tokenizer.tokenize(text).merge_dims(0, 1)
         return indices
 
     def tf_extract(
@@ -622,7 +671,8 @@ class WordPieceFeaturizer(TextFeaturizer):
         text: tf.Tensor,
     ) -> tf.Tensor:
         text = self.tf_preprocess_text(text)
-        text = tf.strings.split(text)
+        text = tft.regex_split(text, delim_regex_pattern="\\s", keep_delim_regex_pattern="\\s")
+        text = text.merge_dims(0, 1)
         indices = self.tokenizer.tokenize(text).merge_dims(0, 1)
         return indices
 
@@ -639,7 +689,9 @@ class WordPieceFeaturizer(TextFeaturizer):
             transcripts: tf.Tensor of dtype tf.string with dim [B]
         """
         indices = tf.ragged.boolean_mask(indices, tf.not_equal(indices, self.blank))
+        indices = tf.ragged.boolean_mask(indices, tf.not_equal(indices, self.decoder_config.unknown_index))
         transcripts = self.tokenizer.detokenize(indices)
+        transcripts = tf.strings.regex_replace(transcripts, "\\s+", " ")  # trim "  " to " "
         return transcripts
 
     @tf.function(input_signature=[tf.TensorSpec([None], dtype=tf.int32)])

@@ -22,20 +22,25 @@ class DecoderConfig:
     def __init__(self, config: dict = None):
         if not config:
             config = {}
-        self.beam_width = config.pop("beam_width", 0)
         self.blank_index = config.pop("blank_index", 0)
+        self.unknown_token = config.pop("unknown_token", "[PAD]")
+        self.unknown_index = config.pop("unknown_index", self.blank_index)
+
+        self.beam_width = config.pop("beam_width", 0)
         self.norm_score = config.pop("norm_score", True)
         self.lm_config = config.pop("lm_config", {})
 
         self.vocabulary = file_util.preprocess_paths(config.pop("vocabulary", None))
         self.vocab_size = config.pop("vocab_size", 1000)
-        self.max_subword_length = config.pop("max_subword_length", 4)
+        self.max_token_length = config.pop("max_token_length", 50)
+        self.max_unique_chars = config.pop("max_unique_chars", None)
+        self.num_iterations = config.pop("num_iterations", 4)
+        self.reserved_tokens = config.pop("reserved_tokens", None)
+        self.normalization_form = config.pop("normalization_form", "NFKC")
+
+        self.corpus_files = file_util.preprocess_paths(config.pop("corpus_files", []))
         self.output_path_prefix = file_util.preprocess_paths(config.pop("output_path_prefix", None))
         self.model_type = config.pop("model_type", None)
-        self.corpus_files = file_util.preprocess_paths(config.pop("corpus_files", []))
-        self.max_corpus_chars = config.pop("max_corpus_chars", None)
-        self.reserved_tokens = config.pop("reserved_tokens", None)
-        self.unknown_token = config.pop("unknown_token", "[UNK]")
 
         for k, v in config.items():
             setattr(self, k, v)
@@ -45,9 +50,10 @@ class DatasetConfig:
     def __init__(self, config: dict = None):
         if not config:
             config = {}
+        self.enabled = config.pop("enabled", True)
         self.stage = config.pop("stage", None)
-        self.data_paths = file_util.preprocess_paths(config.pop("data_paths", None))
-        self.tfrecords_dir = file_util.preprocess_paths(config.pop("tfrecords_dir", None), isdir=True)
+        self.data_paths = file_util.preprocess_paths(config.pop("data_paths", None), enabled=self.enabled)
+        self.tfrecords_dir = file_util.preprocess_paths(config.pop("tfrecords_dir", None), isdir=True, enabled=self.enabled)
         self.tfrecords_shards = config.pop("tfrecords_shards", 16)
         self.shuffle = config.pop("shuffle", False)
         self.cache = config.pop("cache", False)
@@ -55,7 +61,7 @@ class DatasetConfig:
         self.buffer_size = config.pop("buffer_size", 1000)
         self.use_tf = config.pop("use_tf", False)
         self.augmentations = Augmentation(config.pop("augmentation_config", {}))
-        self.enabled = config.pop("enabled", True)
+        self.metadata = config.pop("metadata", None)
         for k, v in config.items():
             setattr(self, k, v)
 

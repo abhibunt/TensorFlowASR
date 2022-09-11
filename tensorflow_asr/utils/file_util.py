@@ -68,6 +68,7 @@ def is_cloud_path(
 def preprocess_paths(
     paths: Union[List[str], str],
     isdir: bool = False,
+    enabled: bool = True,
 ) -> Union[List[str], str]:
     """Expand the path to the root "/" and makedirs
 
@@ -77,6 +78,8 @@ def preprocess_paths(
     Returns:
         Union[List, str]: A processed path or list of paths, return None if it's not path
     """
+    if not enabled:
+        return paths
     if isinstance(paths, (list, tuple)):
         paths = [path if is_cloud_path(path) else os.path.abspath(os.path.expanduser(path)) for path in paths]
         for path in paths:

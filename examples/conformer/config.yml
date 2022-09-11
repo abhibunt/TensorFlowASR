@@ -26,14 +26,27 @@ speech_config:
   top_db: null
 
 decoder_config:
-  vocabulary: ./vocabularies/librispeech/librispeech_train_1000_4.wordpiece
-  vocab_size: 1000
-  max_subword_length: 50
-  blank_at_zero: True
+  blank_index: 0
+  unknown_token: "[PAD]"
+  unknown_index: 0
+
   beam_width: 0
   norm_score: True
+  lm_config: null
+
+  vocabulary: ./vocabularies/librispeech/wordpiece/train_1000_50.tokens
+  vocab_size: 1000
+  max_token_length: 50
+  max_unique_chars: 1000
+  reserved_tokens:
+    - "[PAD]"
+  normalization_form: NFKC
+  num_iterations: 4
+
   corpus_files:
     - E:/MLDL/Datasets/ASR/LibriSpeech/train-clean-100/transcripts.tsv
+    - E:/MLDL/Datasets/ASR/LibriSpeech/train-clean-360/transcripts.tsv
+    - E:/MLDL/Datasets/ASR/LibriSpeech/train-other-500/transcripts.tsv
 
 model_config:
   name: conformer
@@ -100,7 +113,7 @@ learning_config:
     buffer_size: 100
     drop_remainder: True
     stage: train
-    metadata: ./vocabularies/librispeech/librispeech_train_1000_4.metadata.json
+    metadata: ./vocabularies/librispeech/wordpiece/train_1000_50.metadata.json
 
   eval_dataset_config:
     enabled: False
@@ -113,7 +126,7 @@ learning_config:
     buffer_size: 100
     drop_remainder: True
     stage: eval
-    metadata: ./vocabularies/librispeech/librispeech_train_1000_4.metadata.json
+    metadata: ./vocabularies/librispeech/wordpiece/train_1000_50.metadata.json
 
   test_dataset_config:
     use_tf: True
