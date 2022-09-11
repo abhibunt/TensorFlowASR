@@ -19,7 +19,7 @@ import fire
 from tensorflow_asr.configs.config import Config
 from tensorflow_asr.helpers import dataset_helpers, exec_helpers, featurizer_helpers
 from tensorflow_asr.models.transducer.contextnet import ContextNet
-from tensorflow_asr.utils import env_util
+from tensorflow_asr.utils import env_util, file_util
 
 logger = env_util.setup_environment()
 
@@ -54,7 +54,7 @@ def main(
 
     contextnet = ContextNet(**config.model_config, blank=text_featurizer.blank, vocab_size=text_featurizer.num_classes)
     contextnet.make(speech_featurizer.shape)
-    contextnet.load_weights(saved, by_name=True)
+    contextnet.load_weights(saved, by_name=file_util.is_hdf5_filepath(saved))
     contextnet.summary()
     contextnet.add_featurizers(speech_featurizer, text_featurizer)
 

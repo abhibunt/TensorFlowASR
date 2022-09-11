@@ -19,7 +19,7 @@ import fire
 from tensorflow_asr.configs.config import Config
 from tensorflow_asr.helpers import dataset_helpers, exec_helpers, featurizer_helpers
 from tensorflow_asr.models.transducer.rnn_transducer import RnnTransducer
-from tensorflow_asr.utils import env_util
+from tensorflow_asr.utils import env_util, file_util
 
 logger = env_util.setup_environment()
 
@@ -52,7 +52,7 @@ def main(
 
     rnn_transducer = RnnTransducer(**config.model_config, vocab_size=text_featurizer.num_classes)
     rnn_transducer.make(speech_featurizer.shape)
-    rnn_transducer.load_weights(saved, by_name=True)
+    rnn_transducer.load_weights(saved, by_name=file_util.is_hdf5_filepath(saved))
     rnn_transducer.summary()
     rnn_transducer.add_featurizers(speech_featurizer, text_featurizer)
 

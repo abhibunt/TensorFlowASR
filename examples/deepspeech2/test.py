@@ -19,7 +19,7 @@ import fire
 from tensorflow_asr.configs.config import Config
 from tensorflow_asr.helpers import dataset_helpers, exec_helpers, featurizer_helpers
 from tensorflow_asr.models.ctc.deepspeech2 import DeepSpeech2
-from tensorflow_asr.utils import env_util
+from tensorflow_asr.utils import env_util, file_util
 
 logger = env_util.setup_environment()
 
@@ -52,7 +52,7 @@ def main(
 
     deepspeech2 = DeepSpeech2(**config.model_config, vocab_size=text_featurizer.num_classes)
     deepspeech2.make(speech_featurizer.shape)
-    deepspeech2.load_weights(saved, by_name=True)
+    deepspeech2.load_weights(saved, by_name=file_util.is_hdf5_filepath(saved))
     deepspeech2.summary()
     deepspeech2.add_featurizers(speech_featurizer, text_featurizer)
 
