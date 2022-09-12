@@ -32,7 +32,7 @@ from tensorflow_asr.featurizers.speech_featurizers import (
 from tensorflow_asr.featurizers.text_featurizers import TextFeaturizer
 from tensorflow_asr.utils import data_util, feature_util, file_util, math_util
 
-logger = logging.getLogger(__name__)
+logger = tf.get_logger()
 
 
 class ASRDataset(BaseDataset):

@@ -21,7 +21,7 @@ from tensorflow.python.ops.gen_array_ops import matrix_diag_part_v2
 
 from tensorflow_asr.utils import env_util
 
-logger = logging.getLogger(__name__)
+logger = tf.get_logger()
 
 LOG_0 = float("-inf")
 

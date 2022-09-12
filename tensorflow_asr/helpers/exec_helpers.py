@@ -21,7 +21,7 @@ from tensorflow_asr.datasets.asr_dataset import ASRSliceDataset
 from tensorflow_asr.models.base_model import BaseModel
 from tensorflow_asr.utils import app_util, file_util
 
-logger = logging.getLogger(__name__)
+logger = tf.get_logger()
 
 
 def run_testing(

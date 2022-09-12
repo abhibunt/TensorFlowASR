@@ -21,7 +21,7 @@ from tqdm import tqdm
 from tensorflow_asr.metrics.error_rates import ErrorRate
 from tensorflow_asr.utils import file_util, metric_util
 
-logger = logging.getLogger(__name__)
+logger = tf.get_logger()
 
 
 def evaluate_results(

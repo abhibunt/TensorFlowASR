@@ -27,7 +27,7 @@ from tensorflow_text.tools.wordpiece_vocab import bert_vocab_from_dataset as ber
 
 from tensorflow_asr.configs.config import DecoderConfig
 
-logger = logging.getLogger(__name__)
+logger = tf.get_logger()
 
 TEXT_FEATURIZER_TYPES = ["characters", "wordpiece", "subwords", "sentencepiece"]
 

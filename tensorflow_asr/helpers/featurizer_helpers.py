@@ -17,7 +17,7 @@ import logging
 from tensorflow_asr.configs.config import Config
 from tensorflow_asr.featurizers import speech_featurizers, text_featurizers
 
-logger = logging.getLogger(__name__)
+logger = tf.get_logger()
 
 
 def prepare_featurizers(

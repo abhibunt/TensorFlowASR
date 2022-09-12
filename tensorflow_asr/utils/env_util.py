@@ -20,7 +20,7 @@ from typing import List, Union
 import numpy as np
 import tensorflow as tf
 
-logger = logging.getLogger(__name__)
+logger = tf.get_logger()
 
 
 def setup_environment():
@@ -28,7 +28,7 @@ def setup_environment():
     warnings.simplefilter("ignore")
     logging.basicConfig(format="%(asctime)s:%(levelname)s:%(module)s: %(message)s", level=logging.INFO)
     logging.captureWarnings(True)
-    tf.get_logger().setLevel(logging.INFO)
+    logger.setLevel(logging.INFO)
     return logger
 
 
