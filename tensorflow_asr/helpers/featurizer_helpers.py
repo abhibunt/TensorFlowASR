@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
+import tensorflow as tf
 
 from tensorflow_asr.configs.config import Config
 from tensorflow_asr.featurizers import speech_featurizers, text_featurizers

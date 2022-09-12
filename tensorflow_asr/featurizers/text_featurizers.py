@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import codecs
-import logging
 import os
 import unicodedata
 from multiprocessing import cpu_count
