@@ -21,7 +21,7 @@ class CtcLoss(tf.keras.losses.Loss):
         blank=0,
         name=None,
     ):
-        super(CtcLoss, self).__init__(reduction=tf.keras.losses.Reduction.NONE, name=name)
+        super().__init__(reduction=tf.keras.losses.Reduction.NONE, name=name)
         self.blank = blank
 
     def call(self, y_true, y_pred):

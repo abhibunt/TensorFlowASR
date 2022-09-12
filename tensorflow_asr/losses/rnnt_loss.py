@@ -16,7 +16,6 @@
 
 import logging
 
-import numpy as np
 import tensorflow as tf
 from tensorflow.python.ops.gen_array_ops import matrix_diag_part_v2
 
@@ -24,7 +23,7 @@ from tensorflow_asr.utils import env_util
 
 logger = logging.getLogger(__name__)
 
-LOG_0 = -np.inf
+LOG_0 = float("-inf")
 
 
 class RnntLoss(tf.keras.losses.Loss):
@@ -35,7 +34,7 @@ class RnntLoss(tf.keras.losses.Loss):
     ):
         if blank != 0:  # restrict blank index
             raise ValueError("rnnt_loss must use blank = 0")
-        super(RnntLoss, self).__init__(reduction=tf.keras.losses.Reduction.NONE, name=name)
+        super().__init__(reduction=tf.keras.losses.Reduction.NONE, name=name)
         self.blank = blank
 
     def call(self, y_true, y_pred):
