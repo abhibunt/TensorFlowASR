@@ -28,6 +28,8 @@ class CtcModel(BaseModel):
         encoder: tf.keras.Model,
         decoder: Union[tf.keras.Model, tf.keras.layers.Layer] = None,
         vocab_size: int = None,
+        kernel_regularizer=None,
+        bias_regularizer=None,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -37,6 +39,8 @@ class CtcModel(BaseModel):
             self.decoder = tf.keras.layers.Dense(
                 units=vocab_size,
                 name=f"{self.name}_logits",
+                kernel_regularizer=kernel_regularizer,
+                bias_regularizer=bias_regularizer,
             )
         else:
             self.decoder = decoder
@@ -68,6 +72,7 @@ class CtcModel(BaseModel):
     def call(self, inputs, training=False, **kwargs):
         logits = self.encoder(inputs["inputs"], training=training, **kwargs)
         logits = self.decoder(logits, training=training, **kwargs)
+        logits = tf.cast(logits, tf.float32)  # always cast the output as float32 for stable mxp training
         return data_util.create_logits(
             logits=logits,
             logits_length=math_util.get_reduced_length(inputs["inputs_length"], self.time_reduction_factor),
@@ -105,6 +110,7 @@ class CtcModel(BaseModel):
         input_length = tf.expand_dims(input_length, axis=0)
         logits = self.encoder(features, training=False)
         logits = self.decoder(logits, training=False)
+        logits = tf.cast(logits, tf.float32)
         decoded = self._perform_greedy(encoded=logits, encoded_length=input_length)
         decoded = tf.cast(decoded[0], dtype=tf.int32)
         transcript = self.text_featurizer.indices2upoints(decoded)
@@ -140,6 +146,7 @@ class CtcModel(BaseModel):
         input_length = tf.expand_dims(input_length, axis=0)
         logits = self.encoder(features, training=False)
         logits = self.decoder(logits, training=False)
+        logits = tf.cast(logits, tf.float32)
         decoded = self._perform_beam_search(encoded=logits, encoded_length=input_length)
         decoded = tf.cast(decoded[0], dtype=tf.int32)
         transcript = self.text_featurizer.indices2upoints(decoded)

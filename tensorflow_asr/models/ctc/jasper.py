@@ -35,7 +35,7 @@ class JasperSubBlock(tf.keras.layers.Layer):
         bias_regularizer=None,
         **kwargs,
     ):
-        super(JasperSubBlock, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.conv1d = tf.keras.layers.Conv1D(
             filters=channels,
             kernel_size=kernels,
@@ -73,7 +73,7 @@ class JasperResidual(tf.keras.layers.Layer):
         bias_regularizer=None,
         **kwargs,
     ):
-        super(JasperResidual, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.pointwise_conv1d = tf.keras.layers.Conv1D(
             filters=channels,
             kernel_size=1,
@@ -109,7 +109,7 @@ class JasperSubBlockResidual(JasperSubBlock):
         bias_regularizer=None,
         **kwargs,
     ):
-        super(JasperSubBlockResidual, self).__init__(
+        super().__init__(
             channels=channels,
             kernels=kernels,
             strides=strides,
@@ -162,7 +162,7 @@ class JasperBlock(tf.keras.Model):
         bias_regularizer=None,
         **kwargs,
     ):
-        super(JasperBlock, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         self.dense = dense
 
@@ -359,8 +359,8 @@ class Jasper(CtcModel):
                 third_additional_block_strides=third_additional_block_strides,
                 third_additional_block_dilation=third_additional_block_dilation,
                 third_additional_block_dropout=third_additional_block_dropout,
-                kernel_regularizer=None,
-                bias_regularizer=None,
+                kernel_regularizer=kernel_regularizer,
+                bias_regularizer=bias_regularizer,
             ),
             decoder=tf.keras.layers.Conv1D(
                 filters=vocab_size,

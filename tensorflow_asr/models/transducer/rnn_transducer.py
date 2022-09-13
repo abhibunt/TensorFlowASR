@@ -57,7 +57,12 @@ class RnnTransducerBlock(tf.keras.Model):
         )
 
         if layer_norm:
-            self.ln = tf.keras.layers.LayerNormalization(name=f"{self.name}_ln")
+            self.ln = tf.keras.layers.LayerNormalization(
+                name=f"{self.name}_ln",
+                gamma_regularizer=kernel_regularizer,
+                beta_regularizer=bias_regularizer,
+                dtype=tf.float32,  # Use float32 in layernorm for numeric stability.
+            )
         else:
             self.ln = None
 

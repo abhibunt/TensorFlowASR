@@ -53,7 +53,7 @@ class ConvModule(tf.keras.layers.Layer):
         bias_regularizer=None,
         **kwargs,
     ):
-        super(ConvModule, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.strides = strides
         self.conv = tf.keras.layers.SeparableConv1D(
             filters=filters,
@@ -92,7 +92,7 @@ class SEModule(tf.keras.layers.Layer):
         bias_regularizer=None,
         **kwargs,
     ):
-        super(SEModule, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.conv = ConvModule(
             kernel_size=kernel_size,
             strides=strides,
@@ -144,7 +144,7 @@ class ConvBlock(tf.keras.layers.Layer):
         bias_regularizer=None,
         **kwargs,
     ):
-        super(ConvBlock, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         self.dmodel = filters
         self.time_reduction_factor = strides
@@ -231,7 +231,7 @@ class ContextNetEncoder(tf.keras.Model):
         bias_regularizer=None,
         **kwargs,
     ):
-        super(ContextNetEncoder, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         self.reshape = Reshape(name=f"{self.name}_reshape")
 

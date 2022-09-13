@@ -50,12 +50,13 @@ class FFModule(tf.keras.layers.Layer):
         name="ff_module",
         **kwargs,
     ):
-        super(FFModule, self).__init__(name=name, **kwargs)
+        super().__init__(name=name, **kwargs)
         self.fc_factor = fc_factor
         self.ln = tf.keras.layers.LayerNormalization(
             name=f"{name}_ln",
             gamma_regularizer=kernel_regularizer,
             beta_regularizer=bias_regularizer,
+            dtype=tf.float32,  # Use float32 in layernorm for numeric stability.
         )
         self.ffn1 = tf.keras.layers.Dense(
             4 * input_dim,
@@ -116,11 +117,12 @@ class MHSAModule(tf.keras.layers.Layer):
         name="mhsa_module",
         **kwargs,
     ):
-        super(MHSAModule, self).__init__(name=name, **kwargs)
+        super().__init__(name=name, **kwargs)
         self.ln = tf.keras.layers.LayerNormalization(
             name=f"{name}_ln",
             gamma_regularizer=kernel_regularizer,
             beta_regularizer=bias_regularizer,
+            dtype=tf.float32,  # Use float32 in layernorm for numeric stability.
         )
         if mha_type == "relmha":
             self.mha = RelPositionMultiHeadAttention(
@@ -198,8 +200,13 @@ class ConvModule(tf.keras.layers.Layer):
         name="conv_module",
         **kwargs,
     ):
-        super(ConvModule, self).__init__(name=name, **kwargs)
-        self.ln = tf.keras.layers.LayerNormalization()
+        super().__init__(name=name, **kwargs)
+        self.ln = tf.keras.layers.LayerNormalization(
+            name=f"{name}_ln",
+            gamma_regularizer=kernel_regularizer,
+            beta_regularizer=bias_regularizer,
+            dtype=tf.float32,  # Use float32 in layernorm for numeric stability.
+        )
         self.pw_conv_1 = tf.keras.layers.Dense(
             input_dim,
             name=f"{name}_pw_conv_1",
@@ -281,7 +288,7 @@ class ConformerBlock(tf.keras.layers.Layer):
         name="conformer_block",
         **kwargs,
     ):
-        super(ConformerBlock, self).__init__(name=name, **kwargs)
+        super().__init__(name=name, **kwargs)
         self.ffm1 = FFModule(
             input_dim=input_dim,
             dropout=dropout,
@@ -322,6 +329,7 @@ class ConformerBlock(tf.keras.layers.Layer):
             name=f"{name}_ln",
             gamma_regularizer=kernel_regularizer,
             beta_regularizer=kernel_regularizer,
+            dtype=tf.float32,  # Use float32 in layernorm for numeric stability.
         )
 
     def call(

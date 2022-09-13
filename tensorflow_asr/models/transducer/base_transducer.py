@@ -91,7 +91,12 @@ class TransducerPrediction(tf.keras.Model):
                 dtype=dtype,
             )
             if layer_norm:
-                ln = tf.keras.layers.LayerNormalization(name=f"{name}_ln_{i}", dtype=dtype)
+                ln = tf.keras.layers.LayerNormalization(
+                    name=f"{name}_ln_{i}",
+                    gamma_regularizer=kernel_regularizer,
+                    beta_regularizer=bias_regularizer,
+                    dtype=tf.float32,  # Use float32 in layernorm for numeric stability.
+                )
             else:
                 ln = None
             if projection_units > 0:
@@ -246,6 +251,7 @@ class TransducerJoint(tf.keras.Model):
             outputs = self.ffn(outputs, training=training)
         outputs = self.activation(outputs, training=training)
         outputs = self.ffn_out(outputs, training=training)
+        outputs = tf.cast(outputs, tf.float32)  # always cast the output as float32 for stable mxp training
         return outputs
 
 

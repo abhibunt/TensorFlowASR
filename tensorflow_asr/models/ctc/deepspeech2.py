@@ -38,7 +38,7 @@ class ConvBlock(tf.keras.layers.Layer):
         dropout: float = 0.1,
         **kwargs,
     ):
-        super(ConvBlock, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         CNN = layer_util.get_conv(conv_type)
         self.conv = CNN(
@@ -75,7 +75,7 @@ class ConvModule(tf.keras.Model):
         dropout: float = 0.1,
         **kwargs,
     ):
-        super(ConvModule, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         assert len(kernels) == len(strides) == len(filters)
         assert dropout >= 0.0
@@ -130,7 +130,7 @@ class RnnBlock(tf.keras.layers.Layer):
         dropout: float = 0.1,
         **kwargs,
     ):
-        super(RnnBlock, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         RNN = layer_util.get_rnn(rnn_type)
         self.rnn = RNN(
@@ -175,7 +175,7 @@ class RnnModule(tf.keras.Model):
         dropout: float = 0.1,
         **kwargs,
     ):
-        super(RnnModule, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         self.blocks = [
             RnnBlock(
@@ -208,7 +208,7 @@ class FcBlock(tf.keras.layers.Layer):
         dropout: float = 0.1,
         **kwargs,
     ):
-        super(FcBlock, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         self.fc = tf.keras.layers.Dense(units, name=f"{self.name}_fc")
         self.bn = tf.keras.layers.BatchNormalization(name=f"{self.name}_bn")
@@ -236,7 +236,7 @@ class FcModule(tf.keras.Model):
         dropout: float = 0.1,
         **kwargs,
     ):
-        super(FcModule, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         self.blocks = [FcBlock(units=units, dropout=dropout, name=f"{self.name}_block_{i}") for i in range(nlayers)]
 
