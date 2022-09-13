@@ -25,7 +25,9 @@ logger = tf.get_logger()
 def setup_environment():
     """Setting tensorflow running environment"""
     warnings.simplefilter("ignore")
-    return tf.get_logger()
+    lg = tf.get_logger()
+    lg.setLevel("INFO")
+    return lg
 
 
 def setup_devices(
