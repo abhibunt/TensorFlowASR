@@ -81,7 +81,7 @@ For training and testing, you should use `git clone` for installing necessary pa
 git clone https://github.com/TensorSpeech/TensorFlowASR.git
 cd TensorFlowASR
 # Tensorflow 2.x (with 2.x.x >= 2.5.1)
-pip3 install -e ".[tf2.x]" # or ".[tf2.x-gpu]"
+pip3 install ".[tf2.x]" # or ".[tf2.x-gpu]"
 ```
 
 For anaconda3:
@@ -93,14 +93,14 @@ pip install -U tensorflow-gpu # upgrade to latest version of tensorflow
 git clone https://github.com/TensorSpeech/TensorFlowASR.git
 cd TensorFlowASR
 # Tensorflow 2.x (with 2.x.x >= 2.5.1)
-pip3 install -e ".[tf2.x]" # or ".[tf2.x-gpu]"
+pip3 install ".[tf2.x]" # or ".[tf2.x-gpu]"
 ```
 
 ### Installing via PyPi
 
 ```bash
 # Tensorflow 2.x (with 2.x >= 2.3)
-pip3 install -U "TensorFlowASR[tf2.x]" # or pip3 install -U "TensorFlowASR[tf2.x-gpu]"
+pip3 install "TensorFlowASR[tf2.x]" # or pip3 install "TensorFlowASR[tf2.x-gpu]"
 ```
 
 ### Installing for development
