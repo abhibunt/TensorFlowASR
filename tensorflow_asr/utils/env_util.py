@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
 import random
 import warnings
 from typing import List, Union
@@ -26,10 +25,7 @@ logger = tf.get_logger()
 def setup_environment():
     """Setting tensorflow running environment"""
     warnings.simplefilter("ignore")
-    logging.basicConfig(format="%(asctime)s:%(levelname)s:%(module)s: %(message)s", level=logging.INFO)
-    logging.captureWarnings(True)
-    logger.setLevel(logging.INFO)
-    return logger
+    return tf.get_logger()
 
 
 def setup_devices(
