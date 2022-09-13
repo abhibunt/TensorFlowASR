@@ -55,21 +55,22 @@ model_config:
   encoder_reductions:
     0: 3
     1: 2
-  encoder_dmodel: 320
+  encoder_dmodel: 640
   encoder_rnn_type: lstm
-  encoder_rnn_units: 1024
+  encoder_rnn_units: 2048
   encoder_nlayers: 8
-  encoder_layer_norm: True
-  prediction_label_encode_mode: one_hot
-  prediction_embed_dim: 320
+  encoder_layer_norm: False
+  prediction_label_encode_mode: embedding
+  prediction_embed_dim: 640
   prediction_num_rnns: 2
-  prediction_rnn_units: 1024
+  prediction_rnn_units: 2048
   prediction_rnn_type: lstm
-  prediction_projection_units: 320
-  prediction_layer_norm: True
-  joint_dim: 320
+  prediction_rnn_unroll: False
+  prediction_layer_norm: False
+  prediction_projection_units: 640
+  joint_dim: 640
   prejoint_encoder_linear: True
-  prejoint_prediction_linear: False
+  prejoint_prediction_linear: True
   postjoint_linear: False
   joint_activation: tanh
   joint_mode: add
@@ -89,8 +90,8 @@ learning_config:
           num_masks: 1
           mask_factor: 27
     data_paths:
-      - H:/MLDL/Datasets/ASR/Raw/LibriSpeech/train-clean-100/transcripts.tsv
-    tfrecords_dir: null
+      - E:/MLDL/Datasets/ASR/LibriSpeech/train-clean-100/transcripts.tsv
+    tfrecords_dir: E:/MLDL/Datasets/ASR/LibriSpeech/tfrecords/wordpiece-1000/
     shuffle: True
     cache: True
     buffer_size: 100
@@ -99,10 +100,11 @@ learning_config:
     metadata: ./vocabularies/librispeech/wordpiece/train_1000_50.metadata.json
 
   eval_dataset_config:
+    enabled: False
     use_tf: True
     data_paths:
-      - H:/MLDL/Datasets/ASR/Raw/LibriSpeech/dev-clean/transcripts.tsv
-    tfrecords_dir: null
+      - E:/MLDL/Datasets/ASR/LibriSpeech/dev-clean/transcripts.tsv
+    tfrecords_dir: E:/MLDL/Datasets/ASR/LibriSpeech/tfrecords/wordpiece-1000/
     shuffle: False
     cache: True
     buffer_size: 100
@@ -111,9 +113,10 @@ learning_config:
     metadata: ./vocabularies/librispeech/wordpiece/train_1000_50.metadata.json
 
   test_dataset_config:
+    enabled: False
     use_tf: True
     data_paths:
-      - H:/MLDL/Datasets/ASR/Raw/LibriSpeech/test-clean/transcripts.tsv
+      - E:/MLDL/Datasets/ASR/LibriSpeech/test-clean/transcripts.tsv
     tfrecords_dir: null
     shuffle: False
     cache: True
@@ -128,7 +131,7 @@ learning_config:
 
   running_config:
     batch_size: 2
-    num_epochs: 20
+    num_epochs: 100
     checkpoint:
       filepath: D:/Models/local/rnn_transducer/checkpoints/{epoch:02d}.h5
       save_best_only: False
@@ -141,4 +144,4 @@ learning_config:
       write_graph: True
       write_images: True
       update_freq: epoch
-      profile_batch: 2
+      profile_batch: 10
