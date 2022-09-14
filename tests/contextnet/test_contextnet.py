@@ -22,7 +22,7 @@ logger = tf.get_logger()
 DEFAULT_YAML = os.path.join(os.path.abspath(os.path.dirname(__file__)), "config.yml")
 
 from tensorflow_asr.configs.config import Config
-from tensorflow_asr.featurizers.speech_featurizers import TFSpeechFeaturizer
+from tensorflow_asr.featurizers.speech_featurizers import SpeechFeaturizer
 from tensorflow_asr.featurizers.text_featurizers import CharFeaturizer
 from tensorflow_asr.models.transducer.contextnet import ContextNet
 
@@ -32,7 +32,7 @@ def test_contextnet():
 
     text_featurizer = CharFeaturizer(config.decoder_config)
 
-    speech_featurizer = TFSpeechFeaturizer(config.speech_config)
+    speech_featurizer = SpeechFeaturizer(config.speech_config)
 
     model = ContextNet(vocab_size=text_featurizer.num_classes, **config.model_config)
 

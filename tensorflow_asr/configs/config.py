@@ -22,20 +22,46 @@ class SpeechConfig:
     def __init__(self, config: dict = None):
         if not config:
             config = {}
+
+        # Sample rate in Hz
         self.sample_rate: int = config.pop("sample_rate", 16000)
+        # Amount of data grabbed for each frame during analysis
         self.frame_ms: int = config.pop("frame_ms", 25)
-        self.frame_length = int(self.sample_rate * (self.frame_ms / 1000))
+        self.frame_length = int(round(self.sample_rate * self.frame_ms / 1000.0))
+        # Number of ms to jump between frames
         self.stride_ms: int = config.pop("stride_ms", 10)
-        self.frame_step = int(self.sample_rate * (self.stride_ms / 1000))
+        self.frame_step = int(round(self.sample_rate * self.stride_ms / 1000.0))
+        # Number of bins in the feature output
         self.num_feature_bins: int = config.pop("num_feature_bins", 80)
+        # Type of feature extraction
         self.feature_type: str = config.pop("feature_type", "log_mel_spectrogram")
+
+        # The lowest frequency of the feature analysis
+        self.lower_edge_hertz: float = config.pop("lower_edge_hertz", 125.0)
+        # The highest frequency of the feature analysis
+        self.upper_edge_hertz: float = config.pop("upper_edge_hertz", 7600.0)
+
+        # Whether to pad the end of `signals` with zeros when framing produces a frame that lies partially past its end.
+        self.pad_end: bool = config.pop("pad_end", False)
+
+        # The first-order filter coefficient used for preemphasis. When it is 0.0, preemphasis is turned off.
         self.preemphasis: float = config.pop("preemphasis", 0.97)
+        # Whether to compute filterbank output on the energy of spectrum rather than just the magnitude.
+        self.compute_energy: bool = config.pop("compute_energy", False)
+
+        # Whether to use twice the minimum fft resolution.
+        self.fft_overdrive: bool = config.pop("fft_overdrive", True)
+        # Minimum output of filterbank output prior to taking logarithm.
+        self.output_floor: float = config.pop("output_floor", 1.0)
+        # Use natural log
+        self.use_natural_log: bool = config.pop("use_natural_log", True)
+        # Use librosa like stft
+        self.use_librosa_like_stft: bool = config.pop("use_librosa_like_stft", False)
+
         self.normalize_signal: bool = config.pop("normalize_signal", False)
         self.normalize_feature: bool = config.pop("normalize_feature", False)
         self.normalize_per_frame: bool = config.pop("normalize_per_frame", False)
-        self.center: bool = config.pop("center", False)
-        self.top_db: float = config.pop("top_db", None)
-        self.amin: float = config.pop("amin", 1e-10)
+
         for k, v in config.items():
             setattr(self, k, v)
 

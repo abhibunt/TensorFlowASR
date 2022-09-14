@@ -23,7 +23,7 @@ logger = tf.get_logger()
 def prepare_featurizers(
     config: Config,
 ):
-    speech_featurizer = speech_featurizers.TFSpeechFeaturizer(config.speech_config)
+    speech_featurizer = speech_featurizers.SpeechFeaturizer(config.speech_config)
     if config.decoder_config.type == "sentencepiece":
         logger.info("Loading SentencePiece model ...")
         text_featurizer = text_featurizers.SentencePieceFeaturizer(config.decoder_config)
