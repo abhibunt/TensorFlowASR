@@ -94,31 +94,12 @@ def tf_merge_slices(
     return tf.keras.backend.flatten(slices)  # return shape = [-1, ]
 
 
-def merge_slices(
-    slices: np.ndarray,
-) -> np.ndarray:
-    # slices shape = [batch, window_size]
-    return np.reshape(slices, [-1])
-
-
-def normalize_audio_feature(
-    audio_feature: np.ndarray,
-    per_frame=False,
-) -> np.ndarray:
-    """Mean and variance normalization"""
-    axis = 1 if per_frame else None
-    mean = np.mean(audio_feature, axis=axis)
-    std_dev = np.sqrt(np.var(audio_feature, axis=axis) + 1e-9)
-    normalized = (audio_feature - mean) / std_dev
-    return normalized
-
-
 def tf_normalize_audio_features(
     audio_feature: tf.Tensor,
     per_frame=False,
 ) -> tf.Tensor:
     """
-    TF Mean and variance features normalization
+    TF zero mean features normalization
     Args:
         audio_feature: tf.Tensor with shape [T, F]
         per_frame:
@@ -126,18 +107,11 @@ def tf_normalize_audio_features(
     Returns:
         normalized audio features with shape [T, F]
     """
-    axis = 1 if per_frame else None
+    axis = 1 if per_frame else 0
     mean = tf.reduce_mean(audio_feature, axis=axis, keepdims=True)
-    std_dev = tf.math.sqrt(tf.math.reduce_variance(audio_feature, axis=axis, keepdims=True) + 1e-9)
-    return (audio_feature - mean) / std_dev
-
-
-def normalize_signal(
-    signal: np.ndarray,
-) -> np.ndarray:
-    """Normailize signal to [-1, 1] range"""
-    gain = 1.0 / (np.max(np.abs(signal)) + 1e-9)
-    return signal * gain
+    stddev = tf.math.reduce_std(audio_feature, axis=axis, keepdims=True)
+    numerator = audio_feature - mean
+    return tf.where(tf.not_equal(stddev, 0), tf.divide(numerator, stddev), numerator)
 
 
 def tf_normalize_signal(
@@ -153,15 +127,6 @@ def tf_normalize_signal(
     """
     gain = 1.0 / (tf.reduce_max(tf.abs(signal), axis=-1) + 1e-9)
     return signal * gain
-
-
-def preemphasis(
-    signal: np.ndarray,
-    coeff=0.97,
-) -> np.ndarray:
-    if not coeff or coeff <= 0.0:
-        return signal
-    return np.append(signal[0], signal[1:] - coeff * signal[:-1])
 
 
 def tf_preemphasis(

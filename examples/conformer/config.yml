@@ -93,11 +93,10 @@ learning_config:
     enabled: True
     use_tf: True
     augmentation_config:
-      signal_augment:
-        gauss_noise:
-          prob: 0.2
-          stddev: 0.075
       feature_augment:
+        gauss_noise:
+          prob: 0.1
+          stddev: 0.075
         time_masking:
           prob: 0.5
           num_masks: 10
