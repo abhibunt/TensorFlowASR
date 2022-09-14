@@ -36,27 +36,24 @@ class SpeechConfig:
         # Type of feature extraction
         self.feature_type: str = config.pop("feature_type", "log_mel_spectrogram")
 
-        # The lowest frequency of the feature analysis
-        self.lower_edge_hertz: float = config.pop("lower_edge_hertz", 125.0)
-        # The highest frequency of the feature analysis
-        self.upper_edge_hertz: float = config.pop("upper_edge_hertz", 7600.0)
-
-        # Whether to pad the end of `signals` with zeros when framing produces a frame that lies partially past its end.
-        self.pad_end: bool = config.pop("pad_end", False)
-
         # The first-order filter coefficient used for preemphasis. When it is 0.0, preemphasis is turned off.
         self.preemphasis: float = config.pop("preemphasis", 0.97)
-        # Whether to compute filterbank output on the energy of spectrum rather than just the magnitude.
-        self.compute_energy: bool = config.pop("compute_energy", False)
-
+        # Whether to pad the end of `signals` with zeros when framing produces a frame that lies partially past its end.
+        self.pad_end: bool = config.pop("pad_end", False)
+        # Use librosa like stft
+        self.use_librosa_like_stft: bool = config.pop("use_librosa_like_stft", False)
         # Whether to use twice the minimum fft resolution.
         self.fft_overdrive: bool = config.pop("fft_overdrive", True)
+        # Whether to compute filterbank output on the energy of spectrum rather than just the magnitude.
+        self.compute_energy: bool = config.pop("compute_energy", False)
         # Minimum output of filterbank output prior to taking logarithm.
         self.output_floor: float = config.pop("output_floor", 1.0)
         # Use natural log
         self.use_natural_log: bool = config.pop("use_natural_log", True)
-        # Use librosa like stft
-        self.use_librosa_like_stft: bool = config.pop("use_librosa_like_stft", False)
+        # The lowest frequency of the feature analysis
+        self.lower_edge_hertz: float = config.pop("lower_edge_hertz", 125.0)
+        # The highest frequency of the feature analysis
+        self.upper_edge_hertz: float = config.pop("upper_edge_hertz", 7600.0)
 
         self.normalize_signal: bool = config.pop("normalize_signal", False)
         self.normalize_feature: bool = config.pop("normalize_feature", False)
