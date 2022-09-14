@@ -99,7 +99,7 @@ def tf_normalize_audio_features(
     per_frame=False,
 ) -> tf.Tensor:
     """
-    TF zero mean features normalization
+    TF z-score features normalization
     Args:
         audio_feature: tf.Tensor with shape [T, F]
         per_frame:
@@ -107,7 +107,7 @@ def tf_normalize_audio_features(
     Returns:
         normalized audio features with shape [T, F]
     """
-    axis = 1 if per_frame else 0
+    axis = -1 if per_frame else 0
     mean = tf.reduce_mean(audio_feature, axis=axis, keepdims=True)
     stddev = tf.math.reduce_std(audio_feature, axis=axis, keepdims=True)
     numerator = audio_feature - mean
@@ -480,11 +480,10 @@ class TFSpeechFeaturizer(SpeechFeaturizer):
         else:
             raise ValueError("feature_type must be either 'mfcc', 'log_mel_spectrogram' or 'spectrogram'")
 
-        features = tf.expand_dims(features, axis=-1)
-
         if self.speech_config.normalize_feature:
             features = tf_normalize_audio_features(features, per_frame=self.speech_config.normalize_per_frame)
 
+        features = tf.expand_dims(features, axis=-1)
         return features
 
     def compute_log_mel_spectrogram(self, signal):
