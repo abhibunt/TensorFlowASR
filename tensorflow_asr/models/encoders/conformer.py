@@ -14,6 +14,7 @@
 
 import tensorflow as tf
 
+from tensorflow_asr.models.activations.glu import GLU
 from tensorflow_asr.models.layers.depthwise_conv1d import DepthwiseConv1D
 from tensorflow_asr.models.layers.multihead_attention import MultiHeadAttention, RelPositionMultiHeadAttention
 from tensorflow_asr.models.layers.positional_encoding import PositionalEncoding, PositionalEncodingConcat
@@ -208,17 +209,12 @@ class ConvModule(tf.keras.layers.Layer):
             dtype=tf.float32,  # Use float32 in layernorm for numeric stability.
         )
         self.pw_conv_1 = tf.keras.layers.Dense(
-            input_dim,
+            2 * input_dim,
             name=f"{name}_pw_conv_1",
             kernel_regularizer=kernel_regularizer,
             bias_regularizer=bias_regularizer,
         )
-        self.pw_conv_1_gated = tf.keras.layers.Dense(
-            input_dim,
-            name=f"{name}_pw_conv_1_gated",
-            kernel_regularizer=kernel_regularizer,
-            bias_regularizer=bias_regularizer,
-        )
+        self.glu = GLU(axis=-1, name=f"{name}_glu_activation")
         self.dw_conv = DepthwiseConv1D(
             kernel_size=kernel_size,
             strides=1,
@@ -250,9 +246,8 @@ class ConvModule(tf.keras.layers.Layer):
         **kwargs,
     ):
         outputs = self.ln(inputs, training=training)
-        act = self.pw_conv_1(outputs, training=training)
-        gated = self.pw_conv_1_gated(outputs, training=training)
-        outputs = tf.multiply(act, tf.nn.sigmoid(gated))
+        outputs = self.pw_conv_1(outputs, training=training)
+        outputs = self.glu(outputs)
         outputs = self.dw_conv(outputs, training=training)
         outputs = self.bn(outputs, training=training)
         outputs = self.swish(outputs)

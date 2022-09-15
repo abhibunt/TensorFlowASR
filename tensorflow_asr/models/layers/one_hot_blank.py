@@ -23,8 +23,8 @@ class OneHotBlank(tf.keras.layers.Layer):
     except the k-th, which is one. ∅ is encoded as a length K vector of zeros
     """
 
-    def __init__(self, blank, depth, **kwargs):
-        super().__init__(trainable=False, **kwargs)
+    def __init__(self, blank, depth, name="one_hot_blank", **kwargs):
+        super().__init__(name=name, **kwargs)
         self.blank = blank
         self.depth = depth
 

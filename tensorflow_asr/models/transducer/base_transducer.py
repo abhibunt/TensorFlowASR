@@ -168,7 +168,7 @@ class TransducerPrediction(tf.keras.Model):
 
 class TransducerJointMerge(tf.keras.layers.Layer):
     def __init__(self, joint_mode: str = "add", name="transducer_joint_merge", **kwargs):
-        super().__init__(name=name, trainable=False, **kwargs)
+        super().__init__(name=name, **kwargs)
         if joint_mode not in JOINT_MODES:
             raise ValueError(f"joint_mode must in {JOINT_MODES}")
         self.joint_mode = joint_mode

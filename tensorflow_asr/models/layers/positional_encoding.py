@@ -25,7 +25,7 @@ class PositionalEncoding(tf.keras.layers.Layer):
         name="positional_encoding",
         **kwargs,
     ):
-        super().__init__(trainable=False, name=name, **kwargs)
+        super().__init__(name=name, **kwargs)
         self.alpha = alpha
         self.beta = beta
 
