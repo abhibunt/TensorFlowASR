@@ -18,12 +18,6 @@ speech_config:
   stride_ms: 10
   num_feature_bins: 80
   feature_type: log_mel_spectrogram
-  preemphasis: 0.97
-  normalize_signal: False
-  normalize_feature: False
-  normalize_per_frame: False
-  center: False
-  top_db: null
 
 decoder_config:
   type: wordpiece

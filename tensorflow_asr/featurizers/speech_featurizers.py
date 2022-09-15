@@ -194,10 +194,12 @@ class SpeechFeaturizer:
 
     def get_length_from_duration(self, duration):
         nsamples = math.ceil(float(duration) * self.speech_config.sample_rate)
-        if self.speech_config.center:
-            nsamples += self.nfft
         # https://www.tensorflow.org/api_docs/python/tf/signal/frame
-        return 1 + (nsamples - self.nfft) // self.speech_config.frame_step
+        if self.speech_config.use_librosa_like_stft:
+            return 1 + (nsamples - self.nfft) // self.speech_config.frame_step
+        if self.speech_config.pad_end:
+            return -(-nsamples // self.speech_config.frame_step)
+        return 1 + (nsamples - self.speech_config.frame_length) // self.speech_config.frame_step
 
     def update_length(self, length: int):
         self.max_length = max(self.max_length, length)
