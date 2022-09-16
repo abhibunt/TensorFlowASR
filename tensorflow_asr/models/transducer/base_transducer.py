@@ -525,7 +525,7 @@ class Transducer(BaseModel):
                 return tf.less(batch, total_batch)
 
             def body(batch, decoded):
-                hypothesis = self._perform_greedy(
+                hypothesis = self._perform_greedy_v2(
                     encoded=encoded[batch],
                     encoded_length=encoded_length[batch],
                     predicted=tf.constant(self.text_featurizer.blank, dtype=tf.int32),

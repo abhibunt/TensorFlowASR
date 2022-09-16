@@ -47,16 +47,16 @@ class SpeechConfig:
         # Whether to compute filterbank output on the energy of spectrum rather than just the magnitude.
         self.compute_energy: bool = config.pop("compute_energy", False)
         # Minimum output of filterbank output prior to taking logarithm.
-        self.output_floor: float = config.pop("output_floor", 1.0)
+        self.output_floor: float = config.pop("output_floor", 1e-10)
         # Use natural log
         self.use_natural_log: bool = config.pop("use_natural_log", True)
         # The lowest frequency of the feature analysis
         self.lower_edge_hertz: float = config.pop("lower_edge_hertz", 125.0)
         # The highest frequency of the feature analysis
-        self.upper_edge_hertz: float = config.pop("upper_edge_hertz", 7600.0)
+        self.upper_edge_hertz: float = config.pop("upper_edge_hertz", self.sample_rate / 2)
 
         self.normalize_signal: bool = config.pop("normalize_signal", False)
-        self.normalize_feature: bool = config.pop("normalize_feature", False)
+        self.normalize_feature: bool = config.pop("normalize_feature", True)
         self.normalize_per_frame: bool = config.pop("normalize_per_frame", False)
 
         for k, v in config.items():

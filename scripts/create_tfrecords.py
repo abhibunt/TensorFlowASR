@@ -31,9 +31,6 @@ def main(
     tfrecords_dir: str = None,
     tfrecords_shards: int = 16,
     shuffle: bool = True,
-    sentence_piece: bool = False,
-    subwords: bool = False,
-    wordpiece: bool = False,
 ):
     data_paths = preprocess_paths(transcripts)
     tfrecords_dir = preprocess_paths(tfrecords_dir, isdir=True)
