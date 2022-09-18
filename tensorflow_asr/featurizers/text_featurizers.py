@@ -501,7 +501,7 @@ class WordPieceFeaturizer(TextFeaturizer):
             no_pretokenization=True,  # False is limited, so we manually do pretokenization
             support_detokenization=True,
         )
-        self.num_classes = self.decoder_config.vocab_size
+        self.num_classes = len(self.vocab)
 
     @classmethod
     def build_from_corpus(cls, decoder_config: DecoderConfig):
