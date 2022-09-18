@@ -60,7 +60,7 @@ class BlurPool2D(tf.keras.layers.Layer):
         elif self.kernel_size == 7:
             a = np.array([1.0, 6.0, 15.0, 20.0, 15.0, 6.0, 1.0])
 
-        self.kernel = tf.constant(a[:, None] * a[None, :], dtype=self.dtype)
+        self.kernel = tf.constant(a[:, None] * a[None, :], dtype=self.compute_dtype)
         self.kernel = tf.divide(self.kernel, tf.reduce_sum(self.kernel))
         self.kernel = tf.repeat(tf.expand_dims(self.kernel, -1), self.filters, axis=-1)  # [kernel_size, kernel_size, filters]
 
@@ -114,7 +114,7 @@ class BlurPool1D(tf.keras.layers.Layer):
         elif self.kernel_size == 7:
             a = np.array([1.0, 6.0, 15.0, 20.0, 15.0, 6.0, 1.0])
 
-        self.kernel = tf.constant(a, dtype=self.dtype)
+        self.kernel = tf.constant(a, dtype=self.compute_dtype)
         self.kernel = tf.divide(self.kernel, tf.reduce_sum(self.kernel))
         self.kernel = tf.repeat(tf.expand_dims(self.kernel, -1), self.filters, axis=-1)  # [kernel_size, filters]
 
