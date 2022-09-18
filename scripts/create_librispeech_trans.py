@@ -45,8 +45,8 @@ def main(
             audio_file = os.path.join(current_dir, line[0] + ".flac")
             y, sr = librosa.load(audio_file, sr=None)
             duration = librosa.get_duration(y=y, sr=sr)
-            text = unicodedata.normalize("NFC", line[1].lower())
-            transcripts.append(f"{audio_file}\t{duration}\t{text}\n")
+            text = unicodedata.normalize("NFKC", line[1])
+            transcripts.append(f"{audio_file}\t{duration}\t{text.lower()}\n")
 
     with open(output, "w", encoding="utf-8") as out:
         out.write("PATH\tDURATION\tTRANSCRIPT\n")
