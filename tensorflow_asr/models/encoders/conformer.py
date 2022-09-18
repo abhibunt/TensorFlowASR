@@ -18,7 +18,13 @@ from tensorflow_asr.models.activations.glu import GLU
 from tensorflow_asr.models.layers.depthwise_conv1d import DepthwiseConv1D
 from tensorflow_asr.models.layers.multihead_attention import MultiHeadAttention, RelPositionMultiHeadAttention
 from tensorflow_asr.models.layers.positional_encoding import PositionalEncoding, PositionalEncodingConcat
-from tensorflow_asr.models.layers.subsampling import Conv1dSubsampling, Conv2dSubsampling, VggSubsampling
+from tensorflow_asr.models.layers.subsampling import (
+    Conv1dBlurPoolSubsampling,
+    Conv1dSubsampling,
+    Conv2dBlurPoolSubsampling,
+    Conv2dSubsampling,
+    VggSubsampling,
+)
 
 L2 = tf.keras.regularizers.l2(1e-6)
 
@@ -363,7 +369,7 @@ class ConformerEncoder(tf.keras.Model):
         name="conformer_encoder",
         **kwargs,
     ):
-        super(ConformerEncoder, self).__init__(name=name, **kwargs)
+        super().__init__(name=name, **kwargs)
 
         subsampling_name = subsampling.pop("type", "conv2d")
         if subsampling_name == "vgg":
@@ -372,8 +378,12 @@ class ConformerEncoder(tf.keras.Model):
             subsampling_class = Conv2dSubsampling
         elif subsampling_name == "conv1d":
             subsampling_class = Conv1dSubsampling
+        elif subsampling_name == "conv2d_blurpool":
+            subsampling_class = Conv2dBlurPoolSubsampling
+        elif subsampling_name == "conv1d_blurpool":
+            subsampling_class = Conv1dBlurPoolSubsampling
         else:
-            raise ValueError("subsampling must be either  'conv2d' or 'vgg'")
+            raise ValueError("subsampling must be either 'vgg', 'conv2d', 'conv1d', 'conv2d_blurpool', 'conv1d_blurpool'")
 
         self.conv_subsampling = subsampling_class(
             **subsampling,

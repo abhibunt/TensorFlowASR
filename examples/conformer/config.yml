@@ -47,14 +47,12 @@ decoder_config:
 model_config:
   name: conformer
   encoder_subsampling:
-    type: vgg
-    filters:
-      - 64
-      - 128
+    type: conv2d_blurpool
+    filters: 144
     kernel_size: 3
-    pool_size: 2
     strides: 2
-    padding: same
+    conv_padding: same
+    pool_padding: reflect
     activation: relu
   encoder_positional_encoding: sinusoid
   encoder_dmodel: 144
@@ -102,7 +100,7 @@ learning_config:
           mask_factor: 27
     data_paths:
       - E:/MLDL/Datasets/ASR/LibriSpeech/train-clean-100/transcripts.tsv
-    tfrecords_dir: E:/MLDL/Datasets/ASR/LibriSpeech/tfrecords/wordpiece-1000/
+    tfrecords_dir: E:/MLDL/Datasets/ASR/LibriSpeech/tfrecords/100h
     shuffle: True
     cache: True
     buffer_size: 100

@@ -86,7 +86,7 @@ class PositionalEncodingConcat(PositionalEncoding):
         index = 1 / tf.pow(10000.0, (index / dmodel))
 
         sinusoid = tf.einsum("i,j->ij", pos, index)
-        pos = tf.concat([tf.sin(sinusoid), tf.cos(sinusoid)], axis=-1)
+        pos = tf.concat([tf.sin(sinusoid), tf.cos(sinusoid)], -1)
 
         return tf.expand_dims(pos, axis=0)
 

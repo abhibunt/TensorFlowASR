@@ -94,7 +94,7 @@ def merge_repeated(
 
     def _body(i, result, yseqs, U):
         if yseqs[i] != result[-1]:
-            result = tf.concat([result, [yseqs[i]]], axis=-1)
+            result = tf.concat([result, [yseqs[i]]], -1)
         return i + 1, result, yseqs, U
 
     _, result, _, _ = tf.while_loop(
