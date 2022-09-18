@@ -3,13 +3,16 @@ import os
 
 import tensorflow as tf
 
+from tensorflow_asr.configs.config import DecoderConfig
 from tensorflow_asr.featurizers.text_featurizers import WordPieceFeaturizer
 
-decoder_config = {
-    "vocabulary": f"{os.path.dirname(__file__)}/../vocabularies/librispeech/wordpiece/train_1000_50.tokens",
-    "max_subword_length": 50,
-    "unknown_token": "[PAD]",
-}
+decoder_config = DecoderConfig(
+    {
+        "vocabulary": f"{os.path.dirname(__file__)}/../vocabularies/librispeech/wordpiece/train_1000_50.tokens",
+        "max_subword_length": 50,
+        "unknown_token": "[PAD]",
+    }
+)
 
 text = "i'm good but it would have broken down after ten miles of that hard trail dawn came while they wound over the crest of the range and with the sun in their faces they took the downgrade it was well into the morning before nash reached logan"
 
