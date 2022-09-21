@@ -23,6 +23,7 @@ from tensorflow_asr.models.layers.subsampling import (
     Conv1dSubsampling,
     Conv2dBlurPoolSubsampling,
     Conv2dSubsampling,
+    VggBlurPoolSubsampling,
     VggSubsampling,
 )
 
@@ -374,6 +375,8 @@ class ConformerEncoder(tf.keras.Model):
         subsampling_name = subsampling.pop("type", "conv2d")
         if subsampling_name == "vgg":
             subsampling_class = VggSubsampling
+        if subsampling_name == "vgg_blurpool":
+            subsampling_class = VggBlurPoolSubsampling
         elif subsampling_name == "conv2d":
             subsampling_class = Conv2dSubsampling
         elif subsampling_name == "conv1d":
@@ -383,7 +386,9 @@ class ConformerEncoder(tf.keras.Model):
         elif subsampling_name == "conv1d_blurpool":
             subsampling_class = Conv1dBlurPoolSubsampling
         else:
-            raise ValueError("subsampling must be either 'vgg', 'conv2d', 'conv1d', 'conv2d_blurpool', 'conv1d_blurpool'")
+            raise ValueError(
+                "subsampling must be either 'vgg', 'vgg_blurpool', 'conv2d', 'conv1d', 'conv2d_blurpool', 'conv1d_blurpool'"
+            )
 
         self.conv_subsampling = subsampling_class(
             **subsampling,

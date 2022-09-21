@@ -122,6 +122,99 @@ class VggSubsampling(tf.keras.layers.Layer):
         return math_util.merge_two_last_dims(outputs)
 
 
+class VggBlurPoolSubsampling(tf.keras.layers.Layer):
+    def __init__(
+        self,
+        filters: tuple or list = (32, 64),
+        kernel_size: int = 3,
+        pool_size: int = 2,
+        strides: int = 2,
+        conv_padding: str = "same",
+        pool_padding: str = "reflect",
+        activation: str = "relu",
+        kernel_regularizer=None,
+        bias_regularizer=None,
+        name="VggBlurPoolSubsampling",
+        **kwargs,
+    ):
+        super().__init__(name=name, **kwargs)
+        self.conv1 = tf.keras.layers.Conv2D(
+            filters=filters[0],
+            kernel_size=kernel_size,
+            strides=1,
+            padding=conv_padding,
+            name=f"{name}_conv_1",
+            kernel_regularizer=kernel_regularizer,
+            bias_regularizer=bias_regularizer,
+            activation=activation,
+        )
+        self.conv2 = tf.keras.layers.Conv2D(
+            filters=filters[0],
+            kernel_size=kernel_size,
+            strides=1,
+            padding=conv_padding,
+            name=f"{name}_conv_2",
+            kernel_regularizer=kernel_regularizer,
+            bias_regularizer=bias_regularizer,
+            activation=activation,
+        )
+        self.maxpool1 = tf.keras.layers.MaxPool2D(pool_size=pool_size, strides=1, padding=conv_padding, name=f"{name}_maxpool_1")
+        self.blurpool1 = BlurPool2D(
+            filters=filters[0],
+            kernel_size=pool_size,
+            strides=strides,
+            padding=pool_padding,
+            name=f"{name}_blurpool_1",
+        )
+        self.conv3 = tf.keras.layers.Conv2D(
+            filters=filters[1],
+            kernel_size=kernel_size,
+            strides=1,
+            padding=conv_padding,
+            name=f"{name}_conv_3",
+            kernel_regularizer=kernel_regularizer,
+            bias_regularizer=bias_regularizer,
+            activation=activation,
+        )
+        self.conv4 = tf.keras.layers.Conv2D(
+            filters=filters[1],
+            kernel_size=kernel_size,
+            strides=1,
+            padding=conv_padding,
+            name=f"{name}_conv_4",
+            kernel_regularizer=kernel_regularizer,
+            bias_regularizer=bias_regularizer,
+            activation=activation,
+        )
+        self.maxpool2 = tf.keras.layers.MaxPool2D(pool_size=pool_size, strides=1, padding=conv_padding, name=f"{name}_maxpool_2")
+        self.blurpool2 = BlurPool2D(
+            filters=filters[0],
+            kernel_size=pool_size,
+            strides=strides,
+            padding=pool_padding,
+            name=f"{name}_blurpool_2",
+        )
+        self.time_reduction_factor = self.blurpool2.strides * self.blurpool2.strides
+
+    def call(
+        self,
+        inputs,
+        training=False,
+        **kwargs,
+    ):
+        outputs = self.conv1(inputs, training=training)
+        outputs = self.conv2(outputs, training=training)
+        outputs = self.maxpool1(outputs, training=training)
+        outputs = self.blurpool1(outputs)
+
+        outputs = self.conv3(outputs, training=training)
+        outputs = self.conv4(outputs, training=training)
+        outputs = self.maxpool2(outputs, training=training)
+        outputs = self.blurpool2(outputs)
+
+        return math_util.merge_two_last_dims(outputs)
+
+
 class Conv2dSubsampling(tf.keras.layers.Layer):
     def __init__(
         self,
