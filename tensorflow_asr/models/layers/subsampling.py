@@ -188,7 +188,7 @@ class VggBlurPoolSubsampling(tf.keras.layers.Layer):
         )
         self.maxpool2 = tf.keras.layers.MaxPool2D(pool_size=pool_size, strides=1, padding=conv_padding, name=f"{name}_maxpool_2")
         self.blurpool2 = BlurPool2D(
-            filters=filters[0],
+            filters=filters[1],
             kernel_size=pool_size,
             strides=strides,
             padding=pool_padding,
