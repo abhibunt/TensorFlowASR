@@ -375,7 +375,7 @@ class ConformerEncoder(tf.keras.Model):
         subsampling_name = subsampling.pop("type", "conv2d")
         if subsampling_name == "vgg":
             subsampling_class = VggSubsampling
-        if subsampling_name == "vgg_blurpool":
+        elif subsampling_name == "vgg_blurpool":
             subsampling_class = VggBlurPoolSubsampling
         elif subsampling_name == "conv2d":
             subsampling_class = Conv2dSubsampling
