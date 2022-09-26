@@ -98,6 +98,7 @@ class TextFeaturizer:
         text = tf.strings.regex_replace(text, r"\p{Cc}|\p{Cf}", " ")
         text = tf.strings.lower(text, encoding="utf-8")
         text = tf.strings.strip(text)  # remove trailing whitespace
+        text = tf.strings.regex_replace(text, "\\s+", " ")  # trim "  " to " "
         return text
 
     def add_scorer(self, scorer: any = None):
@@ -526,7 +527,7 @@ class WordPieceFeaturizer(TextFeaturizer):
             reserved_tokens=decoder_config.reserved_tokens,
             bert_tokenizer_params=dict(
                 lower_case=False,  # keep original from dataset
-                keep_whitespace=False,
+                keep_whitespace=True,
                 normalization_form=decoder_config.normalization_form,
                 preserve_unused_token=False,
             ),
@@ -553,8 +554,8 @@ class WordPieceFeaturizer(TextFeaturizer):
 
     def tf_extract(self, text: tf.Tensor) -> tf.Tensor:
         text = self.tf_preprocess_text(text)
-        # text = tf.strings.regex_replace(text, "\\s", "| |")
-        # text = tf.strings.split(text, "|")
+        text = tf.strings.regex_replace(text, "\\s", "| |")
+        text = tf.strings.split(text, "|")
         text = tf.strings.split(text)
         indices = self.tokenizer.tokenize(text).merge_dims(0, 1)
         return indices
@@ -571,7 +572,7 @@ class WordPieceFeaturizer(TextFeaturizer):
         indices = tf.ragged.boolean_mask(indices, tf.not_equal(indices, self.blank))
         indices = tf.ragged.boolean_mask(indices, tf.not_equal(indices, self.decoder_config.unknown_index))
         transcripts = self.tokenizer.detokenize(indices)
-        # transcripts = tf.strings.regex_replace(transcripts, "\\s+", " ")  # trim "  " to " "
+        transcripts = tf.strings.regex_replace(transcripts, "\\s+", " ")  # trim "  " to " "
         return transcripts
 
     @tf.function(input_signature=[tf.TensorSpec([None], dtype=tf.int32)])
