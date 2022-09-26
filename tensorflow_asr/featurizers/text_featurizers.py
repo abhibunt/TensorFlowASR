@@ -98,7 +98,6 @@ class TextFeaturizer:
         text = tf.strings.regex_replace(text, r"\p{Cc}|\p{Cf}", " ")
         text = tf.strings.lower(text, encoding="utf-8")
         text = tf.strings.strip(text)  # remove trailing whitespace
-        text = tf.strings.regex_replace(text, "\\s+", " ")  # trim "  " to " "
         return text
 
     def add_scorer(self, scorer: any = None):
@@ -554,7 +553,7 @@ class WordPieceFeaturizer(TextFeaturizer):
 
     def tf_extract(self, text: tf.Tensor) -> tf.Tensor:
         text = self.tf_preprocess_text(text)
-        text = tf.strings.regex_replace(text, "\\s", "| |")
+        text = tf.strings.regex_replace(text, "\\s+", "| |")
         text = tf.strings.split(text, "|")
         text = tf.strings.split(text)
         indices = self.tokenizer.tokenize(text).merge_dims(0, 1)
