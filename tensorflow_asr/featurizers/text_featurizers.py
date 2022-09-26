@@ -555,7 +555,6 @@ class WordPieceFeaturizer(TextFeaturizer):
         text = self.tf_preprocess_text(text)
         text = tf.strings.regex_replace(text, "\\s+", "| |")
         text = tf.strings.split(text, "|")
-        text = tf.strings.split(text)
         indices = self.tokenizer.tokenize(text).merge_dims(0, 1)
         return indices
 
