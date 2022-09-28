@@ -145,7 +145,7 @@ class BaseModel(tf.keras.Model):
 
         with tf.GradientTape() as tape:
             y_pred = self(inputs, training=True)
-            tape.watch(y_pred)
+            tape.watch(y_pred["logits"])
             per_sample_loss = self.loss(y_true=y_true, y_pred=y_pred)
             loss = tf.nn.compute_average_loss(per_sample_loss, global_batch_size=self.__get_global_batch_size(y_pred))
             if self.use_loss_scale:
