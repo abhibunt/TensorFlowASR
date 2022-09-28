@@ -126,6 +126,12 @@ class BaseModel(tf.keras.Model):
 
     # -------------------------------- STEP FUNCTIONS -------------------------------------
 
+    def __get_global_batch_size(self, y_pred):
+        global_batch_size = tf.shape(y_pred)[0] * tf.distribute.get_strategy().num_replicas_in_sync
+        if self.use_ga:
+            global_batch_size *= self.ga.total_steps
+        return global_batch_size
+
     def train_step(self, batch):
         """
         Args:
@@ -139,8 +145,9 @@ class BaseModel(tf.keras.Model):
 
         with tf.GradientTape() as tape:
             y_pred = self(inputs, training=True)
+            tape.watch(y_pred)
             per_sample_loss = self.loss(y_true=y_true, y_pred=y_pred)
-            loss = per_sample_loss * (1.0 / tf.distribute.get_strategy().num_replicas_in_sync)
+            loss = tf.nn.compute_average_loss(per_sample_loss, global_batch_size=self.__get_global_batch_size(y_pred))
             if self.use_loss_scale:
                 scaled_loss = self.optimizer.get_scaled_loss(loss)
 
