@@ -127,7 +127,7 @@ class BaseModel(tf.keras.Model):
     # -------------------------------- STEP FUNCTIONS -------------------------------------
 
     def __get_global_batch_size(self, y_pred):
-        global_batch_size = tf.shape(y_pred)[0] * tf.distribute.get_strategy().num_replicas_in_sync
+        global_batch_size = tf.shape(y_pred["logits"])[0] * tf.distribute.get_strategy().num_replicas_in_sync
         if self.use_ga:
             global_batch_size *= self.ga.total_steps
         return global_batch_size
