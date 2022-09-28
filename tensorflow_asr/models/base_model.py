@@ -126,7 +126,7 @@ class BaseModel(tf.keras.Model):
 
     # -------------------------------- STEP FUNCTIONS -------------------------------------
 
-    def __get_global_batch_size(self, y_pred):
+    def _get_global_batch_size(self, y_pred):
         global_batch_size = tf.shape(y_pred["logits"])[0] * tf.distribute.get_strategy().num_replicas_in_sync
         if self.use_ga:
             global_batch_size *= self.ga.total_steps
@@ -147,7 +147,7 @@ class BaseModel(tf.keras.Model):
             y_pred = self(inputs, training=True)
             tape.watch(y_pred["logits"])
             per_sample_loss = self.loss(y_true=y_true, y_pred=y_pred)
-            loss = tf.nn.compute_average_loss(per_sample_loss, global_batch_size=self.__get_global_batch_size(y_pred))
+            loss = tf.nn.compute_average_loss(per_sample_loss, global_batch_size=self._get_global_batch_size(y_pred))
             if self.use_loss_scale:
                 scaled_loss = self.optimizer.get_scaled_loss(loss)
 
