@@ -164,7 +164,7 @@ class BaseModel(tf.keras.Model):
         else:
             self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
 
-        self._tfasr_metrics["loss"].update_state(per_sample_loss)
+        self._tfasr_metrics["loss"].update_state(loss)
         return {m.name: m.result() for m in self.metrics}
 
     def test_step(self, batch):
@@ -179,7 +179,8 @@ class BaseModel(tf.keras.Model):
         inputs, y_true = batch
         y_pred = self(inputs, training=False)
         per_sample_loss = self.loss(y_true=y_true, y_pred=y_pred)
-        self._tfasr_metrics["loss"].update_state(per_sample_loss)
+        loss = tf.nn.compute_average_loss(per_sample_loss, global_batch_size=self._get_global_batch_size(y_pred))
+        self._tfasr_metrics["loss"].update_state(loss)
         return {m.name: m.result() for m in self.metrics}
 
     def predict_step(self, batch):
