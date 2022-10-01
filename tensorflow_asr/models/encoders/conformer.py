@@ -166,10 +166,10 @@ class MHSAModule(tf.keras.layers.Layer):
         inputs, pe = inputs  # pe is positional encoding matrix
         outputs = self.ln(inputs, training=training)
         if self.mha_type == "relmha":
-            pos = tf.add(outputs, pe)
+            pos = tf.add(outputs, tf.cast(pe, outputs.dtype))
             outputs = self.mha([outputs, outputs, outputs, pos], training=training, mask=mask)
         else:
-            outputs = tf.add(outputs, pe)
+            outputs = tf.add(outputs, tf.cast(pe, outputs.dtype))
             outputs = self.mha([outputs, outputs, outputs], training=training, mask=mask)
         outputs = self.do(outputs, training=training)
         outputs = self.res_add([inputs, outputs])
