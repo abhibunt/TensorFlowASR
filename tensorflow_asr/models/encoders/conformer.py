@@ -169,7 +169,6 @@ class MHSAModule(tf.keras.layers.Layer):
             pos = tf.add(outputs, tf.cast(pe, outputs.dtype))
             outputs = self.mha([outputs, outputs, outputs, pos], training=training, mask=mask)
         else:
-            outputs = tf.add(outputs, tf.cast(pe, outputs.dtype))
             outputs = self.mha([outputs, outputs, outputs], training=training, mask=mask)
         outputs = self.do(outputs, training=training)
         outputs = self.res_add([inputs, outputs])
