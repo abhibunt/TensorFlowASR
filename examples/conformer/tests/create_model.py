@@ -1,0 +1,44 @@
+# %%
+import os
+
+import tensorflow as tf
+
+from tensorflow_asr.configs.config import Config
+from tensorflow_asr.helpers import dataset_helpers, featurizer_helpers
+from tensorflow_asr.models.transducer.conformer import Conformer
+from tensorflow_asr.optimizers.schedules import TransformerSchedule
+from tensorflow_asr.utils import env_util, file_util
+
+logger = env_util.setup_environment()
+
+config_path = os.path.join(os.path.dirname(__file__), "..", "config.yml")
+
+env_util.setup_seed()
+config = Config(config_path)
+
+speech_featurizer, text_featurizer = featurizer_helpers.prepare_featurizers(config=config)
+
+global_batch_size = 32
+
+conformer = Conformer(
+    **config.model_config,
+    blank=text_featurizer.blank,
+    vocab_size=text_featurizer.num_classes,
+)
+conformer.make(
+    speech_featurizer.shape,
+    prediction_shape=text_featurizer.prepand_shape,
+    batch_size=global_batch_size,
+)
+conformer.add_featurizers(speech_featurizer, text_featurizer)
+conformer.summary()
+# %%
+conformer.save("./saved_model")
+
+# %%
+
+import tf2onnx
+
+tf2onnx.convert.from_keras(conformer, output_path="./conformer.onxx")
+
+# %%
