@@ -450,6 +450,7 @@ class ConformerEncoder(tf.keras.Model):
         outputs = self.conv_subsampling(inputs, training=training)
         outputs = self.linear(outputs, training=training)
         pe = self.pe(outputs)
+        pe = tf.repeat(pe, tf.shape(outputs)[0], axis=0)
         outputs = self.do(outputs, training=training)
         for cblock in self.conformer_blocks:
             outputs = cblock([outputs, pe], training=training, mask=mask, **kwargs)

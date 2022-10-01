@@ -39,6 +39,6 @@ conformer.save("./saved_model")
 
 import tf2onnx
 
-tf2onnx.convert.from_keras(conformer, output_path="./conformer.onxx")
+tf2onnx.convert.from_keras(conformer, output_path="./conformer.onnx")
 
 # %%

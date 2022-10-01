@@ -1,3 +1,4 @@
+# pylint: disable=attribute-defined-outside-init
 # Copyright 2020 Huy Le Nguyen (@usimarit)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -111,13 +112,11 @@ class MultiHeadAttention(tf.keras.layers.Layer):
     ):
         # verify shapes
         if key.shape[-2] != value.shape[-2]:
-            raise ValueError(
-                "the number of elements in 'key' must be equal to " "the same as the number of elements in 'value'"
-            )
+            raise ValueError("the number of elements in 'key' must be equal to the same as the number of elements in 'value'")
         # Linear transformations
-        query = tf.einsum("...NI,HIO->...NHO", query, self.query_kernel)
-        key = tf.einsum("...MI,HIO->...MHO", key, self.key_kernel)
-        value = tf.einsum("...MI,HIO->...MHO", value, self.value_kernel)
+        query = tf.einsum("BNI,HIO->BNHO", query, self.query_kernel)
+        key = tf.einsum("BMI,HIO->BMHO", key, self.key_kernel)
+        value = tf.einsum("BMI,HIO->BMHO", value, self.value_kernel)
 
         return query, key, value
 
@@ -135,7 +134,7 @@ class MultiHeadAttention(tf.keras.layers.Layer):
             if len(mask.shape) < 2:
                 raise ValueError("'mask' must have at least 2 dimensions")
             if query.shape[-3] != mask.shape[-2]:
-                raise ValueError("mask's second to last dimension must be equal to " "the number of elements in 'query'")
+                raise ValueError("mask's second to last dimension must be equal to the number of elements in 'query'")
             if key.shape[-3] != mask.shape[-1]:
                 raise ValueError("mask's last dimension must be equal to the number of elements in 'key'")
         # apply mask
@@ -154,11 +153,11 @@ class MultiHeadAttention(tf.keras.layers.Layer):
         attn_coef_dropout = self.dropout(attn_coef, training=training)
 
         # attention * value
-        multihead_output = tf.einsum("...HNM,...MHI->...NHI", attn_coef_dropout, value)
+        multihead_output = tf.einsum("BHNM,BMHI->BNHI", attn_coef_dropout, value)
 
         # Run the outputs through another linear projection layer. Recombining heads
         # is automatically done.
-        output = tf.einsum("...NHI,HIO->...NO", multihead_output, self.projection_kernel)
+        output = tf.einsum("BNHI,HIO->BNO", multihead_output, self.projection_kernel)
 
         if self.projection_bias is not None:
             output += self.projection_bias
@@ -182,14 +181,13 @@ class MultiHeadAttention(tf.keras.layers.Layer):
         query /= tf.sqrt(depth)
 
         # Calculate dot product attention
-        logits = tf.einsum("...NHO,...MHO->...HNM", query, key)
+        logits = tf.einsum("BNHO,BMHO->BHNM", query, key)
 
         output, attn_coef = self.call_attention(query, key, value, logits, training=training, mask=mask)
 
         if self.return_attn_coef:
             return output, attn_coef
-        else:
-            return output
+        return output
 
     def compute_output_shape(
         self,
@@ -208,10 +206,9 @@ class MultiHeadAttention(tf.keras.layers.Layer):
                 num_query_elements,
                 num_key_elements,
             )
-
             return output_shape, attn_coef_shape
-        else:
-            return output_shape
+
+        return output_shape
 
 
 class RelPositionMultiHeadAttention(MultiHeadAttention):
@@ -262,13 +259,13 @@ class RelPositionMultiHeadAttention(MultiHeadAttention):
 
         query, key, value = self.call_qkv(query, key, value, training=training)
 
-        pos = tf.einsum("...MI,HIO->...MHO", pos, self.pos_kernel)
+        pos = tf.einsum("BMI,HIO->BMHO", pos, self.pos_kernel)
 
         query_with_u = query + self.pos_bias_u
         query_with_v = query + self.pos_bias_v
 
-        logits_with_u = tf.einsum("...NHO,...MHO->...HNM", query_with_u, key)
-        logits_with_v = tf.einsum("...NHO,...MHO->...HNM", query_with_v, pos)
+        logits_with_u = tf.einsum("BNHO,BMHO->BHNM", query_with_u, key)
+        logits_with_v = tf.einsum("BNHO,BMHO->BHNM", query_with_v, pos)
         logits_with_v = self.relative_shift(logits_with_v)
 
         logits = logits_with_u + logits_with_v[:, :, :, : tf.shape(logits_with_u)[3]]
