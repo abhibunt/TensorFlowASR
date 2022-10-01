@@ -14,7 +14,7 @@
 
 import tensorflow as tf
 
-from tensorflow_asr.utils.shape_util import shape_list
+from tensorflow_asr.utils import shape_util
 
 
 class PositionalEncoding(tf.keras.layers.Layer):
@@ -22,29 +22,24 @@ class PositionalEncoding(tf.keras.layers.Layer):
         self,
         alpha: int = 1,
         beta: int = 0,
+        n: float = 10000.0,
         name="positional_encoding",
         **kwargs,
     ):
         super().__init__(name=name, **kwargs)
         self.alpha = alpha
         self.beta = beta
+        self.n = n
 
-    def build(
-        self,
-        input_shape,
-    ):
+    def build(self, input_shape):
         dmodel = input_shape[-1]
         assert dmodel % 2 == 0, f"Input last dim must be even: {dmodel}"
 
-    @staticmethod
-    def encode(
-        max_len,
-        dmodel,
-    ):
+    def encode(self, max_len, dmodel):
         pos = tf.expand_dims(tf.range(max_len - 1, -1, -1.0, dtype=tf.float32), axis=1)
         index = tf.expand_dims(tf.range(0, dmodel, dtype=tf.float32), axis=0)
 
-        pe = pos * (1 / tf.pow(10000.0, (2 * (index // 2)) / dmodel))
+        pe = pos * (1 / tf.pow(self.n, (2 * (index // 2)) / dmodel))
 
         # Sin cos will be [max_len, size // 2]
         # we add 0 between numbers by using padding and reshape
@@ -56,46 +51,26 @@ class PositionalEncoding(tf.keras.layers.Layer):
         pe = tf.add(sin, cos)
         return tf.expand_dims(pe, axis=0)  # [1, time, size]
 
-    def call(
-        self,
-        inputs,
-        **kwargs,
-    ):
+    def call(self, inputs, **kwargs):
         # inputs shape [B, T, V]
-        _, max_len, dmodel = shape_list(inputs)
+        batch, max_len, dmodel = shape_util.shape_list(inputs)
         pe = self.encode(max_len * self.alpha + self.beta, dmodel)
+        pe = tf.repeat(pe, batch, axis=0)
         return tf.cast(pe, dtype=inputs.dtype)
 
 
 class PositionalEncodingConcat(PositionalEncoding):
-    def build(
-        self,
-        input_shape,
-    ):
+    def build(self, input_shape):
         dmodel = input_shape[-1]
         assert dmodel % 2 == 0, f"Input last dim must be even: {dmodel}"
 
-    @staticmethod
-    def encode(
-        max_len,
-        dmodel,
-    ):
+    def encode(self, max_len, dmodel):
         pos = tf.range(max_len - 1, -1, -1.0, dtype=tf.float32)
 
         index = tf.range(0, dmodel, 2.0, dtype=tf.float32)
-        index = 1 / tf.pow(10000.0, (index / dmodel))
+        index = 1 / tf.pow(self.n, (index / dmodel))
 
         sinusoid = tf.einsum("i,j->ij", pos, index)
         pos = tf.concat([tf.sin(sinusoid), tf.cos(sinusoid)], -1)
 
         return tf.expand_dims(pos, axis=0)
-
-    def call(
-        self,
-        inputs,
-        **kwargs,
-    ):
-        # inputs shape [B, T, V]
-        _, max_len, dmodel = shape_list(inputs)
-        pe = self.encode(max_len * self.alpha + self.beta, dmodel)
-        return tf.cast(pe, dtype=inputs.dtype)

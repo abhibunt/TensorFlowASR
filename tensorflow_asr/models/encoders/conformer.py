@@ -163,12 +163,13 @@ class MHSAModule(tf.keras.layers.Layer):
         mask=None,
         **kwargs,
     ):
-        inputs, pos = inputs  # pos is positional encoding
+        inputs, pe = inputs  # pe is positional encoding matrix
         outputs = self.ln(inputs, training=training)
         if self.mha_type == "relmha":
+            pos = tf.add(outputs, pe)
             outputs = self.mha([outputs, outputs, outputs, pos], training=training, mask=mask)
         else:
-            outputs = outputs + pos
+            outputs = tf.add(outputs, pe)
             outputs = self.mha([outputs, outputs, outputs], training=training, mask=mask)
         outputs = self.do(outputs, training=training)
         outputs = self.res_add([inputs, outputs])
@@ -450,7 +451,6 @@ class ConformerEncoder(tf.keras.Model):
         outputs = self.conv_subsampling(inputs, training=training)
         outputs = self.linear(outputs, training=training)
         pe = self.pe(outputs)
-        pe = tf.repeat(pe, tf.shape(outputs)[0], axis=0)
         outputs = self.do(outputs, training=training)
         for cblock in self.conformer_blocks:
             outputs = cblock([outputs, pe], training=training, mask=mask, **kwargs)

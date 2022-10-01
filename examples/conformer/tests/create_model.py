@@ -1,13 +1,10 @@
 # %%
 import os
 
-import tensorflow as tf
-
 from tensorflow_asr.configs.config import Config
-from tensorflow_asr.helpers import dataset_helpers, featurizer_helpers
+from tensorflow_asr.helpers import featurizer_helpers
 from tensorflow_asr.models.transducer.conformer import Conformer
-from tensorflow_asr.optimizers.schedules import TransformerSchedule
-from tensorflow_asr.utils import env_util, file_util
+from tensorflow_asr.utils import env_util
 
 logger = env_util.setup_environment()
 

@@ -35,7 +35,7 @@ class MultiHeadAttention(tf.keras.layers.Layer):
         bias_constraint: typing.Union[str, typing.Callable] = None,
         **kwargs,
     ):
-        super(MultiHeadAttention, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         if output_size is not None and output_size < 1:
             raise ValueError("output_size must be a positive number")
@@ -238,7 +238,7 @@ class RelPositionMultiHeadAttention(MultiHeadAttention):
             initializer=self.kernel_initializer,
             constraint=self.kernel_constraint,
         )
-        super(RelPositionMultiHeadAttention, self).build(input_shape[:-1])
+        super().build(input_shape[:-1])
 
     @staticmethod
     def relative_shift(x):
@@ -277,5 +277,4 @@ class RelPositionMultiHeadAttention(MultiHeadAttention):
 
         if self.return_attn_coef:
             return output, attn_coef
-        else:
-            return output
+        return output
