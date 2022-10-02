@@ -54,7 +54,6 @@ model_config:
     conv_padding: same
     pool_padding: reflect
     activation: relu
-  encoder_positional_encoding: sinusoid
   encoder_dmodel: 144
   encoder_num_blocks: 2
   encoder_head_size: 36 # == dmodel // num_heads

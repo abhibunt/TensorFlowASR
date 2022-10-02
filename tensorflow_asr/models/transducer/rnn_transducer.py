@@ -73,27 +73,19 @@ class RnnTransducerBlock(tf.keras.Model):
             bias_regularizer=bias_regularizer,
         )
 
-    def call(
-        self,
-        inputs,
-        training=False,
-        **kwargs,
-    ):
-        outputs = inputs
+    def call(self, inputs, training=False, **kwargs):
+        outputs, inputs_length = inputs
         if self.reduction is not None:
             outputs = self.reduction(outputs)
+            inputs_length = math_util.get_reduced_length(inputs_length, reduction_factor=self.reduction.time_reduction_factor)
         outputs = self.rnn(outputs, training=training)
         outputs = outputs[0]
         if self.ln is not None:
             outputs = self.ln(outputs, training=training)
         outputs = self.projection(outputs, training=training)
-        return outputs
+        return outputs, inputs_length
 
-    def recognize(
-        self,
-        inputs,
-        states,
-    ):
+    def recognize(self, inputs, states):
         outputs = inputs
         if self.reduction is not None:
             outputs = self.reduction(outputs)
@@ -143,10 +135,7 @@ class RnnTransducerEncoder(tf.keras.Model):
             if reduction_factor > 0:
                 self.time_reduction_factor *= reduction_factor
 
-    def get_initial_state(
-        self,
-        batch_size=1,
-    ):
+    def get_initial_state(self, batch_size=1):
         """Get zeros states
 
         Returns:
@@ -157,22 +146,14 @@ class RnnTransducerEncoder(tf.keras.Model):
             states.append(tf.stack(block.rnn.get_initial_state(tf.zeros([batch_size, 1, 1], dtype=tf.float32)), axis=0))
         return tf.stack(states, axis=0)
 
-    def call(
-        self,
-        inputs,
-        training=False,
-        **kwargs,
-    ):
+    def call(self, inputs, training=False, **kwargs):
+        outputs, inputs_length = inputs
         outputs = self.reshape(inputs)
         for block in self.blocks:
-            outputs = block(outputs, training=training, **kwargs)
-        return outputs
+            outputs, inputs_length = block([outputs, inputs_length], training=training, **kwargs)
+        return outputs, inputs_length
 
-    def recognize(
-        self,
-        inputs,
-        states,
-    ):
+    def recognize(self, inputs, states):
         """Recognize function for encoder network
 
         Args:
@@ -265,11 +246,7 @@ class RnnTransducer(Transducer):
         self.time_reduction_factor = self.encoder.time_reduction_factor
         self.dmodel = encoder_dmodel
 
-    def encoder_inference(
-        self,
-        features: tf.Tensor,
-        states: tf.Tensor,
-    ):
+    def encoder_inference(self, features: tf.Tensor, states: tf.Tensor):
         """Infer function for encoder (or encoders)
 
         Args:
@@ -287,30 +264,7 @@ class RnnTransducer(Transducer):
 
     # -------------------------------- GREEDY -------------------------------------
 
-    def recognize(
-        self,
-        inputs: Dict[str, tf.Tensor],
-    ):
-        """
-        RNN Transducer Greedy decoding
-        Args:
-            features (tf.Tensor): a batch of padded extracted features
-
-        Returns:
-            tf.Tensor: a batch of decoded transcripts
-        """
-        batch_size, _, _, _ = shape_util.shape_list(inputs["inputs"])
-        encoded, _ = self.encoder.recognize(inputs["inputs"], self.encoder.get_initial_state(batch_size))
-        encoded_length = math_util.get_reduced_length(inputs["inputs_length"], self.time_reduction_factor)
-        return self._perform_greedy_batch(encoded=encoded, encoded_length=encoded_length)
-
-    def recognize_tflite(
-        self,
-        signal,
-        predicted,
-        encoder_states,
-        prediction_states,
-    ):
+    def recognize_tflite(self, signal, predicted, encoder_states, prediction_states):
         """
         Function to convert to tflite using greedy decoding (default streaming mode)
         Args:
@@ -331,13 +285,7 @@ class RnnTransducer(Transducer):
         transcript = self.text_featurizer.indices2upoints(hypothesis.prediction)
         return transcript, hypothesis.index, new_encoder_states, hypothesis.states
 
-    def recognize_tflite_with_timestamp(
-        self,
-        signal,
-        predicted,
-        encoder_states,
-        prediction_states,
-    ):
+    def recognize_tflite_with_timestamp(self, signal, predicted, encoder_states, prediction_states):
         features = self.speech_featurizer.tf_extract(signal)
         encoded, new_encoder_states = self.encoder_inference(features, encoder_states)
         hypothesis = self._perform_greedy(encoded, tf.shape(encoded)[0], predicted, prediction_states)
@@ -359,27 +307,6 @@ class RnnTransducer(Transducer):
         non_blank_etime = tf.gather_nd(tf.repeat(tf.expand_dims(etime, axis=-1), tf.shape(upoints)[-1], axis=-1), non_blank)
 
         return non_blank_transcript, non_blank_stime, non_blank_etime, hypothesis.index, new_encoder_states, hypothesis.states
-
-    # -------------------------------- BEAM SEARCH -------------------------------------
-
-    def recognize_beam(
-        self,
-        inputs: Dict[str, tf.Tensor],
-        lm: bool = False,
-    ):
-        """
-        RNN Transducer Beam Search
-        Args:
-            features (tf.Tensor): a batch of padded extracted features
-            lm (bool, optional): whether to use language model. Defaults to False.
-
-        Returns:
-            tf.Tensor: a batch of decoded transcripts
-        """
-        batch_size, _, _, _ = shape_util.shape_list(inputs["inputs"])
-        encoded, _ = self.encoder.recognize(inputs["inputs"], self.encoder.get_initial_state(batch_size))
-        encoded_length = math_util.get_reduced_length(inputs["inputs_length"], self.time_reduction_factor)
-        return self._perform_beam_search_batch(encoded=encoded, encoded_length=encoded_length, lm=lm)
 
     # -------------------------------- TFLITE -------------------------------------
 

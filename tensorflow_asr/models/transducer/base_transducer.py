@@ -404,8 +404,9 @@ class Transducer(BaseModel):
             tf.Tensor: output of encoders with shape [T, E]
         """
         with tf.name_scope(f"{self.name}_encoder"):
+            inputs_length = tf.expand_dims(tf.shape(features)[0], axis=0)
             outputs = tf.expand_dims(features, axis=0)
-            outputs, _ = self.encoder(outputs, training=False)
+            outputs, inputs_length = self.encoder([outputs, inputs_length], training=False)
             return tf.squeeze(outputs, axis=0)
 
     def decoder_inference(self, encoded: tf.Tensor, predicted: tf.Tensor, states: tf.Tensor, tflite: bool = False):
@@ -439,7 +440,7 @@ class Transducer(BaseModel):
         Returns:
             tf.Tensor: a batch of decoded transcripts
         """
-        encoded, encoded_length = self.encoder(inputs["inputs"], training=False)
+        encoded, encoded_length = self.encoder([inputs["inputs"], inputs["inputs_length"]], training=False)
         return self._perform_greedy_batch(encoded=encoded, encoded_length=encoded_length)
 
     @tf.function(input_signature=[tf.TensorSpec(shape=[None, None], dtype=tf.float32)])
@@ -686,7 +687,7 @@ class Transducer(BaseModel):
         Returns:
             tf.Tensor: a batch of decoded transcripts
         """
-        encoded, encoded_length = self.encoder(inputs["inputs"], training=False)
+        encoded, encoded_length = self.encoder([inputs["inputs"], inputs["inputs_length"]], training=False)
         return self._perform_beam_search_batch(encoded=encoded, encoded_length=encoded_length, lm=lm)
 
     def _perform_beam_search_batch(

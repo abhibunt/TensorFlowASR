@@ -25,7 +25,8 @@ class PositionalEncoding(tf.keras.layers.Layer):
         self.scalar = scalar
 
     def build(self, input_shape):
-        dmodel = input_shape[-1]
+        output_shape, _ = input_shape
+        dmodel = output_shape[-1]
         assert dmodel % 2 == 0, f"Input last dim must be even: {dmodel}"
 
     def _create_encoding_matrix(self, sequence_length, max_length, dmodel, dtype):
@@ -52,7 +53,7 @@ class PositionalEncoding(tf.keras.layers.Layer):
             elems=inputs_length,
             back_prop=True,
             infer_shape=True,
-            fn_output_signature=tf.TensorSpec(shape=[max_length, dmodel], dtype=outputs.dtype),
+            fn_output_signature=outputs.dtype,
         )
         pe = tf.add(outputs, pe_matrix)
         return pe

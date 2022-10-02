@@ -160,15 +160,15 @@ class MHSAModule(tf.keras.layers.Layer):
         self.mha_type = mha_type
 
     def call(self, inputs, training=False, mask=None, **kwargs):
-        outputs, inputs_length = inputs
-        outputs = self.ln(outputs, training=training)
+        features, inputs_length = inputs
+        outputs = self.ln(features, training=training)
         if self.mha_type == "relmha":
             pos = self.pe([outputs, inputs_length])
             outputs = self.mha([outputs, outputs, outputs, pos], training=training, mask=mask)
         else:
             outputs = self.mha([outputs, outputs, outputs], training=training, mask=mask)
         outputs = self.do(outputs, training=training)
-        outputs = self.res_add([inputs, outputs])
+        outputs = self.res_add([features, outputs])
         return outputs
 
 
