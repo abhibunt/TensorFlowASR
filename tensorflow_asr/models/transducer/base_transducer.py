@@ -347,13 +347,10 @@ class Transducer(BaseModel):
         super().compile(loss=loss, optimizer=optimizer, run_eagerly=run_eagerly, mxp=mxp, ga_steps=ga_steps, **kwargs)
 
     def call(self, inputs, training=False, **kwargs):
-        enc = self.encoder(inputs["inputs"], training=training, **kwargs)
+        enc, enc_length = self.encoder([inputs["inputs"], inputs["inputs_length"]], training=training, **kwargs)
         pred = self.predict_net([inputs["predictions"], inputs["predictions_length"]], training=training, **kwargs)
         logits = self.joint_net([enc, pred], training=training, **kwargs)
-        return data_util.create_logits(
-            logits=logits,
-            logits_length=math_util.get_reduced_length(inputs["inputs_length"], self.time_reduction_factor),
-        )
+        return data_util.create_logits(logits=logits, logits_length=enc_length)
 
     # -------------------------------- INFERENCES -------------------------------------
 
@@ -408,7 +405,7 @@ class Transducer(BaseModel):
         """
         with tf.name_scope(f"{self.name}_encoder"):
             outputs = tf.expand_dims(features, axis=0)
-            outputs = self.encoder(outputs, training=False)
+            outputs, _ = self.encoder(outputs, training=False)
             return tf.squeeze(outputs, axis=0)
 
     def decoder_inference(self, encoded: tf.Tensor, predicted: tf.Tensor, states: tf.Tensor, tflite: bool = False):
@@ -442,8 +439,7 @@ class Transducer(BaseModel):
         Returns:
             tf.Tensor: a batch of decoded transcripts
         """
-        encoded = self.encoder(inputs["inputs"], training=False)
-        encoded_length = math_util.get_reduced_length(inputs["inputs_length"], self.time_reduction_factor)
+        encoded, encoded_length = self.encoder(inputs["inputs"], training=False)
         return self._perform_greedy_batch(encoded=encoded, encoded_length=encoded_length)
 
     @tf.function(input_signature=[tf.TensorSpec(shape=[None, None], dtype=tf.float32)])
@@ -690,13 +686,8 @@ class Transducer(BaseModel):
         Returns:
             tf.Tensor: a batch of decoded transcripts
         """
-        encoded = self.encoder(inputs["inputs"], training=False)
-        encoded_length = math_util.get_reduced_length(inputs["inputs_length"], self.time_reduction_factor)
-        return self._perform_beam_search_batch(
-            encoded=encoded,
-            encoded_length=encoded_length,
-            lm=lm,
-        )
+        encoded, encoded_length = self.encoder(inputs["inputs"], training=False)
+        return self._perform_beam_search_batch(encoded=encoded, encoded_length=encoded_length, lm=lm)
 
     def _perform_beam_search_batch(
         self,

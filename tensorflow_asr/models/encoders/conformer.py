@@ -17,7 +17,7 @@ import tensorflow as tf
 from tensorflow_asr.models.activations.glu import GLU
 from tensorflow_asr.models.layers.depthwise_conv1d import DepthwiseConv1D
 from tensorflow_asr.models.layers.multihead_attention import MultiHeadAttention, RelPositionMultiHeadAttention
-from tensorflow_asr.models.layers.positional_encoding import PositionalEncoding, PositionalEncodingConcat
+from tensorflow_asr.models.layers.positional_encoding import PositionalEncoding
 from tensorflow_asr.models.layers.subsampling import (
     Conv1dBlurPoolSubsampling,
     Conv1dSubsampling,
@@ -26,6 +26,7 @@ from tensorflow_asr.models.layers.subsampling import (
     VggBlurPoolSubsampling,
     VggSubsampling,
 )
+from tensorflow_asr.utils import math_util
 
 L2 = tf.keras.regularizers.l2(1e-6)
 
@@ -120,6 +121,7 @@ class MHSAModule(tf.keras.layers.Layer):
         num_heads,
         dropout=0.0,
         mha_type="relmha",
+        pe_scalar=10000.0,
         kernel_regularizer=L2,
         bias_regularizer=L2,
         name="mhsa_module",
@@ -133,6 +135,7 @@ class MHSAModule(tf.keras.layers.Layer):
             dtype=tf.float32,  # Use float32 in layernorm for numeric stability.
         )
         if mha_type == "relmha":
+            self.pe = PositionalEncoding(scalar=pe_scalar, name=f"{name}_pe")
             self.mha = RelPositionMultiHeadAttention(
                 name=f"{name}_mhsa",
                 head_size=head_size,
@@ -156,17 +159,11 @@ class MHSAModule(tf.keras.layers.Layer):
         self.res_add = tf.keras.layers.Add(name=f"{name}_add")
         self.mha_type = mha_type
 
-    def call(
-        self,
-        inputs,
-        training=False,
-        mask=None,
-        **kwargs,
-    ):
-        inputs, pe = inputs  # pe is positional encoding matrix
-        outputs = self.ln(inputs, training=training)
+    def call(self, inputs, training=False, mask=None, **kwargs):
+        outputs, inputs_length = inputs
+        outputs = self.ln(outputs, training=training)
         if self.mha_type == "relmha":
-            pos = tf.add(outputs, tf.cast(pe, outputs.dtype))
+            pos = self.pe([outputs, inputs_length])
             outputs = self.mha([outputs, outputs, outputs, pos], training=training, mask=mask)
         else:
             outputs = self.mha([outputs, outputs, outputs], training=training, mask=mask)
@@ -282,6 +279,7 @@ class ConformerBlock(tf.keras.layers.Layer):
         head_size=36,
         num_heads=4,
         mha_type="relmha",
+        pe_scalar=10000.0,
         kernel_size=32,
         depth_multiplier=1,
         padding="same",
@@ -301,6 +299,7 @@ class ConformerBlock(tf.keras.layers.Layer):
         )
         self.mhsam = MHSAModule(
             mha_type=mha_type,
+            pe_scalar=pe_scalar,
             dmodel=input_dim,
             head_size=head_size,
             num_heads=num_heads,
@@ -334,16 +333,10 @@ class ConformerBlock(tf.keras.layers.Layer):
             dtype=tf.float32,  # Use float32 in layernorm for numeric stability.
         )
 
-    def call(
-        self,
-        inputs,
-        training=False,
-        mask=None,
-        **kwargs,
-    ):
-        inputs, pos = inputs  # pos is positional encoding
-        outputs = self.ffm1(inputs, training=training, **kwargs)
-        outputs = self.mhsam([outputs, pos], training=training, mask=mask, **kwargs)
+    def call(self, inputs, training=False, mask=None, **kwargs):
+        outputs, inputs_length = inputs
+        outputs = self.ffm1(outputs, training=training, **kwargs)
+        outputs = self.mhsam([outputs, inputs_length], training=training, mask=mask, **kwargs)
         outputs = self.convm(outputs, training=training, **kwargs)
         outputs = self.ffm2(outputs, training=training, **kwargs)
         outputs = self.ln(outputs, training=training)
@@ -354,7 +347,6 @@ class ConformerEncoder(tf.keras.Model):
     def __init__(
         self,
         subsampling,
-        positional_encoding="sinusoid",
         dmodel=144,
         num_blocks=16,
         mha_type="relmha",
@@ -397,22 +389,6 @@ class ConformerEncoder(tf.keras.Model):
             bias_regularizer=bias_regularizer,
         )
 
-        if positional_encoding == "sinusoid":
-            self.pe = PositionalEncoding(name=f"{name}_pe")
-        elif positional_encoding == "sinusoid_v2":
-            self.pe = PositionalEncoding(alpha=2, beta=0, name=f"{name}_pe")
-        elif positional_encoding == "sinusoid_concat":
-            self.pe = PositionalEncodingConcat(name=f"{name}_pe")
-        elif positional_encoding == "sinusoid_concat_v2":
-            self.pe = PositionalEncodingConcat(alpha=2, beta=-1, name=f"{name}_pe")
-        elif positional_encoding == "subsampling":
-            self.pe = tf.keras.layers.Activation("linear", name=f"{name}_pe")
-        else:
-            raise ValueError(
-                "positional_encoding must be either 'sinusoid', \
-                'sinusoid_concat', 'sinusoid_v2', 'sinusoid_concat_v2' or 'subsampling'"
-            )
-
         self.linear = tf.keras.layers.Dense(
             dmodel,
             name=f"{name}_linear",
@@ -439,18 +415,12 @@ class ConformerEncoder(tf.keras.Model):
             )
             self.conformer_blocks.append(conformer_block)
 
-    def call(
-        self,
-        inputs,
-        training=False,
-        mask=None,
-        **kwargs,
-    ):
-        # input with shape [B, T, V1, V2]
-        outputs = self.conv_subsampling(inputs, training=training)
+    def call(self, inputs, training=False, mask=None, **kwargs):
+        outputs, inputs_length = inputs
+        outputs = self.conv_subsampling(outputs, training=training)
+        inputs_length = math_util.get_reduced_length(inputs_length, self.conv_subsampling.time_reduction_factor)
         outputs = self.linear(outputs, training=training)
-        pe = self.pe(outputs)
         outputs = self.do(outputs, training=training)
         for cblock in self.conformer_blocks:
-            outputs = cblock([outputs, pe], training=training, mask=mask, **kwargs)
-        return outputs
+            outputs = cblock([outputs, inputs_length], training=training, mask=mask, **kwargs)
+        return outputs, inputs_length

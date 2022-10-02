@@ -68,12 +68,7 @@ class ConvModule(tf.keras.layers.Layer):
         self.bn = tf.keras.layers.BatchNormalization(name=f"{self.name}_bn")
         self.activation = get_activation(activation)
 
-    def call(
-        self,
-        inputs,
-        training=False,
-        **kwargs,
-    ):
+    def call(self, inputs, training=False, **kwargs):
         outputs = self.conv(inputs, training=training)
         outputs = self.bn(outputs, training=training)
         outputs = self.activation(outputs)
@@ -108,16 +103,11 @@ class SEModule(tf.keras.layers.Layer):
         self.fc1 = tf.keras.layers.Dense(filters // 8, name=f"{self.name}_fc1")
         self.fc2 = tf.keras.layers.Dense(filters, name=f"{self.name}_fc2")
 
-    def call(
-        self,
-        inputs,
-        training=False,
-        **kwargs,
-    ):
-        features, input_length = inputs
+    def call(self, inputs, training=False, **kwargs):
+        features, inputs_length = inputs
         outputs = self.conv(features, training=training)  # [B, T, E]
 
-        mask = tf.sequence_mask(input_length, maxlen=tf.shape(outputs)[1])
+        mask = tf.sequence_mask(inputs_length, maxlen=tf.shape(outputs)[1])
         se = self.global_avg_pool(outputs, mask=mask)  # [B, 1, E]
         se = self.fc1(se, training=training)
         se = self.activation(se)
@@ -202,24 +192,19 @@ class ConvBlock(tf.keras.layers.Layer):
 
         self.activation = get_activation(activation)
 
-    def call(
-        self,
-        inputs,
-        training=False,
-        **kwargs,
-    ):
-        features, input_length = inputs
+    def call(self, inputs, training=False, **kwargs):
+        features, inputs_length = inputs
         outputs = features
         for conv in self.convs:
             outputs = conv(outputs, training=training)
         outputs = self.last_conv(outputs, training=training)
-        input_length = math_util.get_reduced_length(input_length, self.last_conv.strides)
-        outputs = self.se([outputs, input_length], training=training)
+        inputs_length = math_util.get_reduced_length(inputs_length, self.last_conv.strides)
+        outputs = self.se([outputs, inputs_length], training=training)
         if self.residual is not None:
             res = self.residual(features, training=training)
             outputs = tf.add(outputs, res)
         outputs = self.activation(outputs)
-        return outputs, input_length
+        return outputs, inputs_length
 
 
 class ContextNetEncoder(tf.keras.Model):
@@ -247,14 +232,9 @@ class ContextNetEncoder(tf.keras.Model):
                 )
             )
 
-    def call(
-        self,
-        inputs,
-        training=False,
-        **kwargs,
-    ):
-        outputs, input_length = inputs
+    def call(self, inputs, training=False, **kwargs):
+        outputs, inputs_length = inputs
         outputs = self.reshape(outputs)
         for block in self.blocks:
-            outputs, input_length = block([outputs, input_length], training=training)
-        return outputs
+            outputs, inputs_length = block([outputs, inputs_length], training=training)
+        return outputs, inputs_length
