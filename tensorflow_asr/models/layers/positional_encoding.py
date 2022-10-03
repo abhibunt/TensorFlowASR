@@ -22,7 +22,7 @@ from tensorflow_asr.utils import shape_util
 class PositionalEncoding(tf.keras.layers.Layer):
     def __init__(self, scalar: float = 10000.0, name="positional_encoding", **kwargs):
         super().__init__(name=name, **kwargs)
-        self.scalar = scalar
+        self.scalar = tf.convert_to_tensor(scalar, dtype=self.compute_dtype)
 
     def build(self, input_shape):
         output_shape, _ = input_shape
@@ -30,8 +30,8 @@ class PositionalEncoding(tf.keras.layers.Layer):
         assert dmodel % 2 == 0, f"Input last dim must be even: {dmodel}"
 
     def _create_encoding_matrix(self, sequence_length, max_length, dmodel):
-        pos = tf.expand_dims(tf.range(sequence_length - 1, -1, -1.0), axis=1)
-        index = tf.expand_dims(tf.range(0, dmodel), axis=0)
+        pos = tf.expand_dims(tf.range(sequence_length - 1, -1, -1.0, dtype=self.compute_dtype), axis=1)
+        index = tf.expand_dims(tf.range(0, dmodel, dtype=self.compute_dtype), axis=0)
         pe_matrix = pos * (1 / tf.pow(self.scalar, (2 * (index // 2)) / dmodel))
         # Sin cos will be [sequence_length, size // 2]
         # we add 0 between numbers by using padding and reshape
