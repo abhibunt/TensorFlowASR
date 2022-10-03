@@ -46,10 +46,12 @@ class PositionalEncoding(tf.keras.layers.Layer):
     def call(self, inputs):
         outputs, inputs_length = inputs
         _, max_length, dmodel = shape_util.shape_list(outputs)
-        pe_matrix = tf.vectorized_map(
-            fn=lambda x: self._create_encoding_matrix(x, max_length=max_length, dmodel=dmodel),
-            elems=inputs_length,
+        list_inputs_length = tf.unstack(inputs_length, axis=0)
+        list_pe_matrix = tf.nest.map_structure(
+            lambda x: self._create_encoding_matrix(x, max_length=max_length, dmodel=dmodel),
+            list_inputs_length,
         )
+        pe_matrix = tf.stack(list_pe_matrix, axis=0)
         pe_matrix = tf.cast(pe_matrix, dtype=outputs.dtype)
         pe = tf.add(outputs, pe_matrix)
         return pe
