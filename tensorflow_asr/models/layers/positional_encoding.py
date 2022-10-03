@@ -59,7 +59,7 @@ def compute_positional_encoding(
     batch_size=None,
 ):
     inv_freq = 1.0 / (10000.0 ** (tf.range(0, hidden_size, 2.0) / hidden_size))
-    sinusoid_input = tf.einsum("i,d->id", pos_seq, inv_freq)
+    sinusoid_input = tf.einsum("i,d->id", tf.cast(pos_seq, dtype=inv_freq.dtype), inv_freq)
     relative_position_encoding = tf.concat([tf.sin(sinusoid_input), tf.cos(sinusoid_input)], -1)
     relative_position_encoding = relative_position_encoding[None, :, :]
     if batch_size is not None:
