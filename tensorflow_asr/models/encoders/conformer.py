@@ -17,7 +17,7 @@ import tensorflow as tf
 from tensorflow_asr.models.activations.glu import GLU
 from tensorflow_asr.models.layers.depthwise_conv1d import DepthwiseConv1D
 from tensorflow_asr.models.layers.multihead_attention import MultiHeadRelativeAttention
-from tensorflow_asr.models.layers.positional_encoding import RelativeAttentionPositionEncoding
+from tensorflow_asr.models.layers.positional_encoding import PositionalEncoding
 from tensorflow_asr.models.layers.subsampling import (
     Conv1dBlurPoolSubsampling,
     Conv1dSubsampling,
@@ -401,9 +401,9 @@ class ConformerEncoder(tf.keras.Model):
         self.do = tf.keras.layers.Dropout(dropout, name="dropout")
 
         if mha_type == "relmha":
-            self.rel_att_pe = RelativeAttentionPositionEncoding(attention_type=attention_type, name="rel_att_pe")
+            self.pe = PositionalEncoding(name="position_encoding")
         else:
-            self.rel_att_pe = None
+            self.pe = None
 
         self.conformer_blocks = []
         for i in range(num_blocks):
@@ -429,8 +429,8 @@ class ConformerEncoder(tf.keras.Model):
         inputs_length = math_util.get_reduced_length(inputs_length, self.conv_subsampling.time_reduction_factor)
         outputs = self.linear(outputs, training=training)
         outputs = self.do(outputs, training=training)
-        if self.rel_att_pe is not None:
-            relative_position_encoding = self.rel_att_pe(outputs, inputs_length)
+        if self.pe is not None:
+            relative_position_encoding = self.pe(outputs, inputs_length)
         else:
             relative_position_encoding = None
         for cblock in self.conformer_blocks:
