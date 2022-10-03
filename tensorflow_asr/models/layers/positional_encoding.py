@@ -39,19 +39,14 @@ class PositionalEncoding(tf.keras.layers.Layer):
         cos = tf.reshape(cos, [max_length, dmodel])
         # Then add sin and cos, which results in [max_length, dmodel]
         pe_matrix = tf.add(sin, cos)
-        pe_matrix = tf.repeat(pe_matrix, batch_size, axis=0)  # [B, max_length, dmodel]
+        pe_matrix = tf.repeat(tf.expand_dims(pe_matrix, axis=0), batch_size, axis=0)  # [B, max_length, dmodel]
         return pe_matrix
-
-    def _create_encoding_mask(self, inputs_length, max_length, dmodel):
-        pe_matrix_mask = tf.sequence_mask(inputs_length, maxlen=max_length, dtype=tf.float32)
-        pe_matrix_mask = tf.repeat(pe_matrix_mask, dmodel, axis=-1)
-        return pe_matrix_mask
 
     def call(self, inputs):
         outputs, inputs_length = inputs
         batch_size, max_length, dmodel = shape_util.shape_list(outputs)
         pe_matrix = self._create_encoding_matrix(batch_size=batch_size, max_length=max_length, dmodel=dmodel)
-        pe_matrix_mask = self._create_encoding_mask(inputs_length=inputs_length, max_length=max_length, dmodel=dmodel)
+        pe_matrix_mask = tf.sequence_mask(inputs_length, maxlen=max_length, dtype=pe_matrix.dtype)
         pe_matrix = tf.multiply(pe_matrix, pe_matrix_mask)
         pe_matrix = tf.cast(pe_matrix, dtype=outputs.dtype)
         pe = tf.add(outputs, pe_matrix)
