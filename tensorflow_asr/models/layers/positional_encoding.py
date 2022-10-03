@@ -22,11 +22,6 @@ class PositionalEncoding(tf.keras.layers.Layer):
         super().__init__(name=name, **kwargs)
         self.scalar = tf.convert_to_tensor(scalar, dtype=tf.float32)
 
-    def build(self, input_shape):
-        output_shape, _ = input_shape
-        dmodel = output_shape[-1]
-        assert dmodel % 2 == 0, f"Input last dim must be even: {dmodel}"
-
     def _create_encoding_matrix(self, batch_size, max_length, dmodel):
         pos = tf.expand_dims(tf.range(max_length - 1, -1, -1.0, dtype=tf.float32), axis=1)
         index = tf.expand_dims(tf.range(0, dmodel, dtype=tf.float32), axis=0)
