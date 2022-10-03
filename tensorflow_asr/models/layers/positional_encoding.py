@@ -47,6 +47,7 @@ class PositionalEncoding(tf.keras.layers.Layer):
         batch_size, max_length, dmodel = shape_util.shape_list(outputs)
         pe_matrix = self._create_encoding_matrix(batch_size=batch_size, max_length=max_length, dmodel=dmodel)
         pe_matrix_mask = tf.sequence_mask(inputs_length, maxlen=max_length, dtype=pe_matrix.dtype)
+        pe_matrix_mask = tf.repeat(tf.expand_dims(pe_matrix_mask, axis=-1), dmodel, axis=-1)
         pe_matrix = tf.multiply(pe_matrix, pe_matrix_mask)
         pe_matrix = tf.cast(pe_matrix, dtype=outputs.dtype)
         pe = tf.add(outputs, pe_matrix)
