@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import functools
-
 import tensorflow as tf
 
 from tensorflow_asr.utils import shape_util
@@ -49,10 +47,11 @@ class PositionalEncoding(tf.keras.layers.Layer):
         outputs, inputs_length = inputs
         _, max_length, dmodel = shape_util.shape_list(outputs)
         pe_matrix = tf.map_fn(
-            fn=functools.partial(self._create_encoding_matrix, max_length=max_length, dmodel=dmodel),
+            fn=lambda x: self._create_encoding_matrix(x, max_length=max_length, dmodel=dmodel),
             elems=inputs_length,
             back_prop=True,
             infer_shape=True,
+            fn_output_signature=tf.float32,
         )
         pe_matrix = tf.cast(pe_matrix, dtype=outputs.dtype)
         pe = tf.add(outputs, pe_matrix)
