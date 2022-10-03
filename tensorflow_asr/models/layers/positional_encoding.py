@@ -49,6 +49,7 @@ class PositionalEncoding(tf.keras.layers.Layer):
         pe_matrix = tf.vectorized_map(
             fn=lambda x: self._create_encoding_matrix(x, max_length=max_length, dmodel=dmodel),
             elems=inputs_length,
+            warn=False,
         )
         pe_matrix = tf.cast(pe_matrix, dtype=outputs.dtype)
         pe = tf.add(outputs, pe_matrix)
