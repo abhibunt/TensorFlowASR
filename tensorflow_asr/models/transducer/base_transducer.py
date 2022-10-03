@@ -62,7 +62,7 @@ class TransducerPrediction(tf.keras.Model):
                 vocab_size,
                 embed_dim,
                 regularizer=kernel_regularizer,
-                name=f"{self.name}_{self.label_encoder_mode}",
+                name=self.label_encoder_mode,
                 mask_zero=False,
                 dtype=dtype,
             )
@@ -70,7 +70,7 @@ class TransducerPrediction(tf.keras.Model):
             self.label_encoder = OneHotBlank(
                 blank=blank,
                 depth=vocab_size,
-                name=f"{self.name}_{self.label_encoder_mode}",
+                name=self.label_encoder_mode,
                 dtype=dtype,
             )
         # Initialize rnn layers
@@ -82,7 +82,7 @@ class TransducerPrediction(tf.keras.Model):
             rnn = RnnClass(
                 units=rnn_units,
                 return_sequences=True,
-                name=f"{name}_{rnn_type}_{i}",
+                name=f"{rnn_type}_{i}",
                 return_state=True,
                 implementation=rnn_implementation,
                 unroll=rnn_unroll,
@@ -92,7 +92,7 @@ class TransducerPrediction(tf.keras.Model):
             )
             if layer_norm:
                 ln = tf.keras.layers.LayerNormalization(
-                    name=f"{name}_ln_{i}",
+                    name=f"ln_{i}",
                     gamma_regularizer=kernel_regularizer,
                     beta_regularizer=bias_regularizer,
                     dtype=tf.float32,  # Use float32 in layernorm for numeric stability.
@@ -102,7 +102,7 @@ class TransducerPrediction(tf.keras.Model):
             if projection_units > 0:
                 projection = tf.keras.layers.Dense(
                     projection_units,
-                    name=f"{name}_projection_{i}",
+                    name=f"projection_{i}",
                     kernel_regularizer=kernel_regularizer,
                     bias_regularizer=bias_regularizer,
                     dtype=dtype,
@@ -206,34 +206,28 @@ class TransducerJoint(tf.keras.Model):
         self.postjoint_linear = postjoint_linear
 
         if self.prejoint_encoder_linear:
-            self.ffn_enc = tf.keras.layers.Dense(
-                joint_dim, name=f"{name}_enc", kernel_regularizer=kernel_regularizer, bias_regularizer=bias_regularizer
-            )
+            self.ffn_enc = tf.keras.layers.Dense(joint_dim, name="enc", kernel_regularizer=kernel_regularizer, bias_regularizer=bias_regularizer)
         if self.prejoint_prediction_linear:
-            self.ffn_pred = tf.keras.layers.Dense(
-                joint_dim, use_bias=False, name=f"{name}_pred", kernel_regularizer=kernel_regularizer
-            )
+            self.ffn_pred = tf.keras.layers.Dense(joint_dim, use_bias=False, name="pred", kernel_regularizer=kernel_regularizer)
 
-        self.joint = TransducerJointMerge(joint_mode=joint_mode, name=f"{name}_merge")
+        self.joint = TransducerJointMerge(joint_mode=joint_mode, name="merge")
 
         activation = activation.lower()
         if activation == "linear":
-            self.activation = tf.keras.layers.Activation(tf.keras.activations.linear, name=f"{name}_linear")
+            self.activation = tf.keras.layers.Activation(tf.keras.activations.linear, name="linear")
         elif activation == "relu":
-            self.activation = tf.keras.layers.Activation(tf.nn.relu, name=f"{name}_relu")
+            self.activation = tf.keras.layers.Activation(tf.nn.relu, name="relu")
         elif activation == "tanh":
-            self.activation = tf.keras.layers.Activation(tf.nn.tanh, name=f"{name}_tanh")
+            self.activation = tf.keras.layers.Activation(tf.nn.tanh, name="tanh")
         else:
             raise ValueError("activation must be either 'linear', 'relu' or 'tanh'")
 
         if self.postjoint_linear:
-            self.ffn = tf.keras.layers.Dense(
-                joint_dim, name=f"{name}_ffn", kernel_regularizer=kernel_regularizer, bias_regularizer=bias_regularizer
-            )
+            self.ffn = tf.keras.layers.Dense(joint_dim, name=f"ffn", kernel_regularizer=kernel_regularizer, bias_regularizer=bias_regularizer)
 
         self.ffn_out = tf.keras.layers.Dense(
             vocab_size,
-            name=f"{name}_vocab",
+            name=f"vocab",
             kernel_regularizer=kernel_regularizer,
             bias_regularizer=bias_regularizer,
         )
@@ -302,7 +296,7 @@ class Transducer(BaseModel):
             kernel_regularizer=kernel_regularizer,
             bias_regularizer=bias_regularizer,
             trainable=prediction_trainable,
-            name=f"{name}_prediction",
+            name="prediction",
         )
         self.joint_net = TransducerJoint(
             vocab_size=vocab_size,
@@ -315,7 +309,7 @@ class Transducer(BaseModel):
             kernel_regularizer=kernel_regularizer,
             bias_regularizer=bias_regularizer,
             trainable=joint_trainable,
-            name=f"{name}_joint",
+            name="joint",
         )
         self.time_reduction_factor = 1
 
@@ -800,9 +794,7 @@ class Transducer(BaseModel):
                 A = BeamHypothesis(
                     score=A.score.unstack(B.score.stack()),
                     indices=A.indices.unstack(B.indices.stack()),
-                    prediction=A.prediction.unstack(
-                        math_util.pad_tfarray(B.prediction, blank=self.text_featurizer.blank).stack()
-                    ),
+                    prediction=A.prediction.unstack(math_util.pad_tfarray(B.prediction, blank=self.text_featurizer.blank).stack()),
                     states=A.states.unstack(B.states.stack()),
                 )
                 A_i = tf.constant(0, tf.int32)
@@ -841,9 +833,7 @@ class Transducer(BaseModel):
                     )
                     A_i = tf.cond(tf.equal(A_i, 0), true_fn=lambda: A_i, false_fn=lambda: A_i - 1)
 
-                    ytu, new_states = self.decoder_inference(
-                        encoded=encoded_t, predicted=y_hat_index, states=y_hat_states, tflite=tflite
-                    )
+                    ytu, new_states = self.decoder_inference(encoded=encoded_t, predicted=y_hat_index, states=y_hat_states, tflite=tflite)
 
                     def predict_condition(pred, A, A_i, B):
                         return tf.less(pred, self.text_featurizer.num_classes)
