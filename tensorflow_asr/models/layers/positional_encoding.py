@@ -29,10 +29,10 @@ class PositionalEncoding(tf.keras.layers.Layer):
         dmodel = output_shape[-1]
         assert dmodel % 2 == 0, f"Input last dim must be even: {dmodel}"
 
-    def _create_encoding_matrix(self, sequence_length, max_length, dmodel, dtype):
-        pos = tf.expand_dims(tf.range(sequence_length - 1, -1, -1.0, dtype=dtype), axis=1)
-        index = tf.expand_dims(tf.range(0, dmodel, dtype=dtype), axis=0)
-        pe_matrix = pos * (1 / tf.cast(tf.pow(self.scalar, (2 * (index // 2)) / dmodel), dtype=dtype))
+    def _create_encoding_matrix(self, sequence_length, max_length, dmodel):
+        pos = tf.expand_dims(tf.range(sequence_length - 1, -1, -1.0), axis=1)
+        index = tf.expand_dims(tf.range(0, dmodel), axis=0)
+        pe_matrix = pos * (1 / tf.pow(self.scalar, (2 * (index // 2)) / dmodel))
         # Sin cos will be [sequence_length, size // 2]
         # we add 0 between numbers by using padding and reshape
         sin = tf.pad(tf.expand_dims(tf.sin(pe_matrix[:, 0::2]), -1), [[0, 0], [0, 0], [0, 1]], mode="CONSTANT", constant_values=0)
@@ -49,11 +49,11 @@ class PositionalEncoding(tf.keras.layers.Layer):
         outputs, inputs_length = inputs
         _, max_length, dmodel = shape_util.shape_list(outputs)
         pe_matrix = tf.map_fn(
-            fn=functools.partial(self._create_encoding_matrix, max_length=max_length, dmodel=dmodel, dtype=outputs.dtype),
+            fn=functools.partial(self._create_encoding_matrix, max_length=max_length, dmodel=dmodel),
             elems=inputs_length,
             back_prop=True,
             infer_shape=True,
-            fn_output_signature=outputs.dtype,
         )
+        pe_matrix = tf.cast(pe_matrix, dtype=outputs.dtype)
         pe = tf.add(outputs, pe_matrix)
         return pe
