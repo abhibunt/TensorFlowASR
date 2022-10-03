@@ -32,7 +32,7 @@ class PositionalEncoding(tf.keras.layers.Layer):
     def _create_encoding_matrix(self, sequence_length, max_length, dmodel, dtype):
         pos = tf.expand_dims(tf.range(sequence_length - 1, -1, -1.0, dtype=dtype), axis=1)
         index = tf.expand_dims(tf.range(0, dmodel, dtype=dtype), axis=0)
-        pe_matrix = pos * (1 / tf.pow(self.scalar, (2 * (index // 2)) / dmodel))
+        pe_matrix = pos * (1 / tf.cast(tf.pow(self.scala, (2 * (index // 2)) / dmodel), dtype=dtype))
         # Sin cos will be [sequence_length, size // 2]
         # we add 0 between numbers by using padding and reshape
         sin = tf.pad(tf.expand_dims(tf.sin(pe_matrix[:, 0::2]), -1), [[0, 0], [0, 0], [0, 1]], mode="CONSTANT", constant_values=0)
