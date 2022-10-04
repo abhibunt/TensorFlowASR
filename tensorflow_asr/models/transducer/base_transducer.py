@@ -222,11 +222,11 @@ class TransducerJoint(tf.keras.Model):
             raise ValueError("activation must be either 'linear', 'relu' or 'tanh'")
 
         if self.postjoint_linear:
-            self.ffn = tf.keras.layers.Dense(joint_dim, name=f"ffn", kernel_regularizer=kernel_regularizer, bias_regularizer=bias_regularizer)
+            self.ffn = tf.keras.layers.Dense(joint_dim, name="ffn", kernel_regularizer=kernel_regularizer, bias_regularizer=bias_regularizer)
 
         self.ffn_out = tf.keras.layers.Dense(
             vocab_size,
-            name=f"vocab",
+            name="vocab",
             kernel_regularizer=kernel_regularizer,
             bias_regularizer=bias_regularizer,
         )
