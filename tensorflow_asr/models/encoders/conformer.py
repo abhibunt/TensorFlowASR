@@ -65,7 +65,6 @@ class FFModule(tf.keras.layers.Layer):
             name=f"{name}_ln",
             gamma_regularizer=kernel_regularizer,
             beta_regularizer=bias_regularizer,
-            dtype=tf.float32,  # Use float32 in layernorm for numeric stability.
         )
         self.ffn1 = tf.keras.layers.Dense(
             4 * input_dim,
@@ -126,7 +125,6 @@ class MHSAModule(tf.keras.layers.Layer):
             name=f"{name}_ln",
             gamma_regularizer=kernel_regularizer,
             beta_regularizer=bias_regularizer,
-            dtype=tf.float32,  # Use float32 in layernorm for numeric stability.
         )
         if mha_type == "relmha":
             self.mha = MultiHeadRelativeAttention(
@@ -216,7 +214,6 @@ class ConvModule(tf.keras.layers.Layer):
             name="ln",
             gamma_regularizer=kernel_regularizer,
             beta_regularizer=bias_regularizer,
-            dtype=tf.float32,  # Use float32 in layernorm for numeric stability.
         )
         self.pw_conv_1 = tf.keras.layers.Dense(
             2 * input_dim,
@@ -329,7 +326,6 @@ class ConformerBlock(tf.keras.layers.Layer):
             name="ln",
             gamma_regularizer=kernel_regularizer,
             beta_regularizer=kernel_regularizer,
-            dtype=tf.float32,  # Use float32 in layernorm for numeric stability.
         )
 
     def call(
