@@ -19,6 +19,8 @@ import tensorflow as tf
 from keras.layers import EinsumDense, MultiHeadAttention
 from keras.layers.multi_head_attention import _build_proj_equation, _get_output_shape
 
+from tensorflow_asr.utils import shape_util
+
 # def _rel_shift(x, klen=-1):
 #     x_shape = tf.shape(x)
 #     x = tf.pad(x, [[0, 0], [0, 0], [0, 0], [1, 0]])
@@ -26,6 +28,12 @@ from keras.layers.multi_head_attention import _build_proj_equation, _get_output_
 #     x = tf.reshape(x[:, :, 1:, :], x_shape)
 #     return x
 
+
+def compute_self_attention_mask(inputs, inputs_length):  # [B] -> [B, T, T]
+    _, max_length, _ = shape_util.shape_list(inputs)
+    mask = tf.expand_dims(tf.sequence_mask(inputs_length, maxlen=max_length, dtype=inputs.dtype), axis=-1)
+    mask = tf.matmul(mask, mask, transpose_b=True)
+    return mask
 
 def _rel_shift(x, klen=-1):
     """Performs relative shift to form the relative attention score."""

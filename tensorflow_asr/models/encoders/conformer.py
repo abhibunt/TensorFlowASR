@@ -16,8 +16,8 @@ import tensorflow as tf
 
 from tensorflow_asr.models.activations.glu import GLU
 from tensorflow_asr.models.layers.depthwise_conv1d import DepthwiseConv1D
-from tensorflow_asr.models.layers.multihead_attention import MultiHeadRelativeAttention
-from tensorflow_asr.models.layers.positional_encoding import PositionalEncoding
+from tensorflow_asr.models.layers.multihead_attention import MultiHeadRelativeAttention, compute_self_attention_mask
+from tensorflow_asr.models.layers.positional_encoding import PositionalEncoding, compute_relative_position_encoding
 from tensorflow_asr.models.layers.subsampling import (
     Conv1dBlurPoolSubsampling,
     Conv1dSubsampling,
@@ -156,17 +156,18 @@ class MHSAModule(tf.keras.layers.Layer):
     def call(
         self,
         inputs,
+        relative_position_encoding=None,
         training=False,
         attention_mask=None,
     ):
         outputs = self.ln(inputs, training=training)
         if self.mha_type == "relmha":
-            relative_position_encoding = self.pe(outputs)
+            position_encoding = self.pe(outputs, relative_position_encoding=relative_position_encoding)
             outputs = self.mha(
                 query=outputs,
                 key=outputs,
                 value=outputs,
-                relative_position_encoding=relative_position_encoding,
+                relative_position_encoding=position_encoding,
                 training=training,
                 attention_mask=attention_mask,
             )
@@ -332,11 +333,12 @@ class ConformerBlock(tf.keras.layers.Layer):
     def call(
         self,
         inputs,
+        relative_position_encoding=None,
         training=False,
         attention_mask=None,
     ):
         outputs = self.ffm1(inputs, training=training)
-        outputs = self.mhsam(outputs, training=training, attention_mask=attention_mask)
+        outputs = self.mhsam(outputs, relative_position_encoding=relative_position_encoding, training=training, attention_mask=attention_mask)
         outputs = self.convm(outputs, training=training)
         outputs = self.ffm2(outputs, training=training)
         outputs = self.ln(outputs, training=training)
@@ -395,6 +397,7 @@ class ConformerEncoder(tf.keras.Model):
             bias_regularizer=bias_regularizer,
         )
         self.do = tf.keras.layers.Dropout(dropout, name="dropout")
+        self._mha_type = mha_type
 
         self.conformer_blocks = []
         for i in range(num_blocks):
@@ -414,20 +417,17 @@ class ConformerEncoder(tf.keras.Model):
             )
             self.conformer_blocks.append(conformer_block)
 
-    @staticmethod
-    def _compute_self_attention_mask(inputs, inputs_length):  # [B] -> [B, T, T]
-        _, max_length, _ = shape_util.shape_list(inputs)
-        mask = tf.expand_dims(tf.sequence_mask(inputs_length, maxlen=max_length, dtype=inputs.dtype), axis=-1)
-        mask = tf.matmul(mask, mask, transpose_b=True)
-        return mask
-
     def call(self, inputs, training=False):
         outputs, inputs_length = inputs
         outputs = self.conv_subsampling(outputs, training=training)
         inputs_length = math_util.get_reduced_length(inputs_length, self.conv_subsampling.time_reduction_factor)
         outputs = self.linear(outputs, training=training)
         outputs = self.do(outputs, training=training)
-        attention_mask = self._compute_self_attention_mask(outputs, inputs_length)
+        attention_mask = compute_self_attention_mask(outputs, inputs_length)
+        if self._mha_type == "relmha":
+            relative_position_encoding = compute_relative_position_encoding(shape_util.shape_list(outputs), dtype=outputs.dtype)
+        else:
+            relative_position_encoding = None
         for cblock in self.conformer_blocks:
-            outputs = cblock(outputs, training=training, attention_mask=attention_mask)
+            outputs = cblock(outputs, relative_position_encoding=relative_position_encoding, training=training, attention_mask=attention_mask)
         return outputs, inputs_length
