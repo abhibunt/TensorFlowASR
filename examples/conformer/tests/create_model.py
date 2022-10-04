@@ -29,6 +29,8 @@ conformer.make(
 )
 conformer.add_featurizers(speech_featurizer, text_featurizer)
 conformer.summary()
+conformer.save_weights("./conformer.h5")
+conformer.load_weights("./conformer.h5")
 # %%
 conformer.save("./saved_model")
 

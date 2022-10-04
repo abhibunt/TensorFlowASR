@@ -63,9 +63,9 @@ class ConvModule(tf.keras.layers.Layer):
             depthwise_regularizer=kernel_regularizer,
             pointwise_regularizer=kernel_regularizer,
             bias_regularizer=bias_regularizer,
-            name=f"{self.name}_conv",
+            name="conv",
         )
-        self.bn = tf.keras.layers.BatchNormalization(name=f"{self.name}_bn")
+        self.bn = tf.keras.layers.BatchNormalization(name="bn")
         self.activation = get_activation(activation)
 
     def call(self, inputs, training=False, **kwargs):
@@ -96,12 +96,12 @@ class SEModule(tf.keras.layers.Layer):
             padding=padding,
             kernel_regularizer=kernel_regularizer,
             bias_regularizer=bias_regularizer,
-            name=f"{self.name}_conv_module",
+            name="conv_module",
         )
-        self.global_avg_pool = tf.keras.layers.GlobalAveragePooling1D(keepdims=True, name=f"{self.name}_global_avg_pool")
+        self.global_avg_pool = tf.keras.layers.GlobalAveragePooling1D(keepdims=True, name="global_avg_pool")
         self.activation = get_activation(activation)
-        self.fc1 = tf.keras.layers.Dense(filters // 8, name=f"{self.name}_fc1")
-        self.fc2 = tf.keras.layers.Dense(filters, name=f"{self.name}_fc2")
+        self.fc1 = tf.keras.layers.Dense(filters // 8, name="fc1")
+        self.fc2 = tf.keras.layers.Dense(filters, name="fc2")
 
     def call(self, inputs, training=False, **kwargs):
         features, inputs_length = inputs
@@ -151,7 +151,7 @@ class ConvBlock(tf.keras.layers.Layer):
                     padding=padding,
                     kernel_regularizer=kernel_regularizer,
                     bias_regularizer=bias_regularizer,
-                    name=f"{self.name}_conv_module_{i}",
+                    name="conv_module_{i}",
                 )
             )
 
@@ -163,7 +163,7 @@ class ConvBlock(tf.keras.layers.Layer):
             padding=padding,
             kernel_regularizer=kernel_regularizer,
             bias_regularizer=bias_regularizer,
-            name=f"{self.name}_conv_module_{nlayers - 1}",
+            name="conv_module_{nlayers - 1}",
         )
 
         self.se = SEModule(
@@ -174,7 +174,7 @@ class ConvBlock(tf.keras.layers.Layer):
             padding=padding,
             kernel_regularizer=kernel_regularizer,
             bias_regularizer=bias_regularizer,
-            name=f"{self.name}_se",
+            name="se",
         )
 
         self.residual = None
@@ -187,7 +187,7 @@ class ConvBlock(tf.keras.layers.Layer):
                 padding=padding,
                 kernel_regularizer=kernel_regularizer,
                 bias_regularizer=bias_regularizer,
-                name=f"{self.name}_residual",
+                name="residual",
             )
 
         self.activation = get_activation(activation)
@@ -218,7 +218,7 @@ class ContextNetEncoder(tf.keras.Model):
     ):
         super().__init__(**kwargs)
 
-        self.reshape = Reshape(name=f"{self.name}_reshape")
+        self.reshape = Reshape(name="reshape")
 
         self.blocks = []
         for i, config in enumerate(blocks):
@@ -228,7 +228,7 @@ class ContextNetEncoder(tf.keras.Model):
                     alpha=alpha,
                     kernel_regularizer=kernel_regularizer,
                     bias_regularizer=bias_regularizer,
-                    name=f"{self.name}_block_{i}",
+                    name="block_{i}",
                 )
             )
 

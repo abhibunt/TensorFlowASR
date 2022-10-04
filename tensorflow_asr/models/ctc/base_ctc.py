@@ -38,7 +38,7 @@ class CtcModel(BaseModel):
             assert vocab_size is not None, "vocab_size must be set"
             self.decoder = tf.keras.layers.Dense(
                 units=vocab_size,
-                name=f"{self.name}_logits",
+                name="logits",
                 kernel_regularizer=kernel_regularizer,
                 bias_regularizer=bias_regularizer,
             )

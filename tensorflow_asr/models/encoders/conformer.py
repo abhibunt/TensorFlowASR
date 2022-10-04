@@ -62,26 +62,26 @@ class FFModule(tf.keras.layers.Layer):
         super().__init__(name=name, **kwargs)
         self.fc_factor = fc_factor
         self.ln = tf.keras.layers.LayerNormalization(
-            name=f"{name}_ln",
+            name="ln",
             gamma_regularizer=kernel_regularizer,
             beta_regularizer=bias_regularizer,
         )
         self.ffn1 = tf.keras.layers.Dense(
             4 * input_dim,
-            name=f"{name}_dense_1",
+            name="dense_1",
             kernel_regularizer=kernel_regularizer,
             bias_regularizer=bias_regularizer,
         )
-        self.swish = tf.keras.layers.Activation(tf.nn.swish, name=f"{name}_swish_activation")
-        self.do1 = tf.keras.layers.Dropout(dropout, name=f"{name}_dropout_1")
+        self.swish = tf.keras.layers.Activation(tf.nn.swish, name="swish_activation")
+        self.do1 = tf.keras.layers.Dropout(dropout, name="dropout_1")
         self.ffn2 = tf.keras.layers.Dense(
             input_dim,
-            name=f"{name}_dense_2",
+            name="dense_2",
             kernel_regularizer=kernel_regularizer,
             bias_regularizer=bias_regularizer,
         )
-        self.do2 = tf.keras.layers.Dropout(dropout, name=f"{name}_dropout_2")
-        self.res_add = tf.keras.layers.Add(name=f"{name}_add")
+        self.do2 = tf.keras.layers.Dropout(dropout, name="dropout_2")
+        self.res_add = tf.keras.layers.Add(name="add")
 
     def call(self, inputs, training=False):
         outputs = self.ln(inputs, training=training)
@@ -122,12 +122,12 @@ class MHSAModule(tf.keras.layers.Layer):
     ):
         super().__init__(name=name, **kwargs)
         self.ln = tf.keras.layers.LayerNormalization(
-            name=f"{name}_ln",
+            name="ln",
             gamma_regularizer=kernel_regularizer,
             beta_regularizer=bias_regularizer,
         )
         if mha_type == "relmha":
-            self.pe = PositionalEncoding(name="pe", regularizer=bias_regularizer)
+            self.pe = PositionalEncoding(name="pe")
             self.mha = MultiHeadRelativeAttention(
                 num_heads=num_heads,
                 key_dim=head_size,
@@ -135,7 +135,7 @@ class MHSAModule(tf.keras.layers.Layer):
                 output_shape=dmodel,
                 kernel_regularizer=kernel_regularizer,
                 bias_regularizer=bias_regularizer,
-                name=f"{name}_mhsa",
+                name="mhsa",
             )
         elif mha_type == "mha":
             self.mha = tf.keras.layers.MultiHeadAttention(
@@ -145,12 +145,12 @@ class MHSAModule(tf.keras.layers.Layer):
                 output_shape=dmodel,
                 kernel_regularizer=kernel_regularizer,
                 bias_regularizer=bias_regularizer,
-                name=f"{name}_mhsa",
+                name="mhsa",
             )
         else:
             raise ValueError("mha_type must be either 'mha' or 'relmha'")
-        self.do = tf.keras.layers.Dropout(dropout, name=f"{name}_dropout")
-        self.res_add = tf.keras.layers.Add(name=f"{name}_add")
+        self.do = tf.keras.layers.Dropout(dropout, name="dropout")
+        self.res_add = tf.keras.layers.Add(name="add")
         self.mha_type = mha_type
 
     def call(
@@ -223,7 +223,7 @@ class ConvModule(tf.keras.layers.Layer):
             kernel_regularizer=kernel_regularizer,
             bias_regularizer=bias_regularizer,
         )
-        self.glu = GLU(axis=-1, name=f"{name}_glu_activation")
+        self.glu = GLU(axis=-1, name="glu_activation")
         self.dw_conv = DepthwiseConv1D(
             kernel_size=kernel_size,
             strides=1,
@@ -238,15 +238,15 @@ class ConvModule(tf.keras.layers.Layer):
             gamma_regularizer=kernel_regularizer,
             beta_regularizer=bias_regularizer,
         )
-        self.swish = tf.keras.layers.Activation(tf.nn.swish, name=f"{name}_swish_activation")
+        self.swish = tf.keras.layers.Activation(tf.nn.swish, name="swish_activation")
         self.pw_conv_2 = tf.keras.layers.Dense(
             input_dim,
             name="pw_conv_2",
             kernel_regularizer=kernel_regularizer,
             bias_regularizer=bias_regularizer,
         )
-        self.do = tf.keras.layers.Dropout(dropout, name=f"{name}_dropout")
-        self.res_add = tf.keras.layers.Add(name=f"{name}_add")
+        self.do = tf.keras.layers.Dropout(dropout, name="dropout")
+        self.res_add = tf.keras.layers.Add(name="add")
 
     def call(self, inputs, training=False):
         outputs = self.ln(inputs, training=training)

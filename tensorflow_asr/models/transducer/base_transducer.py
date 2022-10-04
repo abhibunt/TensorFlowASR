@@ -348,7 +348,7 @@ class Transducer(BaseModel):
     # -------------------------------- INFERENCES -------------------------------------
 
     def preprocess(self, signals: tf.Tensor):
-        with tf.name_scope(f"{self.name}_preprocess"):
+        with tf.name_scope("preprocess"):
             batch = tf.constant(0, dtype=tf.int32)
             total_batch = tf.shape(signals)[0]
 
@@ -396,7 +396,7 @@ class Transducer(BaseModel):
         Returns:
             tf.Tensor: output of encoders with shape [T, E]
         """
-        with tf.name_scope(f"{self.name}_encoder"):
+        with tf.name_scope("encoder"):
             inputs_length = tf.expand_dims(tf.shape(features)[0], axis=0)
             outputs = tf.expand_dims(features, axis=0)
             outputs, inputs_length = self.encoder([outputs, inputs_length], training=False)
@@ -413,7 +413,7 @@ class Transducer(BaseModel):
         Returns:
             (ytu, new_states)
         """
-        with tf.name_scope(f"{self.name}_decoder"):
+        with tf.name_scope("decoder"):
             encoded = tf.reshape(encoded, [1, 1, -1])  # [E] => [1, 1, E]
             predicted = tf.reshape(predicted, [1, 1])  # [] => [1, 1]
             y, new_states = self.predict_net.recognize(predicted, states, tflite=tflite)  # [1, 1, P], states
@@ -499,7 +499,7 @@ class Transducer(BaseModel):
         parallel_iterations: int = 10,
         swap_memory: bool = False,
     ):
-        with tf.name_scope(f"{self.name}_perform_greedy_batch"):
+        with tf.name_scope("perform_greedy_batch"):
             total_batch = tf.shape(encoded)[0]
             batch = tf.constant(0, dtype=tf.int32)
 
@@ -547,7 +547,7 @@ class Transducer(BaseModel):
         swap_memory: bool = False,
         tflite: bool = False,
     ):
-        with tf.name_scope(f"{self.name}_greedy"):
+        with tf.name_scope("greedy"):
             time = tf.constant(0, dtype=tf.int32)
             total = encoded_length
 
@@ -615,7 +615,7 @@ class Transducer(BaseModel):
         tflite: bool = False,
     ):
         """Ref: https://arxiv.org/pdf/1801.00841.pdf"""
-        with tf.name_scope(f"{self.name}_greedy_v2"):
+        with tf.name_scope("greedy_v2"):
             time = tf.constant(0, dtype=tf.int32)
             total = encoded_length
 
@@ -691,7 +691,7 @@ class Transducer(BaseModel):
         parallel_iterations: int = 10,
         swap_memory: bool = True,
     ):
-        with tf.name_scope(f"{self.name}_perform_beam_search_batch"):
+        with tf.name_scope("perform_beam_search_batch"):
             total_batch = tf.shape(encoded)[0]
             batch = tf.constant(0, dtype=tf.int32)
 
@@ -737,7 +737,7 @@ class Transducer(BaseModel):
         swap_memory: bool = True,
         tflite: bool = False,
     ):
-        with tf.name_scope(f"{self.name}_beam_search"):
+        with tf.name_scope("beam_search"):
             beam_width = tf.cond(
                 tf.less(self.text_featurizer.decoder_config.beam_width, self.text_featurizer.num_classes),
                 true_fn=lambda: self.text_featurizer.decoder_config.beam_width,

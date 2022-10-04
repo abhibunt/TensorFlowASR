@@ -42,7 +42,7 @@ class RnnTransducerBlock(tf.keras.Model):
         super().__init__(**kwargs)
 
         if reduction_factor > 0:
-            self.reduction = TimeReduction(reduction_factor, name=f"{self.name}_reduction")
+            self.reduction = TimeReduction(reduction_factor, name="reduction")
         else:
             self.reduction = None
 
@@ -50,7 +50,7 @@ class RnnTransducerBlock(tf.keras.Model):
         self.rnn = RNN(
             units=rnn_units,
             return_sequences=True,
-            name=f"{self.name}_{rnn_type}",
+            name=rnn_type,
             return_state=True,
             kernel_regularizer=kernel_regularizer,
             bias_regularizer=bias_regularizer,
@@ -58,7 +58,7 @@ class RnnTransducerBlock(tf.keras.Model):
 
         if layer_norm:
             self.ln = tf.keras.layers.LayerNormalization(
-                name=f"{self.name}_ln",
+                name="ln",
                 gamma_regularizer=kernel_regularizer,
                 beta_regularizer=bias_regularizer,
             )
@@ -67,7 +67,7 @@ class RnnTransducerBlock(tf.keras.Model):
 
         self.projection = tf.keras.layers.Dense(
             dmodel,
-            name=f"{self.name}_projection",
+            name="projection",
             kernel_regularizer=kernel_regularizer,
             bias_regularizer=bias_regularizer,
         )
@@ -112,7 +112,7 @@ class RnnTransducerEncoder(tf.keras.Model):
     ):
         super().__init__(**kwargs)
 
-        self.reshape = Reshape(name=f"{self.name}_reshape")
+        self.reshape = Reshape(name="reshape")
 
         self.blocks = [
             RnnTransducerBlock(
@@ -123,7 +123,7 @@ class RnnTransducerEncoder(tf.keras.Model):
                 layer_norm=layer_norm,
                 kernel_regularizer=kernel_regularizer,
                 bias_regularizer=bias_regularizer,
-                name=f"{self.name}_block_{i}",
+                name="block_{i}",
             )
             for i in range(nlayers)
         ]
@@ -216,7 +216,7 @@ class RnnTransducer(Transducer):
                 kernel_regularizer=kernel_regularizer,
                 bias_regularizer=bias_regularizer,
                 trainable=encoder_trainable,
-                name=f"{name}_encoder",
+                name="encoder",
             ),
             blank=blank,
             vocab_size=vocab_size,
@@ -256,7 +256,7 @@ class RnnTransducer(Transducer):
             tf.Tensor: output of encoders with shape [T, E]
             tf.Tensor: states of encoders with shape [num_rnns, 1 or 2, 1, P]
         """
-        with tf.name_scope(f"{self.name}_encoder"):
+        with tf.name_scope("encoder"):
             outputs = tf.expand_dims(features, axis=0)
             outputs, new_states = self.encoder.recognize(outputs, states)
             return tf.squeeze(outputs, axis=0), new_states

@@ -28,7 +28,7 @@ class GradientAccumulator:
             trainable=False,
             synchronization=tf.VariableSynchronization.ON_READ,
             aggregation=tf.VariableAggregation.ONLY_FIRST_REPLICA,
-            name=f"{self.name}_accum_step",
+            name="accum_step",
         )
         self._gradients = [
             tf.Variable(
@@ -36,7 +36,7 @@ class GradientAccumulator:
                 trainable=False,
                 synchronization=tf.VariableSynchronization.ON_READ,
                 aggregation=tf.VariableAggregation.NONE,
-                name=f"{self.name}_{i}",
+                name=f"{name}_{i}",
             )
             for i, v in enumerate(trainable_variables)
         ]

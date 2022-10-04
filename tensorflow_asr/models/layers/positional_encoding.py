@@ -16,7 +16,6 @@ from typing import Optional
 
 import tensorflow as tf
 
-from tensorflow_asr.models.layers.rezero import Scale
 from tensorflow_asr.utils import shape_util
 
 
@@ -42,16 +41,6 @@ def compute_relative_position_encoding(
 
 
 class PositionalEncoding(tf.keras.layers.Layer):
-    def __init__(
-        self,
-        initializer: tf.keras.initializers.Initializer = "zeros",
-        regularizer: Optional[tf.keras.regularizers.Regularizer] = None,
-        name="positional_encoding",
-        **kwargs,
-    ):
-        super().__init__(name=name, **kwargs)
-        self._rezero = Scale(initializer=initializer, regularizer=regularizer, name="rezero")
-
     def build(self, input_shape):
         dmodel = input_shape[-1]
         if dmodel % 2 != 0:
@@ -64,6 +53,5 @@ class PositionalEncoding(tf.keras.layers.Layer):
         else:
             pos_encoding = relative_position_encoding
         pos_encoding = tf.cast(pos_encoding, dtype=inputs.dtype)
-        pos_encoding = self._rezero(pos_encoding)
         outputs = tf.add(inputs, pos_encoding)
         return outputs
