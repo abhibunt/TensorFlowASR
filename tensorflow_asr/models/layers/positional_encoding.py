@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Optional
+
 import tensorflow as tf
 
 from tensorflow_asr.models.layers.rezero import Scale
@@ -43,11 +45,12 @@ class PositionalEncoding(tf.keras.layers.Layer):
     def __init__(
         self,
         initializer: tf.keras.initializers.Initializer = "zeros",
+        regularizer: Optional[tf.keras.regularizers.Regularizer] = None,
         name="positional_encoding",
         **kwargs,
     ):
         super().__init__(name=name, **kwargs)
-        self._rezero = Scale(initializer=initializer, name="rezero")
+        self._rezero = Scale(initializer=initializer, regularizer=regularizer, name="rezero")
 
     def build(self, input_shape):
         dmodel = input_shape[-1]

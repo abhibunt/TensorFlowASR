@@ -127,7 +127,7 @@ class MHSAModule(tf.keras.layers.Layer):
             beta_regularizer=bias_regularizer,
         )
         if mha_type == "relmha":
-            self.pe = PositionalEncoding(name="pe")
+            self.pe = PositionalEncoding(name="pe", regularizer=bias_regularizer)
             self.mha = MultiHeadRelativeAttention(
                 num_heads=num_heads,
                 key_dim=head_size,
