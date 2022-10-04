@@ -26,7 +26,7 @@ from tensorflow_asr.models.layers.subsampling import (
     VggBlurPoolSubsampling,
     VggSubsampling,
 )
-from tensorflow_asr.utils import math_util
+from tensorflow_asr.utils import math_util, shape_util
 
 L2 = tf.keras.regularizers.l2(1e-6)
 
@@ -423,7 +423,14 @@ class ConformerEncoder(tf.keras.Model):
             )
             self.conformer_blocks.append(conformer_block)
 
-    def call(self, inputs, training=False, attention_mask=None):
+    @staticmethod
+    def _compute_self_attention_mask(inputs, inputs_length):  # [B] -> [B, T, T]
+        _, max_length, _ = shape_util.shape_list(inputs)
+        mask = tf.expand_dims(tf.sequence_mask(inputs_length, maxlen=max_length, dtype=inputs.dtype), axis=-1)
+        mask = tf.matmul(mask, mask, transpose_b=True)
+        return mask
+
+    def call(self, inputs, training=False):
         outputs, inputs_length = inputs
         outputs = self.conv_subsampling(outputs, training=training)
         inputs_length = math_util.get_reduced_length(inputs_length, self.conv_subsampling.time_reduction_factor)
@@ -433,6 +440,7 @@ class ConformerEncoder(tf.keras.Model):
             relative_position_encoding = self.pe(outputs, inputs_length)
         else:
             relative_position_encoding = None
+        attention_mask = self._compute_self_attention_mask(outputs, inputs_length)
         for cblock in self.conformer_blocks:
             outputs = cblock(outputs, relative_position_encoding, training=training, attention_mask=attention_mask)
         return outputs, inputs_length
