@@ -16,9 +16,10 @@
 import math
 
 import tensorflow as tf
+from keras.layers import EinsumDense, MultiHeadAttention
 from keras.layers.multi_head_attention import _build_proj_equation, _get_output_shape
 
-# def relative_shift(x):
+# def _rel_shift(x, klen=-1):
 #     x_shape = tf.shape(x)
 #     x = tf.pad(x, [[0, 0], [0, 0], [0, 0], [1, 0]])
 #     x = tf.reshape(x, [x_shape[0], x_shape[1], x_shape[3] + 1, x_shape[2]])
@@ -29,6 +30,7 @@ from keras.layers.multi_head_attention import _build_proj_equation, _get_output_
 def _rel_shift(x, klen=-1):
     """Performs relative shift to form the relative attention score."""
 
+    x = tf.pad(x, [[0, 0], [0, 0], [0, 0], [1, 0]])
     x = tf.transpose(x, perm=[2, 3, 0, 1])
     x_size = tf.shape(x)
 
@@ -42,7 +44,7 @@ def _rel_shift(x, klen=-1):
     return x
 
 
-class MultiHeadRelativeAttention(tf.keras.layers.MultiHeadAttention):
+class MultiHeadRelativeAttention(MultiHeadAttention):
     """A multi-head attention layer with relative attention + position encoding.
     This layer shares the same input/output projections as the common
     `tf.keras.layers.MultiHeadAttention` layer.
@@ -127,7 +129,7 @@ class MultiHeadRelativeAttention(tf.keras.layers.MultiHeadAttention):
 
         with tf.init_scope():  # pylint: disable=not-context-manager
             einsum_equation, _, output_rank = _build_proj_equation(key_shape.rank - 1, bound_dims=1, output_dims=2)
-            self._encoding_dense = tf.keras.layers.experimental.EinsumDense(
+            self._encoding_dense = EinsumDense(
                 einsum_equation,
                 output_shape=_get_output_shape(output_rank - 1, [self._num_heads, self._key_dim]),
                 bias_axes=None,
@@ -154,13 +156,14 @@ class MultiHeadRelativeAttention(tf.keras.layers.MultiHeadAttention):
                 dtype=self.dtype,
             )
 
-    def compute_attention(
+    def _compute_attention(
         self,
         query,
         key,
         value,
         position,
         attention_mask=None,
+        training=None,
     ):
         """Computes the attention.
         This function defines the computation inside `call` with projected
@@ -187,8 +190,9 @@ class MultiHeadRelativeAttention(tf.keras.layers.MultiHeadAttention):
 
         attention_scores = self._masked_softmax(attention_scores, attention_mask)
 
-        attention_output = self._dropout_layer(attention_scores)
+        attention_output = self._dropout_layer(attention_scores, training=training)
 
+        # `context_layer` = [B, T, N, H]
         attention_output = tf.einsum(self._combine_equation, attention_output, value)
         return attention_output, attention_scores
 
@@ -201,6 +205,7 @@ class MultiHeadRelativeAttention(tf.keras.layers.MultiHeadAttention):
         state=None,
         attention_mask=None,
         return_attention_scores=False,
+        training=None,
     ):
         """Compute multi-head relative attention over inputs.
         Size glossary:
@@ -253,12 +258,13 @@ class MultiHeadRelativeAttention(tf.keras.layers.MultiHeadAttention):
         # `position` = [B, L, N, H]
         position = self._encoding_dense(relative_position_encoding)
 
-        attention_output, attention_scores = self.compute_attention(
+        attention_output, attention_scores = self._compute_attention(
             query=query,
             key=key,
             value=value,
             position=position,
             attention_mask=attention_mask,
+            training=training,
         )
 
         # `attention_output` = [B, S, N, H]
