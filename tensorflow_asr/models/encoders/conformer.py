@@ -127,6 +127,7 @@ class MHSAModule(tf.keras.layers.Layer):
             beta_regularizer=bias_regularizer,
         )
         if mha_type == "relmha":
+            self.pe = PositionalEncoding(name="pe")
             self.mha = MultiHeadRelativeAttention(
                 num_heads=num_heads,
                 key_dim=head_size,
@@ -155,12 +156,12 @@ class MHSAModule(tf.keras.layers.Layer):
     def call(
         self,
         inputs,
-        relative_position_encoding=None,
         training=False,
         attention_mask=None,
     ):
         outputs = self.ln(inputs, training=training)
         if self.mha_type == "relmha":
+            relative_position_encoding = self.pe(outputs)
             outputs = self.mha(
                 query=outputs,
                 key=outputs,
@@ -331,12 +332,11 @@ class ConformerBlock(tf.keras.layers.Layer):
     def call(
         self,
         inputs,
-        relative_position_encoding=None,
         training=False,
         attention_mask=None,
     ):
         outputs = self.ffm1(inputs, training=training)
-        outputs = self.mhsam(outputs, relative_position_encoding, training=training, attention_mask=attention_mask)
+        outputs = self.mhsam(outputs, training=training, attention_mask=attention_mask)
         outputs = self.convm(outputs, training=training)
         outputs = self.ffm2(outputs, training=training)
         outputs = self.ln(outputs, training=training)
@@ -396,11 +396,6 @@ class ConformerEncoder(tf.keras.Model):
         )
         self.do = tf.keras.layers.Dropout(dropout, name="dropout")
 
-        if mha_type == "relmha":
-            self.pe = PositionalEncoding(name="position_encoding")
-        else:
-            self.pe = None
-
         self.conformer_blocks = []
         for i in range(num_blocks):
             conformer_block = ConformerBlock(
@@ -432,11 +427,7 @@ class ConformerEncoder(tf.keras.Model):
         inputs_length = math_util.get_reduced_length(inputs_length, self.conv_subsampling.time_reduction_factor)
         outputs = self.linear(outputs, training=training)
         outputs = self.do(outputs, training=training)
-        if self.pe is not None:
-            relative_position_encoding = self.pe(outputs, inputs_length)
-        else:
-            relative_position_encoding = None
         attention_mask = self._compute_self_attention_mask(outputs, inputs_length)
         for cblock in self.conformer_blocks:
-            outputs = cblock(outputs, relative_position_encoding, training=training, attention_mask=attention_mask)
+            outputs = cblock(outputs, training=training, attention_mask=attention_mask)
         return outputs, inputs_length

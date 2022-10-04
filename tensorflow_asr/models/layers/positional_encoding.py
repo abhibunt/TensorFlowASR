@@ -14,34 +14,53 @@
 
 import tensorflow as tf
 
+from tensorflow_asr.models.layers.rezero import Scale
 from tensorflow_asr.utils import shape_util
 
 
+def compute_relative_position_encoding(
+    input_shape,
+    dtype=tf.float32,
+):
+    batch_size, max_length, dmodel = input_shape[0], input_shape[1], input_shape[2]
+    pos = tf.expand_dims(tf.range(max_length - 1, -1, -1.0, dtype=tf.float32), axis=1)
+    index = tf.expand_dims(tf.range(0, dmodel, dtype=tf.float32), axis=0)
+    pe_matrix = pos * (1 / tf.pow(10000.0, (2 * (index // 2)) / dmodel))
+    pe_matrix = tf.cast(pe_matrix, dtype=dtype)
+    # Sin cos will be [max_length, size // 2]
+    # we add 0 between numbers by using padding and reshape
+    sin = tf.pad(tf.expand_dims(tf.sin(pe_matrix[:, 0::2]), -1), [[0, 0], [0, 0], [0, 1]], mode="CONSTANT", constant_values=0)
+    sin = tf.reshape(sin, [max_length, dmodel])
+    cos = tf.pad(tf.expand_dims(tf.cos(pe_matrix[:, 1::2]), -1), [[0, 0], [0, 0], [1, 0]], mode="CONSTANT", constant_values=0)
+    cos = tf.reshape(cos, [max_length, dmodel])
+    # Then add sin and cos, which results in [max_length, dmodel]
+    pe_matrix = tf.add(sin, cos)
+    pe_matrix = tf.tile(tf.expand_dims(pe_matrix, axis=0), [batch_size, 1, 1])  # [B, max_length, dmodel]
+    return pe_matrix
+
+
 class PositionalEncoding(tf.keras.layers.Layer):
-    def __init__(self, scalar: float = 10000.0, name="positional_encoding", **kwargs):
+    def __init__(
+        self,
+        initializer: tf.keras.initializers.Initializer = "zeros",
+        name="positional_encoding",
+        **kwargs,
+    ):
         super().__init__(name=name, **kwargs)
-        self.scalar = tf.convert_to_tensor(scalar, dtype=tf.float32)
+        self._rezero = Scale(initializer=initializer, name="rezero")
 
-    def _create_encoding_matrix(self, batch_size, max_length, dmodel):
-        pos = tf.expand_dims(tf.range(max_length - 1, -1, -1.0, dtype=tf.float32), axis=1)
-        index = tf.expand_dims(tf.range(0, dmodel, dtype=tf.float32), axis=0)
-        pe_matrix = pos * (1 / tf.pow(self.scalar, (2 * (index // 2)) / dmodel))
-        # Sin cos will be [max_length, size // 2]
-        # we add 0 between numbers by using padding and reshape
-        sin = tf.pad(tf.expand_dims(tf.sin(pe_matrix[:, 0::2]), -1), [[0, 0], [0, 0], [0, 1]], mode="CONSTANT", constant_values=0)
-        sin = tf.reshape(sin, [max_length, dmodel])
-        cos = tf.pad(tf.expand_dims(tf.cos(pe_matrix[:, 1::2]), -1), [[0, 0], [0, 0], [1, 0]], mode="CONSTANT", constant_values=0)
-        cos = tf.reshape(cos, [max_length, dmodel])
-        # Then add sin and cos, which results in [max_length, dmodel]
-        pe_matrix = tf.add(sin, cos)
-        pe_matrix = tf.repeat(tf.expand_dims(pe_matrix, axis=0), batch_size, axis=0)  # [B, max_length, dmodel]
-        return pe_matrix
+    def build(self, input_shape):
+        dmodel = input_shape[-1]
+        if dmodel % 2 != 0:
+            raise ValueError("dmodel must be even")
+        super().build(input_shape)
 
-    def call(self, inputs, inputs_length):
-        batch_size, max_length, dmodel = shape_util.shape_list(inputs)
-        pe_matrix = self._create_encoding_matrix(batch_size=batch_size, max_length=max_length, dmodel=dmodel)
-        pe_matrix_mask = tf.sequence_mask(inputs_length, maxlen=max_length, dtype=pe_matrix.dtype)
-        pe_matrix_mask = tf.repeat(tf.expand_dims(pe_matrix_mask, axis=-1), dmodel, axis=-1)
-        pe_matrix = tf.multiply(pe_matrix, pe_matrix_mask)
-        pe_matrix = tf.cast(pe_matrix, dtype=inputs.dtype)
-        return pe_matrix
+    def call(self, inputs, relative_position_encoding=None):
+        if relative_position_encoding is None:
+            pos_encoding = compute_relative_position_encoding(shape_util.shape_list(inputs), dtype=inputs.dtype)
+        else:
+            pos_encoding = relative_position_encoding
+        pos_encoding = tf.cast(pos_encoding, dtype=inputs.dtype)
+        pos_encoding = self._rezero(pos_encoding)
+        outputs = tf.add(inputs, pos_encoding)
+        return outputs
