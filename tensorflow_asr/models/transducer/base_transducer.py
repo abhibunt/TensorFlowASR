@@ -31,7 +31,7 @@ BeamHypothesis = collections.namedtuple("BeamHypothesis", ("score", "indices", "
 JOINT_MODES = ["add", "mul"]
 
 
-class TransducerPrediction(tf.keras.Model):
+class TransducerPrediction(tf.keras.layers.Layer):
     def __init__(
         self,
         blank: int,
@@ -183,7 +183,7 @@ class TransducerJointMerge(tf.keras.layers.Layer):
         return outputs  # [B, T, U, V]
 
 
-class TransducerJoint(tf.keras.Model):
+class TransducerJoint(tf.keras.layers.Layer):
     def __init__(
         self,
         vocab_size: int,
@@ -253,7 +253,7 @@ class Transducer(BaseModel):
 
     def __init__(
         self,
-        encoder: tf.keras.Model,
+        encoder: tf.keras.layers.Layer,
         blank: int,
         vocab_size: int,
         prediction_label_encoder_mode: str = "one_hot",

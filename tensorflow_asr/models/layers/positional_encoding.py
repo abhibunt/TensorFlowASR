@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
-
 import tensorflow as tf
 
 from tensorflow_asr.utils import shape_util
@@ -24,20 +22,21 @@ def compute_relative_position_encoding(
     dtype=tf.float32,
 ):
     batch_size, max_length, dmodel = input_shape[0], input_shape[1], input_shape[2]
-    pos = tf.expand_dims(tf.range(max_length - 1, -1, -1.0, dtype=tf.float32), axis=1)
-    index = tf.expand_dims(tf.range(0, dmodel, dtype=tf.float32), axis=0)
-    pe_matrix = pos * (1 / tf.pow(10000.0, (2 * (index // 2)) / dmodel))
-    pe_matrix = tf.cast(pe_matrix, dtype=dtype)
-    # Sin cos will be [max_length, size // 2]
-    # we add 0 between numbers by using padding and reshape
-    sin = tf.pad(tf.expand_dims(tf.sin(pe_matrix[:, 0::2]), -1), [[0, 0], [0, 0], [0, 1]], mode="CONSTANT", constant_values=0)
-    sin = tf.reshape(sin, [max_length, dmodel])
-    cos = tf.pad(tf.expand_dims(tf.cos(pe_matrix[:, 1::2]), -1), [[0, 0], [0, 0], [1, 0]], mode="CONSTANT", constant_values=0)
-    cos = tf.reshape(cos, [max_length, dmodel])
-    # Then add sin and cos, which results in [max_length, dmodel]
-    pe_matrix = tf.add(sin, cos)
-    pe_matrix = tf.tile(tf.expand_dims(pe_matrix, axis=0), [batch_size, 1, 1])  # [B, max_length, dmodel]
-    return pe_matrix
+    pos_seq = tf.range(max_length - 1, -1, -1.0, dtype=tf.float32)
+    inv_freq = 1 / (10000 ** (tf.range(0, dmodel, 2.0, dtype=tf.float32) / dmodel))
+    sinusoid_inp = tf.einsum("i,j->ij", pos_seq, inv_freq)
+    sinusoid_inp = tf.cast(sinusoid_inp, dtype=dtype)
+    # # Sin cos will be [max_length, size // 2]
+    # # we add 0 between numbers by using padding and reshape
+    # sin = tf.pad(tf.expand_dims(tf.sin(pe_matrix[:, 0::2]), -1), [[0, 0], [0, 0], [0, 1]], mode="CONSTANT", constant_values=0)
+    # sin = tf.reshape(sin, [max_length, dmodel])
+    # cos = tf.pad(tf.expand_dims(tf.cos(pe_matrix[:, 1::2]), -1), [[0, 0], [0, 0], [1, 0]], mode="CONSTANT", constant_values=0)
+    # cos = tf.reshape(cos, [max_length, dmodel])
+    # # Then add sin and cos, which results in [max_length, dmodel]
+    # pe_matrix = tf.add(sin, cos)
+    pe = tf.concat([tf.sin(sinusoid_inp), tf.cos(sinusoid_inp)], -1)
+    pe = tf.tile(pe[None, :, :], [batch_size, 1, 1])  # [B, max_length, dmodel]
+    return pe
 
 
 class PositionalEncoding(tf.keras.layers.Layer):

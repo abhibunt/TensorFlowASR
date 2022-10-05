@@ -55,7 +55,7 @@ model_config:
     pool_padding: reflect
     activation: relu
   encoder_dmodel: 144
-  encoder_num_blocks: 1
+  encoder_num_blocks: 2
   encoder_head_size: 36 # == dmodel // num_heads
   encoder_num_heads: 4
   encoder_mha_type: relmha
