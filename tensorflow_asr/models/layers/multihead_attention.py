@@ -35,6 +35,7 @@ def compute_self_attention_mask(inputs, inputs_length):  # [B] -> [B, T, T]
     mask = tf.matmul(mask, mask, transpose_b=True)
     return mask
 
+
 def _rel_shift(x, klen=-1):
     """Performs relative shift to form the relative attention score."""
 
@@ -144,25 +145,6 @@ class MultiHeadRelativeAttention(MultiHeadAttention):
                 name="encoding",
                 **common_kwargs,
             )
-            attention_bias_shape = [self._num_heads, self._key_dim]
-            self._content_attention_bias = self.add_weight(
-                name="content_attention_bias",
-                shape=attention_bias_shape,
-                initializer=self._bias_initializer,
-                regularizer=self._bias_regularizer,
-                constraint=self._bias_constraint,
-                trainable=True,
-                dtype=self.dtype,
-            )
-            self._positional_attention_bias = self.add_weight(
-                name="positional_attention_bias",
-                shape=attention_bias_shape,
-                initializer=self._bias_initializer,
-                regularizer=self._bias_regularizer,
-                constraint=self._bias_constraint,
-                trainable=True,
-                dtype=self.dtype,
-            )
 
     def _compute_attention(
         self,
@@ -170,6 +152,8 @@ class MultiHeadRelativeAttention(MultiHeadAttention):
         key,
         value,
         position,
+        content_attention_bias,
+        positional_attention_bias,
         attention_mask=None,
         training=None,
     ):
@@ -188,8 +172,8 @@ class MultiHeadRelativeAttention(MultiHeadAttention):
           attention_output: Multi-headed output of attention computation of shape
             `[B, S, N, key_dim]`.
         """
-        content_attention = tf.einsum(self._dot_product_equation, key, query + self._content_attention_bias)
-        positional_attention = tf.einsum(self._dot_product_equation, position, query + self._positional_attention_bias)
+        content_attention = tf.einsum(self._dot_product_equation, key, query + content_attention_bias)
+        positional_attention = tf.einsum(self._dot_product_equation, position, query + positional_attention_bias)
         positional_attention = _rel_shift(positional_attention, klen=tf.shape(content_attention)[3])
 
         attention_sum = content_attention + positional_attention
@@ -209,6 +193,8 @@ class MultiHeadRelativeAttention(MultiHeadAttention):
         query,
         value,
         relative_position_encoding,
+        content_attention_bias,
+        positional_attention_bias,
         key=None,
         state=None,
         attention_mask=None,
@@ -271,6 +257,8 @@ class MultiHeadRelativeAttention(MultiHeadAttention):
             key=key,
             value=value,
             position=position,
+            content_attention_bias=content_attention_bias,
+            positional_attention_bias=positional_attention_bias,
             attention_mask=attention_mask,
             training=training,
         )

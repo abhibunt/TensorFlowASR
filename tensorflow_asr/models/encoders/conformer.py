@@ -157,6 +157,8 @@ class MHSAModule(tf.keras.layers.Layer):
         self,
         inputs,
         relative_position_encoding=None,
+        content_attention_bias=None,
+        positional_attention_bias=None,
         training=False,
         attention_mask=None,
     ):
@@ -168,6 +170,8 @@ class MHSAModule(tf.keras.layers.Layer):
                 key=outputs,
                 value=outputs,
                 relative_position_encoding=position_encoding,
+                content_attention_bias=content_attention_bias,
+                positional_attention_bias=positional_attention_bias,
                 training=training,
                 attention_mask=attention_mask,
             )
@@ -334,11 +338,20 @@ class ConformerBlock(tf.keras.layers.Layer):
         self,
         inputs,
         relative_position_encoding=None,
+        content_attention_bias=None,
+        positional_attention_bias=None,
         training=False,
         attention_mask=None,
     ):
         outputs = self.ffm1(inputs, training=training)
-        outputs = self.mhsam(outputs, relative_position_encoding=relative_position_encoding, training=training, attention_mask=attention_mask)
+        outputs = self.mhsam(
+            outputs,
+            relative_position_encoding=relative_position_encoding,
+            content_attention_bias=content_attention_bias,
+            positional_attention_bias=positional_attention_bias,
+            training=training,
+            attention_mask=attention_mask,
+        )
         outputs = self.convm(outputs, training=training)
         outputs = self.ffm2(outputs, training=training)
         outputs = self.ln(outputs, training=training)
@@ -352,7 +365,6 @@ class ConformerEncoder(tf.keras.Model):
         dmodel=144,
         num_blocks=16,
         mha_type="relmha",
-        attention_type="bi",
         head_size=36,
         num_heads=4,
         kernel_size=32,
@@ -399,6 +411,25 @@ class ConformerEncoder(tf.keras.Model):
         self.do = tf.keras.layers.Dropout(dropout, name="dropout")
         self._mha_type = mha_type
 
+        if self._mha_type == "relmha":
+            attention_bias_shape = [num_heads, head_size]
+            self.content_attention_bias = self.add_weight(
+                name="content_attention_bias",
+                shape=attention_bias_shape,
+                regularizer=bias_regularizer,
+                trainable=True,
+                dtype=self.dtype,
+            )
+            self.positional_attention_bias = self.add_weight(
+                name="positional_attention_bias",
+                shape=attention_bias_shape,
+                regularizer=bias_regularizer,
+                trainable=True,
+                dtype=self.dtype,
+            )
+        else:
+            self.content_attention_bias, self.positional_attention_bias = None, None
+
         self.conformer_blocks = []
         for i in range(num_blocks):
             conformer_block = ConformerBlock(
@@ -429,5 +460,12 @@ class ConformerEncoder(tf.keras.Model):
         else:
             relative_position_encoding = None
         for cblock in self.conformer_blocks:
-            outputs = cblock(outputs, relative_position_encoding=relative_position_encoding, training=training, attention_mask=attention_mask)
+            outputs = cblock(
+                outputs,
+                relative_position_encoding=relative_position_encoding,
+                content_attention_bias=self.content_attention_bias,
+                positional_attention_bias=self.positional_attention_bias,
+                training=training,
+                attention_mask=attention_mask,
+            )
         return outputs, inputs_length

@@ -19,7 +19,7 @@ import tensorflow as tf
 
 from tensorflow_asr.models.layers.subsampling import TimeReduction
 from tensorflow_asr.models.transducer.base_transducer import Transducer
-from tensorflow_asr.utils import layer_util, math_util, shape_util
+from tensorflow_asr.utils import layer_util, math_util
 
 
 class Reshape(tf.keras.layers.Layer):
