@@ -19,12 +19,14 @@ import tensorflow as tf
 
 from tensorflow_asr.utils import shape_util
 
-# def _rel_shift(x, klen=-1):
-#     x_shape = tf.shape(x)
-#     x = tf.pad(x, [[0, 0], [0, 0], [0, 0], [1, 0]])
-#     x = tf.reshape(x, [x_shape[0], x_shape[1], x_shape[3] + 1, x_shape[2]])
-#     x = tf.reshape(x[:, :, 1:, :], x_shape)
-#     return x
+
+def _rel_shift(x):
+    x_shape = tf.shape(x)
+    x = tf.pad(x, [[0, 0], [0, 0], [0, 0], [1, 0]])
+    x = tf.reshape(x, [x_shape[0], x_shape[1], x_shape[3] + 1, x_shape[2]])
+    x = tf.slice(x, [0, 0, 1, 0], [-1, -1, -1, -1])
+    x = tf.reshape(x, x_shape)
+    return x
 
 
 def compute_self_attention_mask(inputs, inputs_length):  # [B] -> [B, T, T]
@@ -34,18 +36,18 @@ def compute_self_attention_mask(inputs, inputs_length):  # [B] -> [B, T, T]
     return mask
 
 
-def _rel_shift(x):
-    x = tf.transpose(x, perm=[2, 3, 0, 1])  # BHNM -> NMBH
-    x_size = tf.shape(x)
+# def _rel_shift(x):
+#     x = tf.transpose(x, perm=[2, 3, 0, 1])  # BHNM -> NMBH
+#     x_size = tf.shape(x)
 
-    x = tf.pad(x, [[0, 0], [1, 0], [0, 0], [0, 0]])
-    x = tf.reshape(x, [x_size[1] + 1, x_size[0], x_size[2], x_size[3]])
-    x = tf.slice(x, [1, 0, 0, 0], [-1, -1, -1, -1])
-    x = tf.reshape(x, x_size)
+#     x = tf.pad(x, [[0, 0], [1, 0], [0, 0], [0, 0]])
+#     x = tf.reshape(x, [x_size[1] + 1, x_size[0], x_size[2], x_size[3]])
+#     x = tf.slice(x, [1, 0, 0, 0], [-1, -1, -1, -1])
+#     x = tf.reshape(x, x_size)
 
-    x = tf.transpose(x, perm=[2, 3, 0, 1])  # NMBH -> BHNM
+#     x = tf.transpose(x, perm=[2, 3, 0, 1])  # NMBH -> BHNM
 
-    return x
+#     return x
 
 
 class MultiHeadAttention(tf.keras.layers.Layer):

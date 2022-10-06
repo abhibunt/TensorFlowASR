@@ -13,7 +13,6 @@
 # limitations under the License.
 """ http://arxiv.org/abs/1811.06621 """
 
-from typing import Dict
 
 import tensorflow as tf
 
