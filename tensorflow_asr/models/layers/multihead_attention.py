@@ -29,11 +29,10 @@ def _rel_shift(x):
     return x
 
 
-def compute_self_attention_mask(inputs, inputs_length):  # [B] -> [B, T, T]
+def compute_self_attention_mask(inputs, inputs_length):  # [B] -> [B, Tquery, Tkey]
     _, max_length, _ = shape_util.shape_list(inputs)
-    mask = tf.expand_dims(tf.sequence_mask(inputs_length, maxlen=max_length, dtype=inputs.dtype), axis=-1)
-    mask = tf.matmul(mask, mask, transpose_b=True)
-    return mask
+    mask = tf.sequence_mask(inputs_length, maxlen=max_length, dtype=inputs.dtype)  # [B, Tquery]
+    return tf.tile(mask[:, :, None], [1, 1, max_length])  # [B, Tquery, Tkey]
 
 
 # def _rel_shift(x):

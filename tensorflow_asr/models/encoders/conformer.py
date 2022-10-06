@@ -420,7 +420,7 @@ class ConformerEncoder(tf.keras.layers.Layer):
         inputs_length = math_util.get_reduced_length(inputs_length, self.conv_subsampling.time_reduction_factor)
         outputs = self.linear(outputs, training=training)
         outputs = self.do(outputs, training=training)
-        # attention_mask = compute_self_attention_mask(outputs, inputs_length)
+        attention_mask = compute_self_attention_mask(outputs, inputs_length)
         if self._mha_type == "relmha":
             relative_position_encoding = compute_relative_position_encoding(shape_util.shape_list(outputs), dtype=outputs.dtype)
         else:
@@ -430,6 +430,6 @@ class ConformerEncoder(tf.keras.layers.Layer):
                 outputs,
                 relative_position_encoding=relative_position_encoding,
                 training=training,
-                # attention_mask=attention_mask,
+                attention_mask=attention_mask,
             )
         return outputs, inputs_length
