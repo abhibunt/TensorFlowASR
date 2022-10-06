@@ -417,7 +417,7 @@ class ConformerEncoder(tf.keras.layers.Layer):
     def call(self, inputs, training=False):
         outputs, inputs_length = inputs
         outputs = self.conv_subsampling(outputs, training=training)
-        inputs_length = math_util.get_reduced_length(inputs_length, self.conv_subsampling.time_reduction_factor)
+        # inputs_length = math_util.get_reduced_length(inputs_length, self.conv_subsampling.time_reduction_factor)
         outputs = self.linear(outputs, training=training)
         outputs = self.do(outputs, training=training)
         # attention_mask = compute_self_attention_mask(outputs, inputs_length)

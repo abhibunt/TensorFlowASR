@@ -16,6 +16,8 @@ config = Config(config_path)
 speech_featurizer, text_featurizer = featurizer_helpers.prepare_featurizers(config=config)
 
 global_batch_size = 32
+speech_featurizer.update_length(1200)
+text_featurizer.update_length(700)
 
 conformer = Conformer(
     **config.model_config,

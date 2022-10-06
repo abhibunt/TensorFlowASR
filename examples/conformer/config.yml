@@ -55,7 +55,7 @@ model_config:
     pool_padding: reflect
     activation: relu
   encoder_dmodel: 144
-  encoder_num_blocks: 2
+  encoder_num_blocks: 16
   encoder_head_size: 36 # == dmodel // num_heads
   encoder_num_heads: 4
   encoder_mha_type: relmha
@@ -70,7 +70,7 @@ model_config:
   prediction_rnn_type: lstm
   prediction_rnn_implementation: 2
   prediction_rnn_unroll: False # False to use with CUDA or dynamic length, True to use with TPU and static length
-  prediction_layer_norm: True
+  prediction_layer_norm: False
   prediction_projection_units: 0
   joint_dim: 320
   prejoint_encoder_linear: True
