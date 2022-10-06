@@ -29,24 +29,45 @@ def _rel_shift(x):
     return x
 
 
-def compute_self_attention_mask(inputs, inputs_length):  # [B] -> [B, Tquery, Tkey]
+def compute_causal_mask(query, value=None):
+    """Computes a causal mask (e.g., for masked self-attention layers).
+    For example, if query and value both contain sequences of length 4,
+    this function returns a boolean `Tensor` equal to:
+    ```
+    [[[True,  False, False, False],
+      [True,  True,  False, False],
+      [True,  True,  True,  False],
+      [True,  True,  True,  True]]]
+    ```
+    Args:
+      query: query `Tensor` of shape `(B, T, ...)`.
+      value: value `Tensor` of shape `(B, S, ...)` (optional, defaults to
+      query).
+    Returns:
+      mask: a boolean `Tensor` of shape [1, T, S] containing a lower
+            triangular matrix of shape [T, S].
+    """
+    q_seq_length = tf.shape(query)[1]
+    v_seq_length = q_seq_length if value is None else tf.shape(value)[1]
+    return tf.linalg.band_part(tf.ones((1, q_seq_length, v_seq_length), tf.bool), -1, 0)  # creates a lower triangular matrix
+
+
+def compute_self_attention_mask(inputs, inputs_length, use_causal_mask=False):
+    """
+    Returns
+    ```
+    [[[True, True, True, False],
+      [True, True, True, False],
+      [True, True, True, False],
+      [False, False, False, False]]]
+    ```
+    """
     _, max_length, _ = shape_util.shape_list(inputs)
-    mask = tf.sequence_mask(inputs_length, maxlen=max_length, dtype=inputs.dtype)  # [B, Tquery]
-    return tf.tile(mask[:, :, None], [1, 1, max_length])  # [B, Tquery, Tkey]
-
-
-# def _rel_shift(x):
-#     x = tf.transpose(x, perm=[2, 3, 0, 1])  # BHNM -> NMBH
-#     x_size = tf.shape(x)
-
-#     x = tf.pad(x, [[0, 0], [1, 0], [0, 0], [0, 0]])
-#     x = tf.reshape(x, [x_size[1] + 1, x_size[0], x_size[2], x_size[3]])
-#     x = tf.slice(x, [1, 0, 0, 0], [-1, -1, -1, -1])
-#     x = tf.reshape(x, x_size)
-
-#     x = tf.transpose(x, perm=[2, 3, 0, 1])  # NMBH -> BHNM
-
-#     return x
+    mask = tf.sequence_mask(inputs_length, maxlen=max_length)
+    attention_mask = mask[:, :, None] & mask[:, None, :]
+    if use_causal_mask:
+        attention_mask = attention_mask & compute_causal_mask(attention_mask)
+    return attention_mask
 
 
 class MultiHeadAttention(tf.keras.layers.Layer):
