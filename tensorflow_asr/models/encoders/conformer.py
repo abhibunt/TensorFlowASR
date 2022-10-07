@@ -355,6 +355,7 @@ class ConformerEncoder(tf.keras.layers.Layer):
         kernel_size=32,
         depth_multiplier=1,
         padding="causal",
+        use_attention_mask=False,
         fc_factor=0.5,
         dropout=0.0,
         kernel_regularizer=L2,
@@ -395,6 +396,7 @@ class ConformerEncoder(tf.keras.layers.Layer):
         )
         self.do = tf.keras.layers.Dropout(dropout, name="dropout")
         self._mha_type = mha_type
+        self._use_attention_mask = use_attention_mask
 
         self.conformer_blocks = []
         for i in range(num_blocks):
@@ -420,7 +422,10 @@ class ConformerEncoder(tf.keras.layers.Layer):
         inputs_length = math_util.get_reduced_length(inputs_length, self.conv_subsampling.time_reduction_factor)
         outputs = self.linear(outputs, training=training)
         outputs = self.do(outputs, training=training)
-        attention_mask = compute_self_attention_mask(outputs, inputs_length, use_causal_mask=True)
+        if self._use_attention_mask:
+            attention_mask = compute_self_attention_mask(outputs, inputs_length)
+        else:
+            attention_mask = None
         if self._mha_type == "relmha":
             relative_position_encoding = compute_relative_position_encoding(shape_util.shape_list(outputs), dtype=outputs.dtype)
         else:
