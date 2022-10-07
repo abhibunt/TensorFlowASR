@@ -21,10 +21,7 @@ from tensorflow_asr.utils import layer_util, math_util
 
 
 class Reshape(tf.keras.layers.Layer):
-    def call(
-        self,
-        inputs,
-    ):
+    def call(self, inputs):
         return math_util.merge_two_last_dims(inputs)
 
 
@@ -39,25 +36,13 @@ class ConvBlock(tf.keras.layers.Layer):
         **kwargs,
     ):
         super().__init__(**kwargs)
-
         CNN = layer_util.get_conv(conv_type)
-        self.conv = CNN(
-            filters=filters,
-            kernel_size=kernels,
-            strides=strides,
-            padding="same",
-            name=conv_type,
-        )
+        self.conv = CNN(filters=filters, kernel_size=kernels, strides=strides, padding="same", name=conv_type)
         self.bn = tf.keras.layers.BatchNormalization(name="bn")
         self.relu = tf.keras.layers.ReLU(name="relu")
         self.do = tf.keras.layers.Dropout(dropout, name="dropout")
 
-    def call(
-        self,
-        inputs,
-        training=False,
-        **kwargs,
-    ):
+    def call(self, inputs, training=False):
         outputs = self.conv(inputs, training=training)
         outputs = self.bn(outputs, training=training)
         outputs = self.relu(outputs, training=training)
@@ -85,14 +70,7 @@ class ConvModule(tf.keras.Model):
             self.preprocess = Reshape(name="preprocess")
 
         self.blocks = [
-            ConvBlock(
-                conv_type=conv_type,
-                kernels=kernels[i],
-                strides=strides[i],
-                filters=filters[i],
-                dropout=dropout,
-                name="block_{i}",
-            )
+            ConvBlock(conv_type=conv_type, kernels=kernels[i], strides=strides[i], filters=filters[i], dropout=dropout, name=f"block_{i}")
             for i in range(len(filters))
         ]
 
@@ -104,17 +82,12 @@ class ConvModule(tf.keras.Model):
         for s in strides:
             self.reduction_factor *= s[0]
 
-    def call(
-        self,
-        inputs,
-        training=False,
-        **kwargs,
-    ):
+    def call(self, inputs, training=False):
         outputs = inputs
         if self.preprocess is not None:
             outputs = self.preprocess(outputs)
         for block in self.blocks:
-            outputs = block(outputs, training=training, **kwargs)
+            outputs = block(outputs, training=training)
         if self.postprocess is not None:
             outputs = self.postprocess(outputs)
         return outputs
@@ -131,32 +104,16 @@ class RnnBlock(tf.keras.layers.Layer):
         **kwargs,
     ):
         super().__init__(**kwargs)
-
         RNN = layer_util.get_rnn(rnn_type)
-        self.rnn = RNN(
-            units,
-            dropout=dropout,
-            return_sequences=True,
-            use_bias=True,
-            name=rnn_type,
-        )
+        self.rnn = RNN(units, dropout=dropout, return_sequences=True, use_bias=True, name=rnn_type)
         if bidirectional:
-            self.rnn = tf.keras.layers.Bidirectional(self.rnn, name="b{rnn_type}")
+            self.rnn = tf.keras.layers.Bidirectional(self.rnn, name=f"b{rnn_type}")
         self.bn = SequenceBatchNorm(time_major=False, name="bn")
         self.rowconv = None
         if not bidirectional and rowconv > 0:
-            self.rowconv = RowConv1D(
-                filters=units,
-                future_context=rowconv,
-                name="rowconv",
-            )
+            self.rowconv = RowConv1D(filters=units, future_context=rowconv, name="rowconv")
 
-    def call(
-        self,
-        inputs,
-        training=False,
-        **kwargs,
-    ):
+    def call(self, inputs, training=False):
         outputs = self.rnn(inputs, training=training)
         outputs = self.bn(outputs, training=training)
         if self.rowconv is not None:
@@ -176,28 +133,15 @@ class RnnModule(tf.keras.Model):
         **kwargs,
     ):
         super().__init__(**kwargs)
-
         self.blocks = [
-            RnnBlock(
-                rnn_type=rnn_type,
-                units=units,
-                bidirectional=bidirectional,
-                rowconv=rowconv,
-                dropout=dropout,
-                name="block_{i}",
-            )
+            RnnBlock(rnn_type=rnn_type, units=units, bidirectional=bidirectional, rowconv=rowconv, dropout=dropout, name=f"block_{i}")
             for i in range(nlayers)
         ]
 
-    def call(
-        self,
-        inputs,
-        training=False,
-        **kwargs,
-    ):
+    def call(self, inputs, training=False):
         outputs = inputs
         for block in self.blocks:
-            outputs = block(outputs, training=training, **kwargs)
+            outputs = block(outputs, training=training)
         return outputs
 
 
@@ -209,18 +153,12 @@ class FcBlock(tf.keras.layers.Layer):
         **kwargs,
     ):
         super().__init__(**kwargs)
-
         self.fc = tf.keras.layers.Dense(units, name="fc")
         self.bn = tf.keras.layers.BatchNormalization(name="bn")
         self.relu = tf.keras.layers.ReLU(name="relu")
         self.do = tf.keras.layers.Dropout(dropout, name="dropout")
 
-    def call(
-        self,
-        inputs,
-        training=False,
-        **kwargs,
-    ):
+    def call(self, inputs, training=False):
         outputs = self.fc(inputs, training=training)
         outputs = self.bn(outputs, training=training)
         outputs = self.relu(outputs, training=training)
@@ -237,18 +175,12 @@ class FcModule(tf.keras.Model):
         **kwargs,
     ):
         super().__init__(**kwargs)
+        self.blocks = [FcBlock(units=units, dropout=dropout, name=f"block_{i}") for i in range(nlayers)]
 
-        self.blocks = [FcBlock(units=units, dropout=dropout, name="block_{i}") for i in range(nlayers)]
-
-    def call(
-        self,
-        inputs,
-        training=False,
-        **kwargs,
-    ):
+    def call(self, inputs, training=False):
         outputs = inputs
         for block in self.blocks:
-            outputs = block(outputs, training=training, **kwargs)
+            outputs = block(outputs, training=training)
         return outputs
 
 
@@ -269,20 +201,12 @@ class DeepSpeech2Encoder(tf.keras.Model):
         fc_nlayers: int = 0,
         fc_units: int = 1024,
         fc_dropout: float = 0.1,
-        name="deepspeech2_encoder",
         **kwargs,
     ):
         super().__init__(**kwargs)
-
         self.conv_module = ConvModule(
-            conv_type=conv_type,
-            kernels=conv_kernels,
-            strides=conv_strides,
-            filters=conv_filters,
-            dropout=conv_dropout,
-            name="conv_module",
+            conv_type=conv_type, kernels=conv_kernels, strides=conv_strides, filters=conv_filters, dropout=conv_dropout, name="conv_module"
         )
-
         self.rnn_module = RnnModule(
             nlayers=rnn_nlayers,
             rnn_type=rnn_type,
@@ -292,24 +216,25 @@ class DeepSpeech2Encoder(tf.keras.Model):
             dropout=rnn_dropout,
             name="rnn_module",
         )
+        self.fc_module = FcModule(nlayers=fc_nlayers, units=fc_units, dropout=fc_dropout, name="fc_module")
 
-        self.fc_module = FcModule(
-            nlayers=fc_nlayers,
-            units=fc_units,
-            dropout=fc_dropout,
-            name="fc_module",
-        )
+    def call(self, inputs, training=False):
+        outputs, inputs_length = inputs
+        outputs = self.conv_module(outputs, training=training)
+        outputs = self.rnn_module(outputs, training=training)
+        outputs = self.fc_module(outputs, training=training)
+        return outputs, inputs_length
 
-    def call(
-        self,
-        inputs,
-        training,
-        **kwargs,
-    ):
-        outputs = self.conv_module(inputs, training=training, **kwargs)
-        outputs = self.rnn_module(outputs, training=training, **kwargs)
-        outputs = self.fc_module(outputs, training=training, **kwargs)
-        return outputs
+
+class DeepSpeech2Decoder(tf.keras.layers.Layer):
+    def __init__(self, vocab_size: int, **kwargs):
+        super().__init__(**kwargs)
+        self.vocab = tf.keras.layers.Dense(vocab_size, name="vocab")
+
+    def call(self, inputs, training=False):
+        logits, logits_length = inputs
+        logits = self.vocab(logits, training=training)
+        return logits, logits_length
 
 
 class DeepSpeech2(CtcModel):
@@ -351,7 +276,7 @@ class DeepSpeech2(CtcModel):
                 fc_dropout=fc_dropout,
                 name="encoder",
             ),
-            vocab_size=vocab_size,
+            decoder=DeepSpeech2Decoder(vocab_size=vocab_size, name="decoder"),
             name=name,
             **kwargs,
         )

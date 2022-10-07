@@ -339,10 +339,10 @@ class Transducer(BaseModel):
         loss = RnntLoss(blank=blank)
         super().compile(loss=loss, optimizer=optimizer, run_eagerly=run_eagerly, mxp=mxp, ga_steps=ga_steps, **kwargs)
 
-    def call(self, inputs, training=False, **kwargs):
-        enc, enc_length = self.encoder([inputs["inputs"], inputs["inputs_length"]], training=training, **kwargs)
-        pred = self.predict_net([inputs["predictions"], inputs["predictions_length"]], training=training, **kwargs)
-        logits = self.joint_net([enc, pred], training=training, **kwargs)
+    def call(self, inputs, training=False):
+        enc, enc_length = self.encoder([inputs["inputs"], inputs["inputs_length"]], training=training)
+        pred = self.predict_net([inputs["predictions"], inputs["predictions_length"]], training=training)
+        logits = self.joint_net([enc, pred], training=training)
         return data_util.create_logits(logits=logits, logits_length=enc_length)
 
     # -------------------------------- INFERENCES -------------------------------------

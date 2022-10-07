@@ -100,11 +100,7 @@ class BaseModel(tf.keras.Model):
             self.use_loss_scale = False
         else:
             self.use_loss_scale = mxp
-            optimizer = (
-                tf.keras.mixed_precision.LossScaleOptimizer(tf.keras.optimizers.get(optimizer))
-                if self.use_loss_scale
-                else optimizer
-            )
+            optimizer = tf.keras.mixed_precision.LossScaleOptimizer(tf.keras.optimizers.get(optimizer)) if self.use_loss_scale else optimizer
         if isinstance(ga_steps, int) and ga_steps > 1:
             self.use_ga = True
             self.ga = GradientAccumulator(ga_steps=ga_steps, trainable_variables=self.trainable_variables)
@@ -194,7 +190,7 @@ class BaseModel(tf.keras.Model):
         labels = self.text_featurizer.iextract(y_true["labels"])
         greedy_decoding = self.recognize(inputs)
         if self.text_featurizer.decoder_config.beam_width == 0:
-            beam_search_decoding = tf.map_fn(lambda _: tf.convert_to_tensor("", dtype=tf.string), labels)
+            beam_search_decoding = tf.tile(tf.expand_dims(tf.convert_to_tensor("", tf.string), 0), [tf.shape(labels)[0]])
         else:
             beam_search_decoding = self.recognize_beam(inputs)
         return tf.stack([labels, greedy_decoding, beam_search_decoding], axis=-1)

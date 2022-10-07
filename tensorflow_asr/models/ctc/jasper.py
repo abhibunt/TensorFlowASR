@@ -51,12 +51,7 @@ class JasperSubBlock(tf.keras.layers.Layer):
         self.do = tf.keras.layers.Dropout(dropout, name="dropout")
         self.reduction_factor = strides
 
-    def call(
-        self,
-        inputs,
-        training=False,
-        **kwargs,
-    ):
+    def call(self, inputs, training=False):
         outputs = inputs
         outputs = self.conv1d(outputs, training=training)
         outputs = self.bn(outputs, training=training)
@@ -85,12 +80,7 @@ class JasperResidual(tf.keras.layers.Layer):
         )
         self.bn = tf.keras.layers.BatchNormalization(name="bn")
 
-    def call(
-        self,
-        inputs,
-        training=False,
-        **kwargs,
-    ):
+    def call(self, inputs, training=False):
         outputs = self.pointwise_conv1d(inputs, training=training)
         outputs = self.bn(outputs, training=training)
         return outputs
@@ -125,31 +115,26 @@ class JasperSubBlockResidual(JasperSubBlock):
                 channels=channels,
                 kernel_regularizer=kernel_regularizer,
                 bias_regularizer=bias_regularizer,
-                name="residual_{i}",
+                name=f"residual_{i}",
             )
             for i in range(nresiduals)
         ]
 
         self.add = tf.keras.layers.Add(name="add")
 
-    def call(
-        self,
-        inputs,
-        training=False,
-        **kwargs,
-    ):
+    def call(self, inputs, training=False):
         outputs, residuals = inputs
         outputs = self.conv1d(outputs, training=training)
         outputs = self.bn(outputs, training=training)
         for i, res in enumerate(residuals):
-            res = self.residuals[i](res, training=training, **kwargs)
+            res = self.residuals[i](res, training=training)
             outputs = self.add([outputs, res], training=training)
         outputs = self.relu(outputs, training=training)
         outputs = self.do(outputs, training=training)
         return outputs
 
 
-class JasperBlock(tf.keras.Model):
+class JasperBlock(tf.keras.layers.Layer):
     def __init__(
         self,
         nsubblocks: int = 3,
@@ -173,7 +158,7 @@ class JasperBlock(tf.keras.Model):
                 dropout=dropout,
                 kernel_regularizer=kernel_regularizer,
                 bias_regularizer=bias_regularizer,
-                name="subordinate_{i}",
+                name=f"subordinate_{i}",
             )
             for i in range(nsubblocks - 1)
         ]
@@ -185,30 +170,25 @@ class JasperBlock(tf.keras.Model):
             nresiduals=nresiduals,
             kernel_regularizer=kernel_regularizer,
             bias_regularizer=bias_regularizer,
-            name="subordinate_{nsubblocks - 1}",
+            name=f"subordinate_{nsubblocks - 1}",
         )
 
         self.reduction_factor = 1
 
-    def call(
-        self,
-        inputs,
-        training=False,
-        **kwargs,
-    ):
+    def call(self, inputs, training=False):
         inputs, residuals = inputs
         outputs = inputs
         for subblock in self.subblocks:
-            outputs = subblock(outputs, training=training, **kwargs)
+            outputs = subblock(outputs, training=training)
         if self.dense:
             residuals.append(inputs)
-            outputs = self.subblock_residual([outputs, residuals], training=training, **kwargs)
+            outputs = self.subblock_residual([outputs, residuals], training=training)
         else:
-            outputs = self.subblock_residual([outputs, [inputs]], training=training, **kwargs)
+            outputs = self.subblock_residual([outputs, [inputs]], training=training)
         return outputs, residuals
 
 
-class JasperEncoder(tf.keras.Model):
+class JasperEncoder(tf.keras.layers.Layer):
     def __init__(
         self,
         dense: bool = False,
@@ -233,10 +213,9 @@ class JasperEncoder(tf.keras.Model):
         third_additional_block_dropout: int = 0.4,
         kernel_regularizer=None,
         bias_regularizer=None,
-        name: str = "jasper_encoder",
         **kwargs,
     ):
-        super().__init__(name=name, **kwargs)
+        super().__init__(**kwargs)
 
         assert len(block_channels) == len(block_kernels) == len(block_dropout)
 
@@ -263,7 +242,7 @@ class JasperEncoder(tf.keras.Model):
                 nresiduals=(i + 1) if dense else 1,
                 kernel_regularizer=kernel_regularizer,
                 bias_regularizer=bias_regularizer,
-                name="block_{i}",
+                name=f"block_{i}",
             )
             for i in range(len(block_channels))
         ]
@@ -290,22 +269,43 @@ class JasperEncoder(tf.keras.Model):
             name="third_block",
         )
 
-    def call(
-        self,
-        inputs,
-        training=False,
-        **kwargs,
-    ):
-        outputs = self.reshape(inputs)
-        outputs = self.first_additional_block(outputs, training=training, **kwargs)
+    def call(self, inputs, training=False):
+        outputs, inputs_length = inputs
+        outputs = self.reshape(outputs)
+        outputs = self.first_additional_block(outputs, training=training)
 
         residuals = []
         for block in self.blocks:
-            outputs, residuals = block([outputs, residuals], training=training, **kwargs)
+            outputs, residuals = block([outputs, residuals], training=training)
 
-        outputs = self.second_additional_block(outputs, training=training, **kwargs)
-        outputs = self.third_additional_block(outputs, training=training, **kwargs)
-        return outputs
+        outputs = self.second_additional_block(outputs, training=training)
+        outputs = self.third_additional_block(outputs, training=training)
+        return outputs, inputs_length
+
+
+class JasperDecoder(tf.keras.layers.Layer):
+    def __init__(
+        self,
+        vocab_size: int,
+        kernel_regularizer=None,
+        bias_regularizer=None,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        self.vocab = tf.keras.layers.Conv1D(
+            filters=vocab_size,
+            kernel_size=1,
+            strides=1,
+            padding="same",
+            kernel_regularizer=kernel_regularizer,
+            bias_regularizer=bias_regularizer,
+            name="logits",
+        )
+
+    def call(self, inputs, training=False):
+        logits, logits_length = inputs
+        logits = self.vocab(logits, training=training)
+        return logits, logits_length
 
 
 class Jasper(CtcModel):
@@ -361,17 +361,9 @@ class Jasper(CtcModel):
                 third_additional_block_dropout=third_additional_block_dropout,
                 kernel_regularizer=kernel_regularizer,
                 bias_regularizer=bias_regularizer,
+                name="encoder",
             ),
-            decoder=tf.keras.layers.Conv1D(
-                filters=vocab_size,
-                kernel_size=1,
-                strides=1,
-                padding="same",
-                kernel_regularizer=kernel_regularizer,
-                bias_regularizer=bias_regularizer,
-                name="logits",
-            ),
-            vocab_size=vocab_size,
+            decoder=JasperDecoder(vocab_size=vocab_size, kernel_regularizer=kernel_regularizer, bias_regularizer=bias_regularizer, name="decoder"),
             name=name,
             **kwargs,
         )

@@ -28,12 +28,11 @@ def get_activation(
     activation = activation.lower()
     if activation in ["silu", "swish"]:
         return tf.nn.swish
-    elif activation == "relu":
+    if activation == "relu":
         return tf.nn.relu
-    elif activation == "linear":
+    if activation == "linear":
         return tf.keras.activations.linear
-    else:
-        raise ValueError("activation must be either 'silu', 'swish', 'relu' or 'linear'")
+    raise ValueError("activation must be either 'silu', 'swish', 'relu' or 'linear'")
 
 
 class Reshape(tf.keras.layers.Layer):
@@ -68,7 +67,7 @@ class ConvModule(tf.keras.layers.Layer):
         self.bn = tf.keras.layers.BatchNormalization(name="bn")
         self.activation = get_activation(activation)
 
-    def call(self, inputs, training=False, **kwargs):
+    def call(self, inputs, training=False):
         outputs = self.conv(inputs, training=training)
         outputs = self.bn(outputs, training=training)
         outputs = self.activation(outputs)
@@ -103,7 +102,7 @@ class SEModule(tf.keras.layers.Layer):
         self.fc1 = tf.keras.layers.Dense(filters // 8, name="fc1")
         self.fc2 = tf.keras.layers.Dense(filters, name="fc2")
 
-    def call(self, inputs, training=False, **kwargs):
+    def call(self, inputs, training=False):
         features, inputs_length = inputs
         outputs = self.conv(features, training=training)  # [B, T, E]
 
@@ -151,7 +150,7 @@ class ConvBlock(tf.keras.layers.Layer):
                     padding=padding,
                     kernel_regularizer=kernel_regularizer,
                     bias_regularizer=bias_regularizer,
-                    name="conv_module_{i}",
+                    name=f"conv_module_{i}",
                 )
             )
 
@@ -163,7 +162,7 @@ class ConvBlock(tf.keras.layers.Layer):
             padding=padding,
             kernel_regularizer=kernel_regularizer,
             bias_regularizer=bias_regularizer,
-            name="conv_module_{nlayers - 1}",
+            name=f"conv_module_{nlayers - 1}",
         )
 
         self.se = SEModule(
@@ -192,7 +191,7 @@ class ConvBlock(tf.keras.layers.Layer):
 
         self.activation = get_activation(activation)
 
-    def call(self, inputs, training=False, **kwargs):
+    def call(self, inputs, training=False):
         features, inputs_length = inputs
         outputs = features
         for conv in self.convs:
@@ -207,7 +206,7 @@ class ConvBlock(tf.keras.layers.Layer):
         return outputs, inputs_length
 
 
-class ContextNetEncoder(tf.keras.Model):
+class ContextNetEncoder(tf.keras.layers.Layer):
     def __init__(
         self,
         blocks: List[dict] = [],
@@ -228,11 +227,11 @@ class ContextNetEncoder(tf.keras.Model):
                     alpha=alpha,
                     kernel_regularizer=kernel_regularizer,
                     bias_regularizer=bias_regularizer,
-                    name="block_{i}",
+                    name=f"block_{i}",
                 )
             )
 
-    def call(self, inputs, training=False, **kwargs):
+    def call(self, inputs, training=False):
         outputs, inputs_length = inputs
         outputs = self.reshape(outputs)
         for block in self.blocks:
