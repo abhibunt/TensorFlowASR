@@ -59,6 +59,7 @@ model_config:
   encoder_head_size: 36 # == dmodel // num_heads
   encoder_num_heads: 4
   encoder_mha_type: relmha
+  encoder_use_attention_mask: True
   encoder_kernel_size: 32
   encoder_fc_factor: 0.5
   encoder_dropout: 0.1

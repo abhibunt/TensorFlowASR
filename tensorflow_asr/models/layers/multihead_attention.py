@@ -108,6 +108,8 @@ class MultiHeadAttention(tf.keras.layers.Layer):
         self.dropout = tf.keras.layers.Dropout(dropout, name="dropout")
         self._droput_rate = dropout
 
+        self.softmax = tf.keras.layers.Softmax(name="softmax")
+
     def build(self, input_shape):
         num_query_features = input_shape[0][-1]
         num_key_features = input_shape[1][-1]
@@ -188,15 +190,11 @@ class MultiHeadAttention(tf.keras.layers.Layer):
                 raise ValueError("mask's last dimension must be equal to the number of elements in 'key'")
         # apply mask
         if attention_mask is not None:
-            attention_mask = tf.cast(attention_mask, logits.dtype)
-
             # possibly expand on the head dimension so broadcasting works
             if len(attention_mask.shape) != len(logits.shape):
                 attention_mask = tf.expand_dims(attention_mask, -3)
 
-            logits += -10e9 * (1.0 - attention_mask)
-
-        attn_coef = tf.nn.softmax(logits)
+        attn_coef = self.softmax(logits, mask=attention_mask)
 
         # attention dropout
         attn_coef_dropout = self.dropout(attn_coef, training=training)
