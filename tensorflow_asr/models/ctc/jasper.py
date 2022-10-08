@@ -301,11 +301,17 @@ class JasperDecoder(tf.keras.layers.Layer):
             bias_regularizer=bias_regularizer,
             name="logits",
         )
+        self._vocab_size = vocab_size
 
     def call(self, inputs, training=False):
         logits, logits_length = inputs
         logits = self.vocab(logits, training=training)
         return logits, logits_length
+
+    def compute_output_shape(self, input_shape):
+        logits_shape, logits_length_shape = input_shape
+        outputs_shape = logits_shape[:-1] + (self._vocab_size,)
+        return tuple(outputs_shape), tuple(logits_length_shape)
 
 
 class Jasper(CtcModel):

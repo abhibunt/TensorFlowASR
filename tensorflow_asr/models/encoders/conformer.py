@@ -15,6 +15,7 @@
 import tensorflow as tf
 
 from tensorflow_asr.models.activations.glu import GLU
+from tensorflow_asr.models.layers.base_layer import Layer
 from tensorflow_asr.models.layers.depthwise_conv1d import DepthwiseConv1D
 from tensorflow_asr.models.layers.multihead_attention import (
     MultiHeadAttention,
@@ -358,7 +359,7 @@ class ConformerBlock(tf.keras.layers.Layer):
         return outputs
 
 
-class ConformerEncoder(tf.keras.layers.Layer):
+class ConformerEncoder(Layer):
     def __init__(
         self,
         subsampling,
@@ -379,6 +380,7 @@ class ConformerEncoder(tf.keras.layers.Layer):
         **kwargs,
     ):
         super().__init__(name=name, **kwargs)
+        self._dmodel = dmodel
         self._kernel_regularizer = kernel_regularizer
         self._bias_regularizer = bias_regularizer
 
@@ -404,6 +406,7 @@ class ConformerEncoder(tf.keras.layers.Layer):
             kernel_regularizer=kernel_regularizer,
             bias_regularizer=bias_regularizer,
         )
+        self.time_reduction_factor = self.conv_subsampling.time_reduction_factor
 
         self.linear = tf.keras.layers.Dense(
             dmodel,
@@ -482,3 +485,11 @@ class ConformerEncoder(tf.keras.layers.Layer):
                 attention_mask=attention_mask,
             )
         return outputs, inputs_length
+
+    def compute_output_shape(self, input_shape):
+        inputs_shape, inputs_length_shape = input_shape
+        outputs_size = self._dmodel
+        outputs_time = None if inputs_shape[1] is None else math_util.legacy_get_reduced_length(inputs_shape[1], self.time_reduction_factor)
+        outputs_batch = inputs_shape[0]
+        outputs_shape = [outputs_batch, outputs_time, outputs_size]
+        return tuple(outputs_shape), tuple(inputs_length_shape)

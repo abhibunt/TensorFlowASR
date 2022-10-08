@@ -16,9 +16,10 @@ import tensorflow as tf
 
 from tensorflow_asr.models.ctc.base_ctc import CtcModel
 from tensorflow_asr.models.encoders.conformer import L2, ConformerEncoder
+from tensorflow_asr.models.layers.base_layer import Layer
 
 
-class ConformerDecoder(tf.keras.layers.Layer):
+class ConformerDecoder(Layer):
     def __init__(
         self,
         vocab_size: int,
@@ -27,6 +28,7 @@ class ConformerDecoder(tf.keras.layers.Layer):
         **kwargs,
     ):
         super().__init__(**kwargs)
+        self._vocab_size = vocab_size
         self.vocab = tf.keras.layers.Dense(
             vocab_size,
             kernel_regularizer=kernel_regularizer,
@@ -38,6 +40,11 @@ class ConformerDecoder(tf.keras.layers.Layer):
         logits, logits_length = inputs
         logits = self.vocab(logits, training=training)
         return logits, logits_length
+
+    def compute_output_shape(self, input_shape):
+        logits_shape, logits_length_shape = input_shape
+        outputs_shape = logits_shape[:-1] + (self._vocab_size,)
+        return tuple(outputs_shape), tuple(logits_length_shape)
 
 
 class Conformer(CtcModel):

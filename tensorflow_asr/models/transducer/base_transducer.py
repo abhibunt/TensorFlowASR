@@ -20,6 +20,7 @@ import tensorflow as tf
 
 from tensorflow_asr.losses.rnnt_loss import RnntLoss
 from tensorflow_asr.models.base_model import BaseModel
+from tensorflow_asr.models.layers.base_layer import Layer
 from tensorflow_asr.models.layers.embedding import Embedding
 from tensorflow_asr.models.layers.one_hot_blank import OneHotBlank
 from tensorflow_asr.utils import data_util, layer_util, math_util, shape_util
@@ -31,7 +32,7 @@ BeamHypothesis = collections.namedtuple("BeamHypothesis", ("score", "indices", "
 JOINT_MODES = ["add", "mul"]
 
 
-class TransducerPrediction(tf.keras.layers.Layer):
+class TransducerPrediction(Layer):
     def __init__(
         self,
         blank: int,
@@ -164,6 +165,12 @@ class TransducerPrediction(tf.keras.layers.Layer):
                 outputs = self.projections[i](outputs, training=False)
         return outputs, tf.stack(new_states, axis=0)
 
+    def compute_output_shape(self, input_shape):
+        predictions_shape, _ = input_shape
+        output_size = self.projections[-1].units if self.projections[-1] is not None else self.rnns[-1].units
+        outputs_shape = predictions_shape + (output_size,)
+        return tuple(outputs_shape)
+
 
 class TransducerJointMerge(tf.keras.layers.Layer):
     def __init__(self, joint_mode: str = "add", name="transducer_joint_merge", **kwargs):
@@ -183,7 +190,7 @@ class TransducerJointMerge(tf.keras.layers.Layer):
         return outputs  # [B, T, U, V]
 
 
-class TransducerJoint(tf.keras.layers.Layer):
+class TransducerJoint(Layer):
     def __init__(
         self,
         vocab_size: int,
@@ -246,6 +253,12 @@ class TransducerJoint(tf.keras.layers.Layer):
         outputs = self.ffn_out(outputs, training=training)
         outputs = tf.cast(outputs, tf.float32)  # always cast the output as float32 for stable mxp training
         return outputs
+
+    def compute_output_shape(self, input_shape):
+        encoder_shape, prediction_shape = input_shape
+        batch_shape = encoder_shape[0]
+        encoder_time_shape, prediction_time_shape = encoder_shape[1], prediction_shape[1]
+        return (batch_shape, encoder_time_shape, prediction_time_shape, self.ffn_out.units)
 
 
 class Transducer(BaseModel):

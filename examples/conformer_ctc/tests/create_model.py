@@ -66,12 +66,12 @@ text_featurizer.update_length(700)
 
 conformer = Conformer(
     **config.model_config,
-    blank=text_featurizer.blank,
     vocab_size=text_featurizer.num_classes,
 )
 conformer.make(speech_featurizer.shape, batch_size=global_batch_size)
 conformer.add_featurizers(speech_featurizer, text_featurizer)
 conformer.summary()
+# %%
 conformer.save_weights("./conformer.h5")
 conformer.load_weights("./conformer.h5")
 # %%

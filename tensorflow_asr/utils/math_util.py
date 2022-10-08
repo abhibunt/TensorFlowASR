@@ -64,6 +64,13 @@ def get_reduced_length(
     )
 
 
+def legacy_get_reduced_length(
+    length,
+    reduction_factor,
+):
+    return int(math.ceil(length / reduction_factor))
+
+
 def count_non_blank(
     tensor: tf.Tensor,
     blank: int or tf.Tensor = 0,

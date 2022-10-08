@@ -15,6 +15,7 @@
 import tensorflow as tf
 
 from tensorflow_asr.models.ctc.base_ctc import CtcModel
+from tensorflow_asr.models.layers.base_layer import Layer
 from tensorflow_asr.models.layers.row_conv_1d import RowConv1D
 from tensorflow_asr.models.layers.sequence_wise_bn import SequenceBatchNorm
 from tensorflow_asr.utils import layer_util, math_util
@@ -50,7 +51,7 @@ class ConvBlock(tf.keras.layers.Layer):
         return outputs
 
 
-class ConvModule(tf.keras.Model):
+class ConvModule(tf.keras.layers.Layer):
     def __init__(
         self,
         conv_type: str = "conv2d",
@@ -121,7 +122,7 @@ class RnnBlock(tf.keras.layers.Layer):
         return outputs
 
 
-class RnnModule(tf.keras.Model):
+class RnnModule(tf.keras.layers.Layer):
     def __init__(
         self,
         nlayers: int = 5,
@@ -166,7 +167,7 @@ class FcBlock(tf.keras.layers.Layer):
         return outputs
 
 
-class FcModule(tf.keras.Model):
+class FcModule(tf.keras.layers.Layer):
     def __init__(
         self,
         nlayers: int = 0,
@@ -184,7 +185,7 @@ class FcModule(tf.keras.Model):
         return outputs
 
 
-class DeepSpeech2Encoder(tf.keras.Model):
+class DeepSpeech2Encoder(Layer):
     def __init__(
         self,
         conv_type: str = "conv2d",
@@ -217,6 +218,7 @@ class DeepSpeech2Encoder(tf.keras.Model):
             name="rnn_module",
         )
         self.fc_module = FcModule(nlayers=fc_nlayers, units=fc_units, dropout=fc_dropout, name="fc_module")
+        self._fc_units = fc_units
 
     def call(self, inputs, training=False):
         outputs, inputs_length = inputs
@@ -225,16 +227,27 @@ class DeepSpeech2Encoder(tf.keras.Model):
         outputs = self.fc_module(outputs, training=training)
         return outputs, inputs_length
 
+    def compute_output_shape(self, input_shape):
+        inputs_shape, inputs_length_shape = input_shape
+        outputs_shape = inputs_shape[:-1] + (self._fc_units,)
+        return tuple(outputs_shape), tuple(inputs_length_shape)
 
-class DeepSpeech2Decoder(tf.keras.layers.Layer):
+
+class DeepSpeech2Decoder(Layer):
     def __init__(self, vocab_size: int, **kwargs):
         super().__init__(**kwargs)
         self.vocab = tf.keras.layers.Dense(vocab_size, name="logits")
+        self._vocab_size = vocab_size
 
     def call(self, inputs, training=False):
         logits, logits_length = inputs
         logits = self.vocab(logits, training=training)
         return logits, logits_length
+
+    def compute_output_shape(self, input_shape):
+        logits_shape, logits_length_shape = input_shape
+        outputs_shape = logits_shape[:-1] + (self._vocab_size,)
+        return tuple(outputs_shape), tuple(logits_length_shape)
 
 
 class DeepSpeech2(CtcModel):
