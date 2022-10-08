@@ -26,7 +26,7 @@ decoder_config:
   unknown_token: "[PAD]"
   unknown_index: 0
 
-  beam_width: 0
+  beam_width: 5
   norm_score: True
   lm_config: null
 
@@ -114,7 +114,7 @@ learning_config:
     shuffle: False
     cache: True
     buffer_size: 100
-    drop_remainder: True
+    drop_remainder: False
     stage: test
 
   optimizer_config:

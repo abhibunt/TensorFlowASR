@@ -103,7 +103,8 @@ class CtcModel(BaseModel):
 
     def recognize_beam(self, inputs: Dict[str, tf.Tensor], lm: bool = False):
         logits = self(inputs, training=False)
-        return self._perform_beam_search(encoded=logits["logits"], encoded_length=logits["logits_length"])
+        decoded = self._perform_beam_search(encoded=logits["logits"], encoded_length=logits["logits_length"])
+        return self.text_featurizer.iextract(decoded)
 
     def _perform_beam_search(self, encoded: np.ndarray, encoded_length):
         decoded, _ = tf.nn.ctc_beam_search_decoder(
