@@ -29,7 +29,7 @@ class BaseModel(tf.keras.Model):
         show_trainable=True,
         **kwargs,
     ):
-        super().summary(line_length=line_length, print_fn=tf.print, expand_nested=expand_nested, show_trainable=show_trainable, **kwargs)
+        super().summary(line_length=line_length, expand_nested=expand_nested, show_trainable=show_trainable, **kwargs)
 
     def save(
         self,
