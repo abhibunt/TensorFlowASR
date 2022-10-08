@@ -139,6 +139,7 @@ class LearningConfig:
     def __init__(self, config: dict = None):
         if not config:
             config = {}
+        self.pretrained = file_util.preprocess_paths(config.pop("pretrained", None))
         self.train_dataset_config = DatasetConfig(config.pop("train_dataset_config", {}))
         self.eval_dataset_config = DatasetConfig(config.pop("eval_dataset_config", {}))
         self.test_dataset_config = DatasetConfig(config.pop("test_dataset_config", {}))

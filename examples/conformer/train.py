@@ -36,7 +36,6 @@ def main(
     spx: int = 1,
     devices: list = [0],
     mxp: bool = False,
-    pretrained: str = None,
     jit_compile: bool = False,
     ga_steps: int = None,
 ):
@@ -66,8 +65,12 @@ def main(
     with strategy.scope():
         conformer = Conformer(**config.model_config, blank=text_featurizer.blank, vocab_size=text_featurizer.num_classes)
         conformer.make(speech_featurizer.shape, prediction_shape=text_featurizer.prepand_shape, batch_size=global_batch_size)
-        if pretrained:
-            conformer.load_weights(pretrained, by_name=file_util.is_hdf5_filepath(pretrained), skip_mismatch=True)
+        if config.learning_config.pretrained:
+            conformer.load_weights(
+                config.learning_config.pretrained,
+                by_name=file_util.is_hdf5_filepath(config.learning_config.pretrained),
+                skip_mismatch=True,
+            )
         optimizer = tf.keras.optimizers.Adam(
             TransformerSchedule(
                 d_model=conformer.dmodel,
