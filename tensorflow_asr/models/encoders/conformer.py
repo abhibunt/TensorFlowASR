@@ -133,8 +133,8 @@ class MHSAModule(tf.keras.layers.Layer):
         if mha_type == "relmha":
             self.mha = MultiHeadRelativeAttention(
                 num_heads=num_heads,
-                head_size=head_size,
-                output_size=dmodel,
+                key_dim=head_size,
+                output_shape=dmodel,
                 kernel_regularizer=kernel_regularizer,
                 bias_regularizer=bias_regularizer,
                 name="mhsa",
@@ -142,8 +142,8 @@ class MHSAModule(tf.keras.layers.Layer):
         elif mha_type == "mha":
             self.mha = MultiHeadAttention(
                 num_heads=num_heads,
-                head_size=head_size,
-                output_size=dmodel,
+                key_dim=head_size,
+                output_shape=dmodel,
                 kernel_regularizer=kernel_regularizer,
                 bias_regularizer=bias_regularizer,
                 name="mhsa",
@@ -158,14 +158,25 @@ class MHSAModule(tf.keras.layers.Layer):
         self,
         inputs,
         relative_position_encoding=None,
+        content_attention_bias=None,
+        positional_attention_bias=None,
         training=False,
         attention_mask=None,
     ):
         outputs = self.ln(inputs, training=training)
         if self.mha_type == "relmha":
-            outputs = self.mha([outputs, outputs, outputs, relative_position_encoding], training=training, attention_mask=attention_mask)
+            outputs = self.mha(
+                query=outputs,
+                key=outputs,
+                value=outputs,
+                relative_position_encoding=relative_position_encoding,
+                content_attention_bias=content_attention_bias,
+                positional_attention_bias=positional_attention_bias,
+                training=training,
+                attention_mask=attention_mask,
+            )
         else:
-            outputs = self.mha([outputs, outputs, outputs], training=training, attention_mask=attention_mask)
+            outputs = self.mha(query=outputs, key=outputs, value=outputs, training=training, attention_mask=attention_mask)
         outputs = self.do(outputs, training=training)
         outputs = self.res_add([inputs, outputs])
         return outputs
@@ -327,6 +338,8 @@ class ConformerBlock(tf.keras.layers.Layer):
         self,
         inputs,
         relative_position_encoding=None,
+        content_attention_bias=None,
+        positional_attention_bias=None,
         training=False,
         attention_mask=None,
     ):
@@ -334,6 +347,8 @@ class ConformerBlock(tf.keras.layers.Layer):
         outputs = self.mhsam(
             outputs,
             relative_position_encoding=relative_position_encoding,
+            content_attention_bias=content_attention_bias,
+            positional_attention_bias=positional_attention_bias,
             training=training,
             attention_mask=attention_mask,
         )
@@ -364,6 +379,8 @@ class ConformerEncoder(tf.keras.layers.Layer):
         **kwargs,
     ):
         super().__init__(name=name, **kwargs)
+        self._kernel_regularizer = kernel_regularizer
+        self._bias_regularizer = bias_regularizer
 
         subsampling_name = subsampling.pop("type", "conv2d")
         if subsampling_name == "vgg":
@@ -395,7 +412,10 @@ class ConformerEncoder(tf.keras.layers.Layer):
             bias_regularizer=bias_regularizer,
         )
         self.do = tf.keras.layers.Dropout(dropout, name="dropout")
+
         self._mha_type = mha_type
+        self._num_heads = num_heads
+        self._head_size = head_size
         self._use_attention_mask = use_attention_mask
 
         self.conformer_blocks = []
@@ -416,6 +436,28 @@ class ConformerEncoder(tf.keras.layers.Layer):
             )
             self.conformer_blocks.append(conformer_block)
 
+    def build(self, input_shape):
+        if self._mha_type == "relmha":
+            self.content_attention_bias = self.add_weight(  # pylint: disable=attribute-defined-outside-init
+                name="content_attention_bias",
+                shape=[self._num_heads, self._head_size],
+                dtype=self.dtype,
+                trainable=True,
+                initializer="random_normal",
+                regularizer=self._bias_regularizer,
+            )
+            self.positional_attention_bias = self.add_weight(  # pylint: disable=attribute-defined-outside-init
+                name="positional_attention_bias",
+                shape=[self._num_heads, self._head_size],
+                dtype=self.dtype,
+                trainable=True,
+                initializer="random_normal",
+                regularizer=self._bias_regularizer,
+            )
+        else:
+            self.content_attention_bias, self.positional_attention_bias = None, None  # pylint: disable=attribute-defined-outside-init
+        super().build(input_shape)
+
     def call(self, inputs, training=False):
         outputs, inputs_length = inputs
         outputs = self.conv_subsampling(outputs, training=training)
@@ -434,6 +476,8 @@ class ConformerEncoder(tf.keras.layers.Layer):
             outputs = cblock(
                 outputs,
                 relative_position_encoding=relative_position_encoding,
+                content_attention_bias=self.content_attention_bias,
+                positional_attention_bias=self.positional_attention_bias,
                 training=training,
                 attention_mask=attention_mask,
             )

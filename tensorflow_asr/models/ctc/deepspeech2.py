@@ -229,7 +229,7 @@ class DeepSpeech2Encoder(tf.keras.Model):
 class DeepSpeech2Decoder(tf.keras.layers.Layer):
     def __init__(self, vocab_size: int, **kwargs):
         super().__init__(**kwargs)
-        self.vocab = tf.keras.layers.Dense(vocab_size, name="vocab")
+        self.vocab = tf.keras.layers.Dense(vocab_size, name="logits")
 
     def call(self, inputs, training=False):
         logits, logits_length = inputs
