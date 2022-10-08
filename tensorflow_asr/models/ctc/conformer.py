@@ -43,7 +43,6 @@ class ConformerDecoder(tf.keras.layers.Layer):
 class Conformer(CtcModel):
     def __init__(
         self,
-        blank: int,
         vocab_size: int,
         encoder_subsampling: dict,
         encoder_dmodel: int = 144,
