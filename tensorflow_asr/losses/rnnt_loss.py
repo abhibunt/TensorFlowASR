@@ -150,9 +150,7 @@ def backward_dp(
         beta_t = tf.concat([x[:, :-1] + truth_probs, LOG_0 * tf.ones(shape=[batch_size, 1])], axis=1)
 
         beta_next = reduce_logsumexp(tf.stack([beta_b, beta_t], axis=0), axis=0)
-        masked_beta_next = nan_to_zero(beta_next * tf.expand_dims(mask_s, axis=1)) + nan_to_zero(
-            x * tf.expand_dims((1.0 - mask_s), axis=1)
-        )
+        masked_beta_next = nan_to_zero(beta_next * tf.expand_dims(mask_s, axis=1)) + nan_to_zero(x * tf.expand_dims((1.0 - mask_s), axis=1))
         return tf.reshape(masked_beta_next, shape=tf.shape(x))
 
     # Initial beta for batches.
@@ -235,8 +233,7 @@ def compute_rnnt_loss_and_grad_helper(logits, labels, label_length, logit_length
     # Compute gradients of loss w.r.t. blank log-probabilities.
     grads_blank = (
         -tf.exp(
-            (alpha[:, :-1, :] + beta[:, 1:, :] - tf.reshape(final_state_probs, shape=[batch_size, 1, 1]) + blank_probs[:, :-1, :])
-            * grad_blank_mask
+            (alpha[:, :-1, :] + beta[:, 1:, :] - tf.reshape(final_state_probs, shape=[batch_size, 1, 1]) + blank_probs[:, :-1, :]) * grad_blank_mask
         )
         * grad_blank_mask
     )
@@ -256,10 +253,7 @@ def compute_rnnt_loss_and_grad_helper(logits, labels, label_length, logit_length
 
     # Compute gradients of loss w.r.t. truth log-probabilities.
     grads_truth = (
-        -tf.exp(
-            (alpha[:, :, :-1] + beta[:, :, 1:] - tf.reshape(final_state_probs, shape=[batch_size, 1, 1]) + truth_probs)
-            * grad_truth_mask
-        )
+        -tf.exp((alpha[:, :, :-1] + beta[:, :, 1:] - tf.reshape(final_state_probs, shape=[batch_size, 1, 1]) + truth_probs) * grad_truth_mask)
         * grad_truth_mask
     )
 
@@ -341,7 +335,7 @@ def rnnt_loss(
             result = compute_rnnt_loss_and_grad_helper(**kwargs)
 
             def grad(grad_loss):
-                grads = [tf.reshape(grad_loss, [-1, 1, 1, 1]) * result[1]]
+                grads = [tf.reshape(grad_loss, [1, -1, 1, 1]) * result[1]]
                 grads += [None] * (len(args) - len(grads))
                 return grads
 
