@@ -24,7 +24,7 @@ from tensorflow_asr.utils import shape_util
 
 
 def _rel_shift(x):
-    x = tf.transpose(x, [3, 2, 0, 1])  # BNRT -> TRBN
+    x = tf.transpose(x, perm=[3, 2, 0, 1])  # BNRT -> TRBN
     x_shape = tf.shape(x)
 
     x = tf.pad(x, [[0, 0], [1, 0], [0, 0], [0, 0]])  # shift on position time dimension
@@ -32,7 +32,7 @@ def _rel_shift(x):
     x = tf.slice(x, [1, 0, 0, 0], [-1, -1, -1, -1])
     x = tf.reshape(x, x_shape)
 
-    x = tf.transpose(x, [3, 2, 0, 1])  # TRBN -> BNRT
+    x = tf.transpose(x, perm=[2, 3, 1, 0])  # TRBN -> BNRT
     return x
 
 
