@@ -53,9 +53,6 @@ config_dict = {
         "encoder_fc_factor": 0.5,
         "encoder_dropout": 0.1,
         "encoder_padding": "same",
-        "decoder_rnn_units": 320,
-        "decoder_rnn_implementation": 2,
-        "decoder_rnn_unroll": False,
     },
 }
 

@@ -23,25 +23,12 @@ class ConformerDecoder(Layer):
     def __init__(
         self,
         vocab_size: int,
-        rnn_units: int = 512,
-        rnn_implementation: int = 2,
-        rnn_unroll: bool = False,
         kernel_regularizer=L2,
         bias_regularizer=L2,
         **kwargs,
     ):
         super().__init__(**kwargs)
         self._vocab_size = vocab_size
-        self.lstm = tf.keras.layers.LSTM(
-            units=rnn_units,
-            kernel_regularizer=kernel_regularizer,
-            bias_regularizer=bias_regularizer,
-            name="lstm",
-            return_sequences=True,
-            return_state=False,
-            implementation=rnn_implementation,
-            unroll=rnn_unroll,
-        )
         self.vocab = tf.keras.layers.Dense(
             vocab_size,
             kernel_regularizer=kernel_regularizer,
@@ -51,9 +38,6 @@ class ConformerDecoder(Layer):
 
     def call(self, inputs, training=False):
         logits, logits_length = inputs
-        maxlen = tf.shape(logits)[1]
-        mask = tf.sequence_mask(logits_length, maxlen=maxlen)
-        logits = self.lstm(logits, training=training, mask=mask)
         logits = self.vocab(logits, training=training)
         return logits, logits_length
 
@@ -80,9 +64,6 @@ class Conformer(CtcModel):
         encoder_fc_factor: float = 0.5,
         encoder_dropout: float = 0,
         encoder_trainable: bool = True,
-        decoder_rnn_units: int = 512,
-        decoder_rnn_implementation: int = 2,
-        decoder_rnn_unroll: bool = False,
         kernel_regularizer=L2,
         bias_regularizer=L2,
         name: str = "conformer",
@@ -109,9 +90,6 @@ class Conformer(CtcModel):
             ),
             decoder=ConformerDecoder(
                 vocab_size=vocab_size,
-                rnn_units=decoder_rnn_units,
-                rnn_implementation=decoder_rnn_implementation,
-                rnn_unroll=decoder_rnn_unroll,
                 kernel_regularizer=kernel_regularizer,
                 bias_regularizer=bias_regularizer,
                 name="decoder",
