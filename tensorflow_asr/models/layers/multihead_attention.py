@@ -24,15 +24,15 @@ from tensorflow_asr.utils import shape_util
 
 
 def _rel_shift(x):
-    x = tf.transpose(x, [2, 3, 0, 1])  # BHTS -> TSBH
+    x = tf.transpose(x, [3, 2, 0, 1])  # BNRT -> TRBN
     x_shape = tf.shape(x)
 
-    x = tf.pad(x, [[0, 0], [1, 0], [0, 0], [0, 0]])
+    x = tf.pad(x, [[0, 0], [1, 0], [0, 0], [0, 0]])  # shift on position time dimension
     x = tf.reshape(x, [x_shape[1] + 1, x_shape[0], x_shape[2], x_shape[3]])
     x = tf.slice(x, [1, 0, 0, 0], [-1, -1, -1, -1])
     x = tf.reshape(x, x_shape)
 
-    x = tf.transpose(x, [2, 3, 0, 1])  # TSBH -> BHTS
+    x = tf.transpose(x, [3, 2, 0, 1])  # TRBN -> BNRT
     return x
 
 
@@ -192,8 +192,8 @@ class MultiHeadRelativeAttention(MultiHeadAttention):
           attention_output: Multi-headed output of attention computation of shape
             `[B, S, N, key_dim]`.
         """
-        content_attention = tf.einsum(self._dot_product_equation, key, query + content_attention_bias)
-        positional_attention = tf.einsum(self._dot_product_equation, position, query + positional_attention_bias)
+        content_attention = tf.einsum(self._dot_product_equation, key, query + content_attention_bias)  # BKNH,BTNH->BNKT
+        positional_attention = tf.einsum(self._dot_product_equation, position, query + positional_attention_bias)  # BRNH,BTNH->BNRT
         positional_attention = _rel_shift(positional_attention)
 
         if segment_matrix is not None:
@@ -214,7 +214,7 @@ class MultiHeadRelativeAttention(MultiHeadAttention):
 
         attention_output = self._dropout_layer(attention_scores, training=training)
 
-        attention_output = tf.einsum(self._combine_equation, attention_output, value)
+        attention_output = tf.einsum(self._combine_equation, attention_output, value)  # BNST,BVNH->BSNH
         return attention_output
 
     def call(
