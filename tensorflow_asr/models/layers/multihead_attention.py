@@ -24,7 +24,7 @@ from tensorflow_asr.utils import shape_util
 
 
 def _rel_shift(x):
-    x = tf.transpose(x, perm=[3, 2, 0, 1])  # BNRT -> TRBN
+    x = tf.transpose(x, perm=[2, 3, 0, 1])  # BNTR -> TRBN
     x_shape = tf.shape(x)
 
     x = tf.pad(x, [[0, 0], [1, 0], [0, 0], [0, 0]])  # shift on position time dimension
@@ -32,7 +32,7 @@ def _rel_shift(x):
     x = tf.slice(x, [1, 0, 0, 0], [-1, -1, -1, -1])
     x = tf.reshape(x, x_shape)
 
-    x = tf.transpose(x, perm=[2, 3, 1, 0])  # TRBN -> BNRT
+    x = tf.transpose(x, perm=[2, 3, 0, 1])  # TRBN -> BNTR
     return x
 
 
@@ -63,15 +63,15 @@ def compute_self_attention_mask(inputs, inputs_length, use_causal_mask=False):
     """
     Returns
     ```
-    [[[True, True, True, False],
-      [True, True, True, False],
-      [True, True, True, False],
+    [[[True, True, True, True],
+      [True, True, True, True],
+      [True, True, True, True],
       [False, False, False, False]]]
     ```
     """
     _, max_length, _ = shape_util.shape_list(inputs)
     mask = tf.sequence_mask(inputs_length, maxlen=max_length)
-    attention_mask = mask[:, :, None] & mask[:, None, :]
+    attention_mask = tf.tile(mask[:, :, None], [1, 1, max_length])  # BTS
     if use_causal_mask:
         attention_mask = attention_mask & compute_causal_mask(attention_mask)
     return attention_mask
@@ -192,8 +192,8 @@ class MultiHeadRelativeAttention(MultiHeadAttention):
           attention_output: Multi-headed output of attention computation of shape
             `[B, S, N, key_dim]`.
         """
-        content_attention = tf.einsum(self._dot_product_equation, key, query + content_attention_bias)  # BKNH,BTNH->BNKT
-        positional_attention = tf.einsum(self._dot_product_equation, position, query + positional_attention_bias)  # BRNH,BTNH->BNRT
+        content_attention = tf.einsum(self._dot_product_equation, key, query + content_attention_bias)  # BSNH,BTNH->BNTS
+        positional_attention = tf.einsum(self._dot_product_equation, position, query + positional_attention_bias)  # BRNH,BTNH->BNTR
         positional_attention = _rel_shift(positional_attention)
 
         if segment_matrix is not None:
@@ -214,7 +214,7 @@ class MultiHeadRelativeAttention(MultiHeadAttention):
 
         attention_output = self._dropout_layer(attention_scores, training=training)
 
-        attention_output = tf.einsum(self._combine_equation, attention_output, value)  # BNST,BVNH->BSNH
+        attention_output = tf.einsum(self._combine_equation, attention_output, value)  # BNTS,BVNH->BTNH
         return attention_output
 
     def call(
