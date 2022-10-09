@@ -60,7 +60,7 @@ config = Config(config_dict)
 
 speech_featurizer, text_featurizer = featurizer_helpers.prepare_featurizers(config=config)
 
-global_batch_size = 32
+global_batch_size = 2
 speech_featurizer.update_length(1200)
 text_featurizer.update_length(700)
 
@@ -71,6 +71,12 @@ conformer = Conformer(
 conformer.make(speech_featurizer.shape, batch_size=global_batch_size)
 conformer.add_featurizers(speech_featurizer, text_featurizer)
 conformer.summary()
+# %%
+import tensorflow as tf
+
+from tensorflow_asr.models.layers.multihead_attention import compute_self_attention_mask
+
+compute_self_attention_mask(tf.zeros([4, 10, 3]), [8, 7, 9, 10])
 # %%
 conformer.save_weights("./conformer.h5")
 conformer.load_weights("./conformer.h5")
