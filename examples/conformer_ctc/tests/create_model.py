@@ -47,7 +47,7 @@ config_dict = {
         "encoder_num_blocks": 16,
         "encoder_head_size": 36,
         "encoder_num_heads": 4,
-        "encoder_mha_type": "relmha",
+        "encoder_mha_type": "mha",
         "encoder_use_attention_mask": True,
         "encoder_kernel_size": 32,
         "encoder_fc_factor": 0.5,

@@ -78,41 +78,46 @@ def compute_self_attention_mask(inputs, inputs_length, use_causal_mask=False):
 
 
 class MultiHeadRelativeAttention(MultiHeadAttention):
+    """A multi-head attention layer with relative attention + position encoding.
+    This layer shares the same input/output projections as the common
+    `tf.keras.layers.MultiHeadAttention` layer.
+    When it calculates attention logits, position encoding is projected to form
+    relative keys. The logits are composed by shifted relative logits and content
+    logits.
+    **Note: This layer is currently experimental.
+    Attributes:
+      kernel_initializer: The kernel initializer. Defaults to variance_scaling.
+    Call args:
+      query: Query `Tensor` of shape `[B, T, dim]`.
+      value: Value `Tensor` of shape `[B, S, dim]`.
+      content_attention_bias: Bias `Tensor` for content based attention of shape
+        `[num_heads, dim]`.
+      positional_attention_bias: Bias `Tensor` for position based attention of
+        shape `[num_heads, dim]`.
+      key: Optional key `Tensor` of shape `[B, S, dim]`. If not given, will use
+        `value` for both `key` and `value`, which is the most common case.
+      relative_position_encoding: Relative positional encoding `Tensor` of shape
+        `[B, L, dim]`.
+      segment_matrix: Optional `Tensor` representing segmentation IDs used in
+        XLNet of shape `[B, S, S + M]`.
+      segment_encoding: Optional `Tensor` representing the segmentation encoding
+        as used in XLNet of shape `[2, num_heads, dim]`.
+      segment_attention_bias: Optional trainable bias parameter added to the query
+        had when calculating the segment-based attention score used in XLNet of
+        shape `[num_heads, dim]`.
+      state: Optional `Tensor` of shape `[B, M, E]` where M is the length of the
+        state or memory. If passed, this is also attended over as in Transformer
+        XL.
+      attention_mask: A boolean mask of shape `[B, T, S]` that prevents attention
+        to certain positions.
+    """
+
     def __init__(
         self,
-        num_heads,
-        key_dim,
-        value_dim=None,
-        dropout=0.0,
-        use_bias=True,
-        output_shape=None,
-        attention_axes=None,
         kernel_initializer="variance_scaling",
-        bias_initializer="zeros",
-        kernel_regularizer=None,
-        bias_regularizer=None,
-        activity_regularizer=None,
-        kernel_constraint=None,
-        bias_constraint=None,
-        **kwargs
+        **kwargs,
     ):
-        super().__init__(
-            num_heads=num_heads,
-            key_dim=key_dim,
-            value_dim=value_dim,
-            dropout=dropout,
-            use_bias=use_bias,
-            output_shape=output_shape,
-            attention_axes=attention_axes,
-            kernel_initializer=kernel_initializer,
-            bias_initializer=bias_initializer,
-            kernel_regularizer=kernel_regularizer,
-            bias_regularizer=bias_regularizer,
-            activity_regularizer=activity_regularizer,
-            kernel_constraint=kernel_constraint,
-            bias_constraint=bias_constraint,
-            **kwargs,
-        )
+        super().__init__(kernel_initializer=kernel_initializer, **kwargs)
 
     def _build_from_signature(self, query, value, key=None):
         super()._build_from_signature(query=query, value=value, key=key)
@@ -155,20 +160,62 @@ class MultiHeadRelativeAttention(MultiHeadAttention):
         position,
         content_attention_bias,
         positional_attention_bias,
+        segment_matrix=None,
+        segment_encoding=None,
+        segment_attention_bias=None,
         attention_mask=None,
         training=None,
     ):
+        """Computes the attention.
+        This function defines the computation inside `call` with projected
+        multihead Q, K, V, R inputs.
+        Args:
+          query: Projected query `Tensor` of shape `[B, T, N, key_dim]`.
+          key: Projected key `Tensor` of shape `[B, S + M, N, key_dim]`.
+          value: Projected value `Tensor` of shape `[B, S + M, N, key_dim]`.
+          position: Projected position `Tensor` of shape `[B, L, N, key_dim]`.
+          content_attention_bias: Trainable bias parameter added to the query head
+            when calculating the content-based attention score.
+          positional_attention_bias: Trainable bias parameter added to the query
+            head when calculating the position-based attention score.
+          segment_matrix: Optional `Tensor` representing segmentation IDs used in
+            XLNet.
+          segment_encoding: Optional trainable `Tensor` representing the
+            segmentation encoding as used in XLNet.
+          segment_attention_bias: Optional trainable bias parameter added to the
+            query had when calculating the segment-based attention score used in
+            XLNet.
+          attention_mask: (default None) Optional mask that is added to attention
+            logits. If state is not None, the mask source sequence dimension should
+            extend M.
+        Returns:
+          attention_output: Multi-headed output of attention computation of shape
+            `[B, S, N, key_dim]`.
+        """
         content_attention = tf.einsum(self._dot_product_equation, key, query + content_attention_bias)
         positional_attention = tf.einsum(self._dot_product_equation, position, query + positional_attention_bias)
         positional_attention = _rel_shift(positional_attention)
-        attention_sum = content_attention + positional_attention
+
+        if segment_matrix is not None:
+            segment_attention = tf.einsum("bind,snd->bnis", query + segment_attention_bias, segment_encoding)
+            target_shape = tf.shape(positional_attention)
+            segment_attention = tf.where(
+                tf.broadcast_to(tf.expand_dims(segment_matrix, 1), target_shape),
+                tf.broadcast_to(segment_attention[:, :, :, 1:], target_shape),
+                tf.broadcast_to(segment_attention[:, :, :, :1], target_shape),
+            )
+            attention_sum = content_attention + positional_attention + segment_attention
+        else:
+            attention_sum = content_attention + positional_attention
 
         attention_scores = tf.multiply(attention_sum, 1.0 / math.sqrt(float(self._key_dim)))
-        attention_scores = self._masked_softmax(attention_scores, attention_mask)
-        attention_output = self._dropout_layer(attention_scores, training=training)
-        attention_output = tf.einsum(self._combine_equation, attention_output, value)  # BTNH
 
-        return attention_output, attention_scores
+        attention_scores = self._masked_softmax(attention_scores, attention_mask)
+
+        attention_output = self._dropout_layer(attention_scores, training=training)
+
+        attention_output = tf.einsum(self._combine_equation, attention_output, value)
+        return attention_output
 
     def call(
         self,
@@ -178,11 +225,51 @@ class MultiHeadRelativeAttention(MultiHeadAttention):
         content_attention_bias,
         positional_attention_bias,
         key=None,
+        segment_matrix=None,
+        segment_encoding=None,
+        segment_attention_bias=None,
         state=None,
         attention_mask=None,
-        return_attention_scores=False,
         training=None,
     ):
+        """Compute multi-head relative attention over inputs.
+        Size glossary:
+          * Number of heads (H): the number of attention heads.
+          * Value size (V): the size of each value embedding per head.
+          * Key size (K): the size of each key embedding per head. Equally, the size
+            of each query embedding per head. Typically K <= V.
+          * Batch dimensions (B).
+          * Query (target) attention axes shape (T).
+          * Value (source) attention axes shape (S), the rank must match the target.
+          * Encoding length (L): The relative positional encoding length.
+        Args:
+          query: attention input.
+          value: attention input.
+          content_attention_bias: A trainable bias parameter added to the query head
+            when calculating the content-based attention score.
+          positional_attention_bias: A trainable bias parameter added to the query
+            head when calculating the position-based attention score.
+          key: attention input.
+          relative_position_encoding: relative positional encoding for key and
+            value.
+          segment_matrix: Optional `Tensor` representing segmentation IDs used in
+            XLNet.
+          segment_encoding: Optional `Tensor` representing the segmentation encoding
+            as used in XLNet.
+          segment_attention_bias: Optional trainable bias parameter added to the
+            query had when calculating the segment-based attention score used in
+            XLNet.
+          state: (default None) optional state. If passed, this is also attended
+            over as in TransformerXL.
+          attention_mask: (default None) Optional mask that is added to attention
+            logits. If state is not None, the mask source sequence dimension should
+            extend M.
+        Returns:
+          attention_output: The result of the computation, of shape [B, T, E],
+            where `T` is for target sequence shapes and `E` is the query input last
+            dimension if `output_shape` is `None`. Otherwise, the multi-head outputs
+            are projected to the shape specified by `output_shape`.
+        """
         if not self._built_from_signature:
             self._build_from_signature(query, value, key=key)
         if key is None:
@@ -191,28 +278,33 @@ class MultiHeadRelativeAttention(MultiHeadAttention):
             value = tf.concat([state, value], 1)
             key = tf.concat([state, key], 1)
 
-        # `query` = BTNH
+        # `query` = [B, T, N ,H]
         query = self._query_dense(query)
-        # `key` = BSNH
+
+        # `key` = [B, S + M, N, H]
         key = self._key_dense(key)
-        # `value` = BSNH
+
+        # `value` = [B, S + M, N, H]
         value = self._value_dense(value)
-        # `position` = BLNH
+
+        # `position` = [B, L, N, H]
         position = self._encoding_dense(relative_position_encoding)
-        # `attention_output` = BTNH
-        attention_output, attention_scores = self._compute_attention(
+
+        attention_output = self._compute_attention(
             query=query,
             key=key,
             value=value,
             position=position,
             content_attention_bias=content_attention_bias,
             positional_attention_bias=positional_attention_bias,
+            segment_matrix=segment_matrix,
+            segment_encoding=segment_encoding,
+            segment_attention_bias=segment_attention_bias,
             attention_mask=attention_mask,
             training=training,
         )
-        # `attention_output` = [B, T, output_shape]
+
+        # `attention_output` = [B, S, N, H]
         attention_output = self._output_dense(attention_output)
 
-        if return_attention_scores:
-            return attention_output, attention_scores
         return attention_output
