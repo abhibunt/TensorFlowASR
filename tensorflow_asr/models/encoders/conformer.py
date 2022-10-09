@@ -444,7 +444,7 @@ class ConformerEncoder(Layer):
             self.content_attention_bias = self.add_weight(  # pylint: disable=attribute-defined-outside-init
                 name="content_attention_bias",
                 shape=[self._num_heads, self._head_size],
-                dtype=self.dtype,
+                dtype=tf.float32,
                 trainable=True,
                 initializer="random_normal",
                 regularizer=self._bias_regularizer,
@@ -452,7 +452,7 @@ class ConformerEncoder(Layer):
             self.positional_attention_bias = self.add_weight(  # pylint: disable=attribute-defined-outside-init
                 name="positional_attention_bias",
                 shape=[self._num_heads, self._head_size],
-                dtype=self.dtype,
+                dtype=tf.float32,
                 trainable=True,
                 initializer="random_normal",
                 regularizer=self._bias_regularizer,
