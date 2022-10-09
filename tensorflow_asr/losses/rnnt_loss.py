@@ -335,7 +335,7 @@ def rnnt_loss(
             result = compute_rnnt_loss_and_grad_helper(**kwargs)
 
             def grad(grad_loss):
-                grads = [tf.reshape(grad_loss, [1, -1, 1, 1]) * result[1]]
+                grads = [tf.reshape(grad_loss, [-1, 1, 1, 1]) * result[1]]
                 grads += [None] * (len(args) - len(grads))
                 return grads
 
