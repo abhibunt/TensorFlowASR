@@ -100,13 +100,14 @@ class RnnBlock(tf.keras.layers.Layer):
         rnn_type: str = "lstm",
         units: int = 1024,
         bidirectional: bool = True,
+        unroll: bool = False,
         rowconv: int = 0,
         dropout: float = 0.1,
         **kwargs,
     ):
         super().__init__(**kwargs)
         RNN = layer_util.get_rnn(rnn_type)
-        self.rnn = RNN(units, dropout=dropout, return_sequences=True, use_bias=True, name=rnn_type)
+        self.rnn = RNN(units, dropout=dropout, unroll=unroll, return_sequences=True, use_bias=True, name=rnn_type)
         if bidirectional:
             self.rnn = tf.keras.layers.Bidirectional(self.rnn, name=f"b{rnn_type}")
         self.bn = SequenceBatchNorm(time_major=False, name="bn")
@@ -129,13 +130,14 @@ class RnnModule(tf.keras.layers.Layer):
         rnn_type: str = "lstm",
         units: int = 1024,
         bidirectional: bool = True,
+        unroll: bool = False,
         rowconv: int = 0,
         dropout: float = 0.1,
         **kwargs,
     ):
         super().__init__(**kwargs)
         self.blocks = [
-            RnnBlock(rnn_type=rnn_type, units=units, bidirectional=bidirectional, rowconv=rowconv, dropout=dropout, name=f"block_{i}")
+            RnnBlock(rnn_type=rnn_type, units=units, bidirectional=bidirectional, unroll=unroll, rowconv=rowconv, dropout=dropout, name=f"block_{i}")
             for i in range(nlayers)
         ]
 
@@ -197,6 +199,7 @@ class DeepSpeech2Encoder(Layer):
         rnn_type: str = "lstm",
         rnn_units: int = 1024,
         rnn_bidirectional: bool = True,
+        rnn_unroll: bool = False,
         rnn_rowconv: int = 0,
         rnn_dropout: float = 0.1,
         fc_nlayers: int = 0,
@@ -213,6 +216,7 @@ class DeepSpeech2Encoder(Layer):
             rnn_type=rnn_type,
             units=rnn_units,
             bidirectional=rnn_bidirectional,
+            unroll=rnn_unroll,
             rowconv=rnn_rowconv,
             dropout=rnn_dropout,
             name="rnn_module",
@@ -263,6 +267,7 @@ class DeepSpeech2(CtcModel):
         rnn_type: str = "lstm",
         rnn_units: int = 1024,
         rnn_bidirectional: bool = True,
+        rnn_unroll: bool = False,
         rnn_rowconv: int = 0,
         rnn_dropout: float = 0.1,
         fc_nlayers: int = 0,
@@ -282,6 +287,7 @@ class DeepSpeech2(CtcModel):
                 rnn_type=rnn_type,
                 rnn_units=rnn_units,
                 rnn_bidirectional=rnn_bidirectional,
+                rnn_unroll=rnn_unroll,
                 rnn_rowconv=rnn_rowconv,
                 rnn_dropout=rnn_dropout,
                 fc_nlayers=fc_nlayers,

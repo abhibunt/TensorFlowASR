@@ -61,6 +61,7 @@ model_config:
   rnn_type: lstm
   rnn_units: 512
   rnn_bidirectional: True
+  rnn_unroll: False
   rnn_rowconv: 0
   rnn_dropout: 0.1
   fc_nlayers: 0
