@@ -221,8 +221,11 @@ class DeepSpeech2Encoder(Layer):
             dropout=rnn_dropout,
             name="rnn_module",
         )
+        self._rnn_units = rnn_units
         self.fc_module = FcModule(nlayers=fc_nlayers, units=fc_units, dropout=fc_dropout, name="fc_module")
+        self._fc_nlayers = fc_nlayers
         self._fc_units = fc_units
+        self.time_reduction_factor = self.encoder.reduction_factor
 
     def call(self, inputs, training=False):
         outputs, inputs_length = inputs
@@ -233,7 +236,10 @@ class DeepSpeech2Encoder(Layer):
 
     def compute_output_shape(self, input_shape):
         inputs_shape, inputs_length_shape = input_shape
-        outputs_shape = inputs_shape[:-1] + (self._fc_units,)
+        outputs_time = None if inputs_shape[1] is None else math_util.legacy_get_reduced_length(inputs_shape[1], self.time_reduction_factor)
+        outputs_batch = inputs_shape[0]
+        outputs_size = self._fc_units if self._fc_nlayers > 0 else self._rnn_units
+        outputs_shape = [outputs_batch, outputs_time, outputs_size]
         return tuple(outputs_shape), tuple(inputs_length_shape)
 
 
