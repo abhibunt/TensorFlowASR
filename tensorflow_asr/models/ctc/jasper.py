@@ -15,6 +15,7 @@
 import tensorflow as tf
 
 from tensorflow_asr.models.ctc.base_ctc import CtcModel
+from tensorflow_asr.models.layers.base_layer import Layer
 from tensorflow_asr.utils import math_util
 
 
@@ -188,7 +189,7 @@ class JasperBlock(tf.keras.layers.Layer):
         return outputs, residuals
 
 
-class JasperEncoder(tf.keras.layers.Layer):
+class JasperEncoder(Layer):
     def __init__(
         self,
         dense: bool = False,
@@ -268,6 +269,9 @@ class JasperEncoder(tf.keras.layers.Layer):
             bias_regularizer=bias_regularizer,
             name="third_block",
         )
+        self.time_reduction_factor = self.first_additional_block.reduction_factor
+        self.time_reduction_factor *= self.second_additional_block.reduction_factor
+        self.time_reduction_factor *= self.third_additional_block.reduction_factor
 
     def call(self, inputs, training=False):
         outputs, inputs_length = inputs
@@ -282,8 +286,16 @@ class JasperEncoder(tf.keras.layers.Layer):
         outputs = self.third_additional_block(outputs, training=training)
         return outputs, inputs_length
 
+    def compute_output_shape(self, input_shape):
+        inputs_shape, inputs_length_shape = input_shape
+        outputs_time = None if inputs_shape[1] is None else math_util.legacy_get_reduced_length(inputs_shape[1], self.time_reduction_factor)
+        outputs_batch = inputs_shape[0]
+        outputs_size = self.third_additional_block.conv1d.filters
+        outputs_shape = [outputs_batch, outputs_time, outputs_size]
+        return tuple(outputs_shape), tuple(inputs_length_shape)
 
-class JasperDecoder(tf.keras.layers.Layer):
+
+class JasperDecoder(Layer):
     def __init__(
         self,
         vocab_size: int,
@@ -373,6 +385,4 @@ class Jasper(CtcModel):
             name=name,
             **kwargs,
         )
-        self.time_reduction_factor = self.encoder.first_additional_block.reduction_factor
-        self.time_reduction_factor *= self.encoder.second_additional_block.reduction_factor
-        self.time_reduction_factor *= self.encoder.third_additional_block.reduction_factor
+        self.time_reduction_factor = self.encoder.time_reduction_factor

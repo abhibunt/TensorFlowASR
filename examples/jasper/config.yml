@@ -18,12 +18,6 @@ speech_config:
   stride_ms: 10
   num_feature_bins: 80
   feature_type: log_mel_spectrogram
-  preemphasis: 0.97
-  normalize_signal: False
-  normalize_feature: False
-  normalize_per_frame: False
-  center: False
-  top_db: null
 
 decoder_config:
   type: wordpiece
@@ -75,10 +69,11 @@ model_config:
 
 learning_config:
   train_dataset_config:
+    enabled: True
     use_tf: True
     data_paths:
-      - H:/MLDL/Datasets/ASR/Raw/LibriSpeech/train-clean-100/transcripts.tsv
-    tfrecords_dir: null
+      - E:/MLDL/Datasets/ASR/LibriSpeech/train-clean-100/transcripts.tsv
+    tfrecords_dir: E:/MLDL/Datasets/ASR/LibriSpeech/tfrecords/100h
     shuffle: True
     cache: True
     buffer_size: 100
@@ -87,9 +82,10 @@ learning_config:
     metadata: ./vocabularies/librispeech/wordpiece/train_1000_50.metadata.json
 
   eval_dataset_config:
+    enabled: False
     use_tf: True
     data_paths:
-      - H:/MLDL/Datasets/ASR/Raw/LibriSpeech/dev-clean/transcripts.tsv
+      - E:/MLDL/Datasets/ASR/LibriSpeech/dev-clean/transcripts.tsv
     tfrecords_dir: null
     shuffle: False
     cache: True
@@ -99,9 +95,10 @@ learning_config:
     metadata: ./vocabularies/librispeech/wordpiece/train_1000_50.metadata.json
 
   test_dataset_config:
+    enabled: False
     use_tf: True
     data_paths:
-      - H:/MLDL/Datasets/ASR/Raw/LibriSpeech/test-clean/transcripts.tsv
+      - E:/MLDL/Datasets/ASR/LibriSpeech/test-clean/transcripts.tsv
     tfrecords_dir: null
     shuffle: False
     cache: True
