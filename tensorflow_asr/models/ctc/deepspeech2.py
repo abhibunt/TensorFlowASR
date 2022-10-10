@@ -225,7 +225,7 @@ class DeepSpeech2Encoder(Layer):
         self.fc_module = FcModule(nlayers=fc_nlayers, units=fc_units, dropout=fc_dropout, name="fc_module")
         self._fc_nlayers = fc_nlayers
         self._fc_units = fc_units
-        self.time_reduction_factor = self.encoder.reduction_factor
+        self.time_reduction_factor = self.conv_module.reduction_factor
 
     def call(self, inputs, training=False):
         outputs, inputs_length = inputs
