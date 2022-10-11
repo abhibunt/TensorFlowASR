@@ -35,12 +35,11 @@ config_dict = {
     "model_config": {
         "name": "conformer",
         "encoder_subsampling": {
-            "type": "conv2d_blurpool",
+            "type": "conv2d",
             "filters": 144,
             "kernel_size": 3,
             "strides": 2,
-            "conv_padding": "same",
-            "pool_padding": "reflect",
+            "padding": "same",
             "activation": "relu",
         },
         "encoder_dmodel": 144,

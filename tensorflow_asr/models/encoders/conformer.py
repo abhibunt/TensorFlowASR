@@ -189,14 +189,14 @@ class ConvModule(tf.keras.layers.Layer):
       input
       /   \
       |   ln(.)                   # input_dim
-      |   fflayer(.)              # 2 * input_dim
+      |   conv1d(.)              # 2 * input_dim
       |    |
       |   glu(.)                  # input_dim
       |   depthwise_conv_1d(.)
       |   bnorm(.)
       |   swish(.)
       |    |
-      |   fflayer(.)
+      |   conv1d(.)
       |   dropout(.)
       \   /
         +
@@ -222,8 +222,11 @@ class ConvModule(tf.keras.layers.Layer):
             gamma_regularizer=kernel_regularizer,
             beta_regularizer=bias_regularizer,
         )
-        self.pw_conv_1 = tf.keras.layers.Dense(
-            2 * input_dim,
+        self.pw_conv_1 = tf.keras.layers.Conv1D(
+            filters=2 * input_dim,
+            kernel_size=1,
+            strides=1,
+            padding="valid",
             name="pw_conv_1",
             kernel_regularizer=kernel_regularizer,
             bias_regularizer=bias_regularizer,
@@ -244,8 +247,11 @@ class ConvModule(tf.keras.layers.Layer):
             beta_regularizer=bias_regularizer,
         )
         self.swish = tf.keras.layers.Activation(tf.nn.swish, name="swish_activation")
-        self.pw_conv_2 = tf.keras.layers.Dense(
-            input_dim,
+        self.pw_conv_2 = tf.keras.layers.Conv1D(
+            filters=input_dim,
+            kernel_size=1,
+            strides=1,
+            padding="valid",
             name="pw_conv_2",
             kernel_regularizer=kernel_regularizer,
             bias_regularizer=bias_regularizer,
