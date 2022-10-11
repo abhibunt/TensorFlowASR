@@ -18,7 +18,11 @@ import math
 
 import tensorflow as tf
 from keras.layers import EinsumDense, MultiHeadAttention
-from keras.layers.multi_head_attention import _build_proj_equation, _get_output_shape
+
+try:
+    from keras.layers.multi_head_attention import _build_proj_equation, _get_output_shape
+except ImportError:
+    from keras.layers.attention.multi_head_attention import _build_proj_equation, _get_output_shape
 
 from tensorflow_asr.utils import shape_util
 
