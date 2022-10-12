@@ -75,7 +75,7 @@ def compute_self_attention_mask(inputs, inputs_length, use_causal_mask=False):
     """
     _, max_length, _ = shape_util.shape_list(inputs)
     mask = tf.sequence_mask(inputs_length, maxlen=max_length)
-    attention_mask = tf.tile(mask[:, :, None], [1, 1, max_length])  # BTS
+    attention_mask = mask[:, None, :] & mask[:, :, None]
     if use_causal_mask:
         attention_mask = attention_mask & compute_causal_mask(attention_mask)
     return attention_mask
