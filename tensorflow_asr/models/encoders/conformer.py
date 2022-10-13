@@ -22,7 +22,7 @@ from tensorflow_asr.models.layers.multihead_attention import (
     MultiHeadRelativeAttention,
     compute_self_attention_mask,
 )
-from tensorflow_asr.models.layers.positional_encoding import compute_relative_position_encoding
+from tensorflow_asr.models.layers.positional_encoding import compute_sinusoid_position_encoding
 from tensorflow_asr.models.layers.subsampling import (
     Conv1dBlurPoolSubsampling,
     Conv1dSubsampling,
@@ -134,8 +134,8 @@ class MHSAModule(tf.keras.layers.Layer):
         if mha_type == "relmha":
             self.mha = MultiHeadRelativeAttention(
                 num_heads=num_heads,
-                key_dim=head_size,
-                output_shape=dmodel,
+                head_size=head_size,
+                output_size=dmodel,
                 kernel_regularizer=kernel_regularizer,
                 bias_regularizer=bias_regularizer,
                 name="mhsa",
@@ -143,8 +143,8 @@ class MHSAModule(tf.keras.layers.Layer):
         elif mha_type == "mha":
             self.mha = MultiHeadAttention(
                 num_heads=num_heads,
-                key_dim=head_size,
-                output_shape=dmodel,
+                head_size=head_size,
+                output_size=dmodel,
                 kernel_regularizer=kernel_regularizer,
                 bias_regularizer=bias_regularizer,
                 name="mhsa",
@@ -159,25 +159,22 @@ class MHSAModule(tf.keras.layers.Layer):
         self,
         inputs,
         relative_position_encoding=None,
-        content_attention_bias=None,
-        positional_attention_bias=None,
+        pos_bias_u=None,
+        pos_bias_v=None,
         training=False,
         attention_mask=None,
     ):
         outputs = self.ln(inputs, training=training)
         if self.mha_type == "relmha":
             outputs = self.mha(
-                query=outputs,
-                key=outputs,
-                value=outputs,
-                relative_position_encoding=relative_position_encoding,
-                content_attention_bias=content_attention_bias,
-                positional_attention_bias=positional_attention_bias,
+                [outputs, outputs, outputs, relative_position_encoding],
+                pos_bias_u=pos_bias_u,
+                pos_bias_v=pos_bias_v,
                 training=training,
                 attention_mask=attention_mask,
             )
         else:
-            outputs = self.mha(query=outputs, key=outputs, value=outputs, training=training, attention_mask=attention_mask)
+            outputs = self.mha([outputs, outputs, outputs], training=training, attention_mask=attention_mask)
         outputs = self.do(outputs, training=training)
         outputs = self.res_add([inputs, outputs])
         return outputs
@@ -345,8 +342,8 @@ class ConformerBlock(tf.keras.layers.Layer):
         self,
         inputs,
         relative_position_encoding=None,
-        content_attention_bias=None,
-        positional_attention_bias=None,
+        pos_bias_u=None,
+        pos_bias_v=None,
         training=False,
         attention_mask=None,
     ):
@@ -354,8 +351,8 @@ class ConformerBlock(tf.keras.layers.Layer):
         outputs = self.mhsam(
             outputs,
             relative_position_encoding=relative_position_encoding,
-            content_attention_bias=content_attention_bias,
-            positional_attention_bias=positional_attention_bias,
+            pos_bias_u=pos_bias_u,
+            pos_bias_v=pos_bias_v,
             training=training,
             attention_mask=attention_mask,
         )
@@ -447,24 +444,24 @@ class ConformerEncoder(Layer):
 
     def build(self, input_shape):
         if self._mha_type == "relmha":
-            self.content_attention_bias = self.add_weight(  # pylint: disable=attribute-defined-outside-init
+            self.pos_bias_u = self.add_weight(  # pylint: disable=attribute-defined-outside-init
                 name="content_attention_bias",
                 shape=[self._num_heads, self._head_size],
                 dtype=self.dtype,
                 trainable=True,
-                initializer="random_normal",
+                initializer="zeros",
                 regularizer=self._bias_regularizer,
             )
-            self.positional_attention_bias = self.add_weight(  # pylint: disable=attribute-defined-outside-init
+            self.pos_bias_v = self.add_weight(  # pylint: disable=attribute-defined-outside-init
                 name="positional_attention_bias",
                 shape=[self._num_heads, self._head_size],
                 dtype=self.dtype,
                 trainable=True,
-                initializer="random_normal",
+                initializer="zeros",
                 regularizer=self._bias_regularizer,
             )
         else:
-            self.content_attention_bias, self.positional_attention_bias = None, None  # pylint: disable=attribute-defined-outside-init
+            self.pos_bias_u, self.pos_bias_v = None, None  # pylint: disable=attribute-defined-outside-init
         super().build(input_shape)
 
     def call(self, inputs, training=False):
@@ -478,15 +475,16 @@ class ConformerEncoder(Layer):
         else:
             attention_mask = None
         if self._mha_type == "relmha":
-            relative_position_encoding = compute_relative_position_encoding(shape_util.shape_list(outputs), dtype=outputs.dtype)
+            batch_size, max_length, dmodel = shape_util.shape_list(outputs)
+            relative_position_encoding = compute_sinusoid_position_encoding(batch_size, max_length, dmodel, dtype=outputs.dtype)
         else:
             relative_position_encoding = None
         for cblock in self.conformer_blocks:
             outputs = cblock(
                 outputs,
                 relative_position_encoding=relative_position_encoding,
-                content_attention_bias=self.content_attention_bias,
-                positional_attention_bias=self.positional_attention_bias,
+                pos_bias_u=self.pos_bias_u,
+                pos_bias_v=self.pos_bias_v,
                 training=training,
                 attention_mask=attention_mask,
             )
