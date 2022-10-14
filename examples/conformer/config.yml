@@ -47,15 +47,14 @@ decoder_config:
 model_config:
   name: conformer
   encoder_subsampling:
-    type: conv2d_blurpool
+    type: conv2d
     filters: 144
     kernel_size: 3
     strides: 2
-    conv_padding: same
-    pool_padding: reflect
+    padding: same
     activation: relu
   encoder_dmodel: 144
-  encoder_num_blocks: 16
+  encoder_num_blocks: 1
   encoder_head_size: 36 # == dmodel // num_heads
   encoder_num_heads: 4
   encoder_mha_type: relmha
