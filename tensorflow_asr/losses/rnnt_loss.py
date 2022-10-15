@@ -138,8 +138,7 @@ def transition_probs(
              truth_probs with shape batch_size x input_max_len x (target_max_len-1)
     """
     blank_probs = log_probs[:, :, :, 0]
-    # truth_probs = tf.reduce_sum(tf.multiply(log_probs[:, :, :-1, :], one_hot_labels), axis=-1)
-    truth_probs = tf.reduce_sum(tf.multiply(log_probs[:, :, 1:, :], one_hot_labels), axis=-1)
+    truth_probs = tf.reduce_sum(tf.multiply(log_probs[:, :, :-1, :], one_hot_labels), axis=-1)
 
     return blank_probs, truth_probs
 
