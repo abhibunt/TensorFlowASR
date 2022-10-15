@@ -208,7 +208,7 @@ def backward_dp(
 
     # Initial beta for batches.
     initial_beta_mask = tf.one_hot(logit_length - 1, depth=input_max_len + 1)
-    initial_beta = tf.expand_dims(blank_sl, axis=1) * initial_beta_mask + (LOG_0 * (1.0 - initial_beta_mask))
+    initial_beta = tf.expand_dims(blank_sl, axis=1) * initial_beta_mask + nan_to_zero(LOG_0 * (1.0 - initial_beta_mask))
 
     # Mask for scan iterations.
     mask = tf.sequence_mask(
