@@ -201,8 +201,10 @@ def backward_dp(
         beta_b = tf.concat([x[:, 1:] + blank_probs_s, LOG_0 * tf.ones(shape=[batch_size, 1])], axis=1)
         beta_t = tf.concat([x[:, :-1] + truth_probs, LOG_0 * tf.ones(shape=[batch_size, 1])], axis=1)
 
-        beta_next = reduce_logsumexp(tf.stack([beta_b, beta_t], axis=0), axis=0)
-        masked_beta_next = nan_to_zero(beta_next * tf.expand_dims(mask_s, axis=1)) + nan_to_zero(x * tf.expand_dims((1.0 - mask_s), axis=1))
+        # beta_next = reduce_logsumexp(tf.stack([beta_b, beta_t], axis=0), axis=0)
+        beta_next = tf.math.reduce_logsumexp(tf.stack([beta_b, beta_t], axis=0), axis=0)
+        # masked_beta_next = nan_to_zero(beta_next * tf.expand_dims(mask_s, axis=1)) + nan_to_zero(x * tf.expand_dims((1.0 - mask_s), axis=1))
+        masked_beta_next = (beta_next * tf.expand_dims(mask_s, axis=1)) + (x * tf.expand_dims((1.0 - mask_s), axis=1))
         return tf.reshape(masked_beta_next, shape=tf.shape(x))
 
     # Initial beta for batches.
