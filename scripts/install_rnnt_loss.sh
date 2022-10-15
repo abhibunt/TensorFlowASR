@@ -3,6 +3,10 @@
 mkdir -p externals
 cd ./externals || exit
 
+if [ ! -d tensorflow ]; then
+  git clone https://github.com/tensorflow/tensorflow.git
+fi
+
 # Install rnnt_loss
 if [ ! -d warp-transducer ]; then
     git clone https://github.com/usimarit/warp-transducer.git
@@ -28,8 +32,6 @@ fi
 make
 
 cd ../tensorflow_binding || exit
-
-git clone https://github.com/tensorflow/tensorflow.git .
 
 if [ "$CUDA_HOME" ]; then
   CUDA="$CUDA_HOME" python setup.py install
