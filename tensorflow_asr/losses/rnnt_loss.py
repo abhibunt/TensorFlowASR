@@ -120,8 +120,8 @@ def extract_diagonals(
     reverse_log_probs = tf.reverse(log_probs, axis=[-1])
     paddings = [[0, 0], [0, 0], [time_steps - 1, 0]]
     padded_reverse_log_probs = tf.pad(reverse_log_probs, paddings, "CONSTANT", constant_values=LOG_0)
-    diagonals = tf.linalg.diag_part(
-        padded_reverse_log_probs,
+    diagonals = tf.raw_ops.MatrixDiagPartV2(
+        input=padded_reverse_log_probs,
         k=(0, time_steps + output_steps - 2),
         padding_value=LOG_0,
     )
@@ -138,7 +138,8 @@ def transition_probs(
              truth_probs with shape batch_size x input_max_len x (target_max_len-1)
     """
     blank_probs = log_probs[:, :, :, 0]
-    truth_probs = tf.reduce_sum(tf.multiply(log_probs[:, :, :-1, :], one_hot_labels), axis=-1)
+    # truth_probs = tf.reduce_sum(tf.multiply(log_probs[:, :, :-1, :], one_hot_labels), axis=-1)
+    truth_probs = tf.reduce_sum(tf.multiply(log_probs[:, :, 1:, :], one_hot_labels), axis=-1)
 
     return blank_probs, truth_probs
 
@@ -175,7 +176,7 @@ def forward_dp(
     fwd = tf.scan(next_state, (bp_diags[:-1, :, :-1], tp_diags), initializer=initial_alpha)
 
     alpha = tf.transpose(tf.concat([tf.expand_dims(initial_alpha, axis=0), fwd], axis=0), perm=[1, 2, 0])
-    alpha = tf.linalg.diag_part(alpha, k=(0, target_max_len - 1), padding_value=LOG_0)
+    alpha = tf.raw_ops.MatrixDiagPartV2(input=alpha, k=(0, target_max_len - 1), padding_value=LOG_0)
     alpha = tf.transpose(tf.reverse(alpha, axis=[1]), perm=[0, 2, 1])
 
     return alpha
@@ -201,15 +202,15 @@ def backward_dp(
         beta_b = tf.concat([x[:, 1:] + blank_probs_s, LOG_0 * tf.ones(shape=[batch_size, 1])], axis=1)
         beta_t = tf.concat([x[:, :-1] + truth_probs, LOG_0 * tf.ones(shape=[batch_size, 1])], axis=1)
 
-        # beta_next = reduce_logsumexp(tf.stack([beta_b, beta_t], axis=0), axis=0)
-        beta_next = tf.math.reduce_logsumexp(tf.stack([beta_b, beta_t], axis=0), axis=0)
-        # masked_beta_next = nan_to_zero(beta_next * tf.expand_dims(mask_s, axis=1)) + nan_to_zero(x * tf.expand_dims((1.0 - mask_s), axis=1))
-        masked_beta_next = (beta_next * tf.expand_dims(mask_s, axis=1)) + (x * tf.expand_dims((1.0 - mask_s), axis=1))
+        beta_next = reduce_logsumexp(tf.stack([beta_b, beta_t], axis=0), axis=0)
+        # beta_next = tf.math.reduce_logsumexp(tf.stack([beta_b, beta_t], axis=0), axis=0)
+        masked_beta_next = nan_to_zero(beta_next * tf.expand_dims(mask_s, axis=1)) + nan_to_zero(x * tf.expand_dims((1.0 - mask_s), axis=1))
+        # masked_beta_next = (beta_next * tf.expand_dims(mask_s, axis=1)) + (x * tf.expand_dims((1.0 - mask_s), axis=1))
         return tf.reshape(masked_beta_next, shape=tf.shape(x))
 
     # Initial beta for batches.
     initial_beta_mask = tf.one_hot(logit_length - 1, depth=input_max_len + 1)
-    initial_beta = tf.expand_dims(blank_sl, axis=1) * initial_beta_mask + (LOG_0 * (1.0 - initial_beta_mask))
+    initial_beta = tf.expand_dims(blank_sl, axis=1) * initial_beta_mask + nan_to_zero(LOG_0 * (1.0 - initial_beta_mask))
 
     # Mask for scan iterations.
     mask = tf.sequence_mask(
@@ -227,7 +228,7 @@ def backward_dp(
     )
 
     beta = tf.transpose(tf.concat([bwd, tf.expand_dims(initial_beta, axis=0)], axis=0), perm=[1, 2, 0])[:, :-1, :]
-    beta = tf.linalg.diag_part(beta, k=(0, target_max_len - 1), padding_value=LOG_0)
+    beta = tf.raw_ops.MatrixDiagPartV2(input=beta, k=(0, target_max_len - 1), padding_value=LOG_0)
     beta = tf.transpose(tf.reverse(beta, axis=[1]), perm=[0, 2, 1])
 
     return beta
@@ -269,7 +270,7 @@ def compute_rnnt_loss_and_grad_helper(logits, labels, label_length, logit_length
     blank_sl = tf.gather_nd(blank_probs, indices, batch_dims=1)
 
     beta = backward_dp(bp_diags, tp_diags, batch_size, input_max_len, target_max_len, label_length, logit_length, blank_sl) * mask
-    # beta = tf.where(tf.math.is_nan(beta), tf.zeros_like(beta), beta)
+    beta = nan_to_zero(beta)
     final_state_probs = beta[:, 0, 0]
 
     # Compute gradients of loss w.r.t. blank log-probabilities.
