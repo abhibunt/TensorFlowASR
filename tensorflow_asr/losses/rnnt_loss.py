@@ -15,7 +15,6 @@
 # RNNT loss implementation in pure TensorFlow is borrowed from [iamjanvijay's repo](https://github.com/iamjanvijay/rnnt)
 
 import tensorflow as tf
-from tensorflow.python.ops.gen_array_ops import matrix_diag_part_v2
 
 from tensorflow_asr.utils import env_util
 
@@ -121,7 +120,7 @@ def extract_diagonals(
     reverse_log_probs = tf.reverse(log_probs, axis=[-1])
     paddings = [[0, 0], [0, 0], [time_steps - 1, 0]]
     padded_reverse_log_probs = tf.pad(reverse_log_probs, paddings, "CONSTANT", constant_values=LOG_0)
-    diagonals = matrix_diag_part_v2(
+    diagonals = tf.linalg.diag_part(
         padded_reverse_log_probs,
         k=(0, time_steps + output_steps - 2),
         padding_value=LOG_0,
@@ -176,7 +175,7 @@ def forward_dp(
     fwd = tf.scan(next_state, (bp_diags[:-1, :, :-1], tp_diags), initializer=initial_alpha)
 
     alpha = tf.transpose(tf.concat([tf.expand_dims(initial_alpha, axis=0), fwd], axis=0), perm=[1, 2, 0])
-    alpha = matrix_diag_part_v2(alpha, k=(0, target_max_len - 1), padding_value=LOG_0)
+    alpha = tf.linalg.diag_part(alpha, k=(0, target_max_len - 1), padding_value=LOG_0)
     alpha = tf.transpose(tf.reverse(alpha, axis=[1]), perm=[0, 2, 1])
 
     return alpha
@@ -208,7 +207,7 @@ def backward_dp(
 
     # Initial beta for batches.
     initial_beta_mask = tf.one_hot(logit_length - 1, depth=input_max_len + 1)
-    initial_beta = tf.expand_dims(blank_sl, axis=1) * initial_beta_mask + nan_to_zero(LOG_0 * (1.0 - initial_beta_mask))
+    initial_beta = tf.expand_dims(blank_sl, axis=1) * initial_beta_mask + (LOG_0 * (1.0 - initial_beta_mask))
 
     # Mask for scan iterations.
     mask = tf.sequence_mask(
@@ -226,7 +225,7 @@ def backward_dp(
     )
 
     beta = tf.transpose(tf.concat([bwd, tf.expand_dims(initial_beta, axis=0)], axis=0), perm=[1, 2, 0])[:, :-1, :]
-    beta = matrix_diag_part_v2(beta, k=(0, target_max_len - 1), padding_value=LOG_0)
+    beta = tf.linalg.diag_part(beta, k=(0, target_max_len - 1), padding_value=LOG_0)
     beta = tf.transpose(tf.reverse(beta, axis=[1]), perm=[0, 2, 1])
 
     return beta
