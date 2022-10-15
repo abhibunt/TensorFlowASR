@@ -41,8 +41,8 @@ def load_yaml(
         ),
         list("-+0123456789."),
     )
-    with open(path, "r", encoding="utf-8") as file:
-        return yaml.load(file, Loader=loader)
+    with tf.io.gfile.GFile(path, "r") as file:
+        return yaml.load(file.read(), Loader=loader)
 
 
 def is_hdf5_filepath(
