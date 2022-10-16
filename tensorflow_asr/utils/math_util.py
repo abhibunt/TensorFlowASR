@@ -179,3 +179,22 @@ def bfloat16_to_float16(
     tensor,
 ):
     return tf.cond(tf.equal(tensor.dtype, tf.bfloat16), lambda: tf.cast(tensor, tf.float16), lambda: tensor)
+
+
+def masked_fill(
+    tensor,
+    mask,
+    value=0,
+):
+    shape = shape_util.shape_list(tensor)
+    mask = tf.broadcast_to(mask, shape)
+    values = tf.cast(tf.fill(shape, value), tensor.dtype)
+    return tf.where(mask, tensor, values)
+
+
+def large_compatible_negative(
+    tensor_type,
+):
+    if tensor_type == tf.float16:
+        return tf.float16.min
+    return -1e9

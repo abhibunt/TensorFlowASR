@@ -17,7 +17,7 @@ import typing
 
 import tensorflow as tf
 
-from tensorflow_asr.utils import shape_util
+from tensorflow_asr.utils import math_util, shape_util
 
 
 def _rel_shift(x):
@@ -191,13 +191,15 @@ class MultiHeadAttention(tf.keras.layers.Layer):
             if key.shape[-3] != attention_mask.shape[-1]:
                 raise ValueError("mask's last dimension must be equal to the number of elements in 'key'")
 
-        attn_coef = tf.nn.softmax(logits)  # avoid using mask in softmax to avoid NaN gradients
-
         # apply mask
         if attention_mask is not None:  # possibly expand on the head dimension so broadcasting works
             if len(attention_mask.shape) != len(logits.shape):
                 attention_mask = tf.expand_dims(attention_mask, -3)
-            attn_coef = tf.multiply(attn_coef, tf.cast(attention_mask, dtype=attn_coef.dtype))
+            attn_coef = math_util.masked_fill(logits, attention_mask, value=math_util.large_compatible_negative(logits.dtype))
+            attn_coef = tf.nn.softmax(attn_coef)
+            attn_coef = math_util.masked_fill(attn_coef, attention_mask, value=0.0)
+        else:
+            attn_coef = tf.nn.softmax(logits)  # avoid using mask in softmax to avoid NaN gradients
 
         # attention dropout
         attn_coef_dropout = self.dropout(attn_coef, training=training)
