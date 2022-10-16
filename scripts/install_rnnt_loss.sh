@@ -7,6 +7,8 @@ if [ ! -d tensorflow ]; then
   git clone https://github.com/tensorflow/tensorflow.git
 fi
 
+export TENSORFLOW_SRC_PATH=$(pwd)/tensorflow
+
 # Install rnnt_loss
 if [ ! -d warp-transducer ]; then
     git clone https://github.com/usimarit/warp-transducer.git
