@@ -14,13 +14,13 @@ mkdir -p build && cd build || exit
 
 if [ "$CUDA_HOME" ]; then
   cmake \
-      -DUSE_NAIVE_KERNEL=on \
+      -DUSE_NAIVE_KERNEL=OFF \
       -DCMAKE_C_COMPILER_LAUNCHER="$(which gcc)" \
       -DCMAKE_CXX_COMPILER_LAUNCHER="$(which g++)"  \
       -DCUDA_TOOLKIT_ROOT_DIR="$CUDA_HOME" ..
 else
   cmake \
-      -DUSE_NAIVE_KERNEL=on \
+      -DUSE_NAIVE_KERNEL=OFF \
       -DCMAKE_C_COMPILER_LAUNCHER="$(which gcc)" \
       -DCMAKE_CXX_COMPILER_LAUNCHER="$(which g++)" ..
 fi
