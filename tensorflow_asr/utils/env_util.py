@@ -52,9 +52,9 @@ def setup_devices(
         if gpus:
             if devices is not None:
                 gpus = [gpus[i] for i in devices]
-                tf.config.set_visible_devices(gpus, "GPU")
             for gpu in gpus:
                 tf.config.experimental.set_memory_growth(gpu, True)
+            tf.config.set_visible_devices(gpus, "GPU")
         logger.info(f"Run on {len(gpus)} Physical GPUs")
 
 
