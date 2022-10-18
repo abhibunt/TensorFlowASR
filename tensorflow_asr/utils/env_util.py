@@ -13,6 +13,10 @@
 # limitations under the License.
 
 import os
+
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+os.environ["TF_FORCE_GPU_ALLOW_GROWTH"] = "true"
+
 import random
 import warnings
 from typing import List, Union
@@ -25,8 +29,6 @@ logger = tf.get_logger()
 
 def setup_environment():
     """Setting tensorflow running environment"""
-    os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
-    os.environ["TF_FORCE_GPU_ALLOW_GROWTH"] = "1"
     warnings.simplefilter("ignore")
     lg = tf.get_logger()
     lg.setLevel("INFO")
