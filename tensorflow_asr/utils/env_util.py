@@ -25,7 +25,8 @@ logger = tf.get_logger()
 
 def setup_environment():
     """Setting tensorflow running environment"""
-    os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
+    os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+    os.environ["TF_FORCE_GPU_ALLOW_GROWTH"] = True
     warnings.simplefilter("ignore")
     lg = tf.get_logger()
     lg.setLevel("INFO")
@@ -52,9 +53,7 @@ def setup_devices(
         if gpus:
             if devices is not None:
                 gpus = [gpus[i] for i in devices]
-            for gpu in gpus:
-                tf.config.experimental.set_memory_growth(gpu, True)
-            tf.config.set_visible_devices(gpus, "GPU")
+                tf.config.set_visible_devices(gpus, "GPU")
         logger.info(f"Run on {len(gpus)} Physical GPUs")
 
 
