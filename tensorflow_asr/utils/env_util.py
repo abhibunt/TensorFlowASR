@@ -33,7 +33,7 @@ def setup_environment():
 
 
 def setup_devices(
-    devices: List[int],
+    devices: List[int] = None,
     cpu: bool = False,
 ):
     """Setting visible devices
@@ -50,9 +50,12 @@ def setup_devices(
     else:
         gpus = tf.config.list_physical_devices("GPU")
         if gpus:
-            visible_gpus = [gpus[i] for i in devices]
-            tf.config.set_visible_devices(visible_gpus, "GPU")
-            logger.info(f"Run on {len(visible_gpus)} Physical GPUs")
+            if devices is not None:
+                gpus = [gpus[i] for i in devices]
+                tf.config.set_visible_devices(gpus, "GPU")
+            for gpu in gpus:
+                tf.config.experimental.set_memory_growth(gpu, True)
+        logger.info(f"Run on {len(gpus)} Physical GPUs")
 
 
 def setup_tpu(

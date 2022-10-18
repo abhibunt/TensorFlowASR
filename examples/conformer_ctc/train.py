@@ -34,7 +34,7 @@ def main(
     tfrecords: bool = False,
     bs: int = None,
     spx: int = 1,
-    devices: list = [0],
+    devices: list = None,
     mxp: bool = False,
     pretrained: str = None,
     jit_compile: bool = False,

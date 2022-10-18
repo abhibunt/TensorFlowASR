@@ -33,7 +33,7 @@ def main(
     tfrecords: bool = False,
     bs: int = None,
     spx: int = 1,
-    devices: list = [0],
+    devices: list = None,
     mxp: bool = False,
     pretrained: str = None,
     jit_compile: bool = False,
@@ -68,8 +68,7 @@ def main(
         if pretrained:
             contextnet.load_weights(pretrained, by_name=file_util.is_hdf5_filepath(pretrained), skip_mismatch=True)
         optimizer = tf.keras.optimizers.Adam(
-            TransformerSchedule(d_model=contextnet.dmodel, **config.learning_config.learning_rate_config),
-            **config.learning_config.optimizer_config
+            TransformerSchedule(d_model=contextnet.dmodel, **config.learning_config.learning_rate_config), **config.learning_config.optimizer_config
         )
         contextnet.compile(
             optimizer=optimizer,
