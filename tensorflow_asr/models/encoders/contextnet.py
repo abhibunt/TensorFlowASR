@@ -17,6 +17,7 @@ from typing import List
 
 import tensorflow as tf
 
+from tensorflow_asr.models.layers.base_layer import Layer
 from tensorflow_asr.utils import math_util
 
 L2 = tf.keras.regularizers.l2(1e-6)
@@ -206,7 +207,7 @@ class ConvBlock(tf.keras.layers.Layer):
         return outputs, inputs_length
 
 
-class ContextNetEncoder(tf.keras.layers.Layer):
+class ContextNetEncoder(Layer):
     def __init__(
         self,
         blocks: List[dict] = [],
@@ -231,9 +232,22 @@ class ContextNetEncoder(tf.keras.layers.Layer):
                 )
             )
 
+        self.dmodel = self.blocks[-1].dmodel
+        self.time_reduction_factor = 1
+        for block in self.blocks:
+            self.time_reduction_factor *= block.time_reduction_factor
+
     def call(self, inputs, training=False):
         outputs, inputs_length = inputs
         outputs = self.reshape(outputs)
         for block in self.blocks:
             outputs, inputs_length = block([outputs, inputs_length], training=training)
         return outputs, inputs_length
+
+    def compute_output_shape(self, input_shape):
+        inputs_shape, inputs_length_shape = input_shape
+        outputs_size = self.dmodel
+        outputs_time = None if inputs_shape[1] is None else math_util.legacy_get_reduced_length(inputs_shape[1], self.time_reduction_factor)
+        outputs_batch = inputs_shape[0]
+        outputs_shape = [outputs_batch, outputs_time, outputs_size]
+        return tuple(outputs_shape), tuple(inputs_length_shape)
