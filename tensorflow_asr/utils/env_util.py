@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import random
 import warnings
 from typing import List, Union
@@ -24,6 +25,7 @@ logger = tf.get_logger()
 
 def setup_environment():
     """Setting tensorflow running environment"""
+    os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
     warnings.simplefilter("ignore")
     lg = tf.get_logger()
     lg.setLevel("INFO")
