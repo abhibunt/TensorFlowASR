@@ -29,11 +29,6 @@ except ImportError:
     logger.info("Use RNNT loss in TensorFlow")
     use_warprnnt = False
 
-USE_CPU = not env_util.has_devices(["GPU", "TPU"])
-
-if USE_CPU:
-    logger.info("Use CPU implementation for RNNT loss")
-
 
 class RnntLoss(tf.keras.losses.Loss):
     def __init__(
@@ -45,6 +40,11 @@ class RnntLoss(tf.keras.losses.Loss):
             raise ValueError("rnnt_loss in tensorflow must use blank = 0")
         super().__init__(reduction=tf.keras.losses.Reduction.NONE, name=name)
         self.blank = blank
+        self.use_cpu = not env_util.has_devices(["GPU", "TPU"])
+        if self.use_cpu:
+            logger.info("Use CPU implementation for RNNT loss")
+        else:
+            logger.info("Use GPU/TPU implementation for RNNT loss")
 
     def call(self, y_true, y_pred):
         return rnnt_loss(
@@ -54,6 +54,7 @@ class RnntLoss(tf.keras.losses.Loss):
             label_length=y_true["labels_length"],
             blank=self.blank,
             name=self.name,
+            use_cpu=self.use_cpu,
         )
 
 
@@ -64,15 +65,24 @@ def rnnt_loss(
     logit_length,
     blank=0,
     name=None,
+    use_cpu=False,
 ):
     if use_warprnnt:
-        return rnnt_loss_warprnnt(logits=logits, labels=labels, label_length=label_length, logit_length=logit_length, blank=blank)
+        return rnnt_loss_warprnnt(
+            logits=logits,
+            labels=labels,
+            label_length=label_length,
+            logit_length=logit_length,
+            blank=blank,
+            use_cpu=use_cpu,
+        )
     return rnnt_loss_tf(
         logits=logits,
         labels=labels,
         label_length=label_length,
         logit_length=logit_length,
         name=name,
+        use_cpu=use_cpu,
     )
 
 
@@ -85,8 +95,9 @@ def rnnt_loss_warprnnt(
     label_length,
     logit_length,
     blank=0,
+    use_cpu=False,
 ):
-    if USE_CPU:
+    if use_cpu:
         logits = tf.nn.log_softmax(logits)
     loss = warp_rnnt_loss(acts=logits, label_lengths=label_length, labels=labels, input_lengths=logit_length, blank_label=blank)
     return loss
@@ -231,7 +242,7 @@ def backward_dp(
     return beta
 
 
-def compute_rnnt_loss_and_grad_helper(logits, labels, label_length, logit_length):
+def compute_rnnt_loss_and_grad_helper(logits, labels, label_length, logit_length, use_cpu=False):
     batch_size = tf.shape(logits)[0]
     input_max_len = tf.shape(logits)[1]
     target_max_len = tf.shape(logits)[2]
@@ -309,7 +320,7 @@ def compute_rnnt_loss_and_grad_helper(logits, labels, label_length, logit_length
         tf.reshape(labels - 1, shape=(batch_size, 1, target_max_len - 1, 1)),
         dtype=tf.int64,
     )
-    if USE_CPU:
+    if use_cpu:
         b = tf.where(tf.equal(b, -1), tf.zeros_like(b), b)  # for cpu testing (index -1 on cpu will raise errors)
     c = tf.concat([a, b], axis=3)
     d = tf.tile(c, multiples=(1, input_max_len, 1, 1))
@@ -349,6 +360,7 @@ def rnnt_loss_tf(
     label_length,
     logit_length,
     name=None,
+    use_cpu=False,
 ):
     name = "rnnt_loss" if name is None else name
     with tf.name_scope(name):
@@ -372,7 +384,7 @@ def rnnt_loss_tf(
                 label_length=label_length_t,
                 logit_length=logit_length_t,
             )
-            result = compute_rnnt_loss_and_grad_helper(**kwargs)
+            result = compute_rnnt_loss_and_grad_helper(**kwargs, use_cpu=use_cpu)
 
             def grad(grad_loss):
                 grads = [tf.reshape(grad_loss, [-1, 1, 1, 1]) * result[1]]

@@ -97,8 +97,8 @@ def has_devices(
     devices: Union[List[str], str],
 ):
     if isinstance(devices, list):
-        return all((len(tf.config.list_logical_devices(d)) != 0 for d in devices))
-    return len(tf.config.list_logical_devices(devices)) != 0
+        return all((len(tf.config.list_logical_devices(d)) > 0 for d in devices))
+    return len(tf.config.list_logical_devices(devices)) > 0
 
 
 def setup_mxp(
