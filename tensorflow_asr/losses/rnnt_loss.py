@@ -40,7 +40,7 @@ class RnntLoss(tf.keras.losses.Loss):
             raise ValueError("rnnt_loss in tensorflow must use blank = 0")
         super().__init__(reduction=tf.keras.losses.Reduction.NONE, name=name)
         self.blank = blank
-        self.use_cpu = not env_util.has_devices(["GPU", "TPU"])
+        self.use_cpu = not env_util.has_devices("GPU") and not env_util.has_devices("TPU")
         if self.use_cpu:
             logger.info("Use CPU implementation for RNNT loss")
         else:
