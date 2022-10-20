@@ -228,9 +228,7 @@ class ASRDataset(BaseDataset):
         data = self.tf_preprocess(path, audio, transcript) if self.use_tf else self.preprocess(path, audio, transcript)
         _, features, input_length, label, label_length, prediction, prediction_length = data
         return (
-            data_util.create_inputs(
-                inputs=features, inputs_length=input_length, predictions=prediction, predictions_length=prediction_length
-            ),
+            data_util.create_inputs(inputs=features, inputs_length=input_length, predictions=prediction, predictions_length=prediction_length),
             data_util.create_labels(labels=label, labels_length=label_length),
         )
 
@@ -244,7 +242,7 @@ class ASRDataset(BaseDataset):
         if self.cache:
             dataset = dataset.cache()  # cache original (unchanged data)
 
-        dataset = dataset.map(self.parse, num_parallel_calls=AUTOTUNE)
+        dataset = dataset.map(self.parse, num_parallel_calls=AUTOTUNE, deterministic=False)
         self.total_steps = math_util.get_num_batches(self.total_steps, batch_size, drop_remainders=self.drop_remainder)
 
         if self.shuffle:
@@ -266,9 +264,7 @@ class ASRDataset(BaseDataset):
                 data_util.create_labels(labels=tf.TensorShape(self.text_featurizer.shape), labels_length=tf.TensorShape([])),
             ),
             padding_values=(
-                data_util.create_inputs(
-                    inputs=0.0, inputs_length=0, predictions=self.text_featurizer.blank, predictions_length=0
-                ),
+                data_util.create_inputs(inputs=0.0, inputs_length=0, predictions=self.text_featurizer.blank, predictions_length=0),
                 data_util.create_labels(labels=self.text_featurizer.blank, labels_length=0),
             ),
             drop_remainder=self.drop_remainder,
@@ -439,6 +435,6 @@ class ASRSliceDataset(ASRDataset):
             return None
 
         dataset = tf.data.Dataset.from_tensor_slices(self.entries)
-        dataset = dataset.map(self.load, num_parallel_calls=AUTOTUNE)
+        dataset = dataset.map(self.load, num_parallel_calls=AUTOTUNE, deterministic=False)
 
         return self.process(dataset, batch_size)
