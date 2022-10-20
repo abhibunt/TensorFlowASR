@@ -416,14 +416,6 @@ class ASRTFRecordDataset(ASRDataset):
 class ASRSliceDataset(ASRDataset):
     """Dataset for ASR using Slice"""
 
-    @staticmethod
-    def load(record):
-        def fn(path: bytes):
-            return load_and_convert_to_wav(path.decode("utf-8")).numpy()
-
-        audio = tf.numpy_function(fn, inp=[record[0]], Tout=tf.string)
-        return record[0], audio, record[2]
-
     def create(
         self,
         batch_size: int,
@@ -434,7 +426,18 @@ class ASRSliceDataset(ASRDataset):
         if not self.total_steps or self.total_steps == 0:
             return None
 
-        dataset = tf.data.Dataset.from_tensor_slices(self.entries)
-        dataset = dataset.map(self.load, num_parallel_calls=AUTOTUNE, deterministic=False)
+        def gen():
+            for path, _, transcript in self.entries:
+                audio = load_and_convert_to_wav(path.decode("utf-8"))
+                return path, audio, transcript
+
+        dataset = tf.data.Dataset.from_generator(
+            gen,
+            output_signature=(
+                tf.TensorSpec(shape=(), dtype=tf.string),
+                tf.TensorSpec(shape=(), dtype=tf.string),
+                tf.TensorSpec(shape=(), dtype=tf.string),
+            ),
+        )
 
         return self.process(dataset, batch_size)
