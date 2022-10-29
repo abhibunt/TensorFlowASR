@@ -42,18 +42,16 @@ def main(
 
     config = Config(config_path)
 
+    batch_size = bs or config.learning_config.running_config.batch_size
     speech_featurizer, text_featurizer = featurizer_helpers.prepare_featurizers(config=config)
 
     conformer = Conformer(**config.model_config, blank=text_featurizer.blank, vocab_size=text_featurizer.num_classes)
-    conformer.make(speech_featurizer.shape)
+    conformer.make(speech_featurizer.shape, batch_size=batch_size)
     conformer.load_weights(saved, by_name=file_util.is_hdf5_filepath(saved))
     conformer.summary()
     conformer.add_featurizers(speech_featurizer, text_featurizer)
 
-    test_dataset = dataset_helpers.prepare_testing_datasets(
-        config=config, speech_featurizer=speech_featurizer, text_featurizer=text_featurizer
-    )
-    batch_size = bs or config.learning_config.running_config.batch_size
+    test_dataset = dataset_helpers.prepare_testing_datasets(config=config, speech_featurizer=speech_featurizer, text_featurizer=text_featurizer)
     test_data_loader = test_dataset.create(batch_size)
 
     exec_helpers.run_testing(model=conformer, test_dataset=test_dataset, test_data_loader=test_data_loader, output=output)

@@ -95,6 +95,10 @@ conformer.save_weights("./conformer.h5")
 conformer.load_weights("./conformer.h5")
 # %%
 conformer.save("./saved_model")
+# %%
+import tensorflow as tf
+
+model = tf.saved_model.load("./saved_model")
 
 # %%
 
