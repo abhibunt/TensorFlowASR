@@ -20,6 +20,7 @@ from typing import List, Union
 
 import tensorflow as tf
 import yaml
+from jinja2 import BaseLoader, Environment
 
 
 def load_yaml(
@@ -42,7 +43,7 @@ def load_yaml(
         list("-+0123456789."),
     )
     with tf.io.gfile.GFile(path, "r") as file:
-        return yaml.load(file.read(), Loader=loader)
+        return yaml.load(Environment(loader=BaseLoader()).from_string(file.read()).render(), Loader=loader)
 
 
 def is_hdf5_filepath(

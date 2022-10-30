@@ -126,15 +126,16 @@ class RunningConfig:
         self.accumulation_steps: int = config.pop("accumulation_steps", 1)
         self.num_epochs: int = config.pop("num_epochs", 20)
         self.checkpoint: dict = {}
-        self.states_dir: str = None
+        self.backup_and_restore: dict = {}
         self.tensorboard: dict = {}
         for k, v in config.items():
             setattr(self, k, v)
             if k == "checkpoint":
                 if v and v.get("filepath"):
                     file_util.preprocess_paths(v.get("filepath"))
-            elif k == "states_dir" and v:
-                file_util.preprocess_paths(v, isdir=True)
+            elif k == "backup_and_restore" and v:
+                if v and v.get("backup_dir"):
+                    file_util.preprocess_paths(v.get("backup_dir"), isdir=True)
             elif k == "tensorboard":
                 if v and v.get("log_dir"):
                     file_util.preprocess_paths(v.get("log_dir"), isdir=True)

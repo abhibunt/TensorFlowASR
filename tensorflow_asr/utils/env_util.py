@@ -25,14 +25,14 @@ import numpy as np
 import tensorflow as tf
 
 logger = tf.get_logger()
+logger.setLevel(os.environ.get("LOG_LEVEL", "info").upper())
+logger.propagate = False
 
 
 def setup_environment():
     """Setting tensorflow running environment"""
     warnings.simplefilter("ignore")
-    lg = tf.get_logger()
-    lg.setLevel("INFO")
-    return lg
+    return tf.get_logger()
 
 
 def setup_devices(
@@ -88,7 +88,7 @@ def setup_strategy(
     try:
         return setup_tpu(tpu_address)
     except (ValueError, tf.errors.NotFoundError) as e:
-        logger.warn(e)
+        logger.warning(e)
     setup_devices(devices)
     return tf.distribute.MirroredStrategy()
 

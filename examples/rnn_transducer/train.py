@@ -26,7 +26,7 @@ from tensorflow_asr.helpers import dataset_helpers, featurizer_helpers
 from tensorflow_asr.models.transducer.rnn_transducer import RnnTransducer
 from tensorflow_asr.utils import file_util
 
-DEFAULT_YAML = os.path.join(os.path.abspath(os.path.dirname(__file__)), "config.yml")
+DEFAULT_YAML = os.path.join(os.path.abspath(os.path.dirname(__file__)), "config_wp.j2")
 
 
 def main(
@@ -78,7 +78,7 @@ def main(
     callbacks = [
         tf.keras.callbacks.TerminateOnNaN(),
         tf.keras.callbacks.ModelCheckpoint(**config.learning_config.running_config.checkpoint),
-        tf.keras.callbacks.BackupAndRestore(config.learning_config.running_config.states_dir),
+        tf.keras.callbacks.BackupAndRestore(**config.learning_config.running_config.backup_and_restore),
         tf.keras.callbacks.TensorBoard(**config.learning_config.running_config.tensorboard),
     ]
 

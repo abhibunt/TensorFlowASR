@@ -19,7 +19,7 @@ import tensorflow as tf
 
 logger = tf.get_logger()
 
-DEFAULT_YAML = os.path.join(os.path.abspath(os.path.dirname(__file__)), "config.yml")
+DEFAULT_YAML = os.path.join(os.path.abspath(os.path.dirname(__file__)), "config_wp.j2")
 
 from tensorflow_asr.configs.config import Config
 from tensorflow_asr.featurizers.speech_featurizers import SpeechFeaturizer
@@ -74,9 +74,7 @@ def test_streaming_transducer():
     )
     tflitemodel.set_tensor(
         input_details[3]["index"],
-        tf.zeros(
-            [config.model_config["prediction_num_rnns"], 2, 1, config.model_config["prediction_rnn_units"]], dtype=tf.float32
-        ),
+        tf.zeros([config.model_config["prediction_num_rnns"], 2, 1, config.model_config["prediction_rnn_units"]], dtype=tf.float32),
     )
     tflitemodel.invoke()
     hyp = tflitemodel.get_tensor(output_details[0]["index"])

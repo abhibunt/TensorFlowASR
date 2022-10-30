@@ -23,7 +23,7 @@ from tensorflow_asr.utils import env_util, file_util
 
 logger = env_util.setup_environment()
 
-DEFAULT_YAML = os.path.join(os.path.abspath(os.path.dirname(__file__)), "config.yml")
+DEFAULT_YAML = os.path.join(os.path.abspath(os.path.dirname(__file__)), "config_wp.j2")
 
 
 def main(
@@ -50,9 +50,7 @@ def main(
     deepspeech2.summary()
     deepspeech2.add_featurizers(speech_featurizer, text_featurizer)
 
-    test_dataset = dataset_helpers.prepare_testing_datasets(
-        config=config, speech_featurizer=speech_featurizer, text_featurizer=text_featurizer
-    )
+    test_dataset = dataset_helpers.prepare_testing_datasets(config=config, speech_featurizer=speech_featurizer, text_featurizer=text_featurizer)
     batch_size = bs or config.learning_config.running_config.batch_size
     test_data_loader = test_dataset.create(batch_size)
 

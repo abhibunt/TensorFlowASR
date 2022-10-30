@@ -23,7 +23,7 @@ from tensorflow_asr.utils import env_util, file_util
 
 logger = env_util.setup_environment()
 
-DEFAULT_YAML = os.path.join(os.path.abspath(os.path.dirname(__file__)), "config.yml")
+DEFAULT_YAML = os.path.join(os.path.abspath(os.path.dirname(__file__)), "config_wp.j2")
 
 
 def main(

@@ -148,10 +148,10 @@ class BaseModel(tf.keras.Model):
                 scaled_loss = self.optimizer.get_scaled_loss(loss)
 
         if self.use_loss_scale:
-            gradients = tape.gradient(scaled_loss, self.trainable_weights)
+            gradients = tape.gradient(scaled_loss, self.trainable_weights, unconnected_gradients=tf.UnconnectedGradients.ZERO)
             gradients = self.optimizer.get_unscaled_gradients(gradients)
         else:
-            gradients = tape.gradient(loss, self.trainable_weights)
+            gradients = tape.gradient(loss, self.trainable_weights, unconnected_gradients=tf.UnconnectedGradients.ZERO)
 
         if self.use_ga:  # perform gradient accumulation
             self.ga.accumulate(gradients=gradients)
