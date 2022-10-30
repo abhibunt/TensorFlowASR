@@ -70,13 +70,20 @@ class DecoderConfig:
         self.type: str = config.pop("type", "wordpiece")
 
         self.blank_index: int = config.pop("blank_index", 0)
-        self.unknown_token: str = config.pop("unknown_token", "[PAD]")
-        self.unknown_index: int = config.pop("unknown_index", self.blank_index)
+        self.pad_token: str = config.pop("pad_token", "<pad>")
+        self.pad_index: int = config.pop("pad_index", 0)
+        self.unknown_token: str = config.pop("unknown_token", "<unk>")
+        self.unknown_index: int = config.pop("unknown_index", 1)
+        self.bos_token: str = config.pop("bos_token", "<s>")
+        self.bos_index: int = config.pop("bos_index", 2)
+        self.eos_token: str = config.pop("eos_token", "</s>")
+        self.eos_index: int = config.pop("eos_index", 3)
 
         self.beam_width: int = config.pop("beam_width", 0)
         self.norm_score: bool = config.pop("norm_score", True)
         self.lm_config: dict = config.pop("lm_config", {})
 
+        self.model_type: str = config.pop("model_type", "unigram")
         self.vocabulary: str = file_util.preprocess_paths(config.pop("vocabulary", None))
         self.vocab_size: int = config.pop("vocab_size", 1000)
         self.max_token_length: int = config.pop("max_token_length", 50)
@@ -86,8 +93,6 @@ class DecoderConfig:
         self.normalization_form: str = config.pop("normalization_form", "NFKC")
 
         self.corpus_files = file_util.preprocess_paths(config.pop("corpus_files", []))
-        self.output_path_prefix: str = file_util.preprocess_paths(config.pop("output_path_prefix", None))
-        self.model_type: str = config.pop("model_type", None)
 
         for k, v in config.items():
             setattr(self, k, v)

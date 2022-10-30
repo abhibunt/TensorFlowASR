@@ -25,6 +25,7 @@ import tensorflow_text as tft
 from tensorflow_text.tools.wordpiece_vocab import bert_vocab_from_dataset as bert_vocab
 
 from tensorflow_asr.configs.config import DecoderConfig
+from tensorflow_asr.utils import file_util
 
 logger = tf.get_logger()
 
@@ -343,46 +344,20 @@ class SubwordFeaturizer(TextFeaturizer):
 
 
 class SentencePieceFeaturizer(TextFeaturizer):
-    """
-    Extract text feature based on sentence piece package.
-    """
-
-    UNK_TOKEN, UNK_TOKEN_ID = "<unk>", 1
-    BOS_TOKEN, BOS_TOKEN_ID = "<s>", 2
-    EOS_TOKEN, EOS_TOKEN_ID = "</s>", 3
-    PAD_TOKEN, PAD_TOKEN_ID = "<pad>", 0  # unused, by default
-
-    def __init__(self, decoder_config: DecoderConfig, model=None):
+    def __init__(self, decoder_config: DecoderConfig):
         super().__init__(decoder_config)
-        self.model = self.__load_model() if model is None else model
-        self.blank = 0  # treats blank as 0 (pad)
-        # vocab size
-        self.num_classes = self.model.get_piece_size()
-        self.__init_vocabulary()
+        self.blank = self.decoder_config.blank_index
+        self.tokenizer = tft.FastSentencepieceTokenizer(self.__load_model(), add_bos=True, add_eos=True)
+        self.num_classes = self.tokenizer.vocab_size()
 
     def __load_model(self):
-        filename_prefix = os.path.splitext(self.decoder_config.vocabulary)[0]
-        processor = sp.SentencePieceProcessor()
-        processor.load(filename_prefix + ".model")  # pylint: disable=no-member
-        return processor
-
-    def __init_vocabulary(self):
-        self.tokens = []
-        for idx in range(1, self.num_classes):
-            self.tokens.append(self.model.decode_ids([idx]))
-        self.non_blank_tokens = self.tokens.copy()
-        self.tokens.insert(0, "")
-        self.upoints = tf.strings.unicode_decode(self.tokens, "UTF-8")
-        self.upoints = self.upoints.to_tensor()  # [num_classes, max_subword_length]
+        with file_util.read_file(self.decoder_config.vocabulary) as path:
+            with open(path, "rb") as f:
+                return f.read()
 
     @classmethod
     def build_from_corpus(cls, decoder_config: DecoderConfig):
-        """
-        --model_prefix: output model name prefix. <model_name>.model and <model_name>.vocab are generated.
-        --vocab_size: vocabulary size, e.g., 8000, 16000, or 32000
-        --model_type: model type. Choose from unigram (default), bpe, char, or word.
-        The input sentence must be pretokenized when using word type."""
-        # Train SentencePiece Model
+        output_path_prefix = os.path.splitext(decoder_config.vocabulary)[0]
 
         def corpus_iterator():
             for file in decoder_config.corpus_files:
@@ -395,79 +370,43 @@ class SentencePieceFeaturizer(TextFeaturizer):
 
         sp.SentencePieceTrainer.Train(
             sentence_iterator=corpus_iterator(),
-            model_prefix=decoder_config.output_path_prefix,
+            model_prefix=output_path_prefix,
             model_type=decoder_config.model_type,
             vocab_size=decoder_config.vocab_size,
             num_threads=cpu_count(),
-            unk_id=cls.UNK_TOKEN_ID,
-            bos_id=cls.BOS_TOKEN_ID,
-            eos_id=cls.EOS_TOKEN_ID,
-            pad_id=cls.PAD_TOKEN_ID,
+            unk_id=decoder_config.unknown_index,
+            bos_id=decoder_config.bos_index,
+            eos_id=decoder_config.eos_index,
+            pad_id=decoder_config.pad_index,
             unk_surface="__UNKNOWN__",  # change default unk surface U+2047("⁇") by "__UNKNOWN__"
         )
-        # Export fairseq dictionary
-        processor = sp.SentencePieceProcessor()
-        processor.Load(decoder_config.output_path_prefix + ".model")
-        vocab = {i: processor.IdToPiece(i) for i in range(processor.GetPieceSize())}
-        assert (
-            vocab.get(cls.UNK_TOKEN_ID) == cls.UNK_TOKEN
-            and vocab.get(cls.BOS_TOKEN_ID) == cls.BOS_TOKEN
-            and vocab.get(cls.EOS_TOKEN_ID) == cls.EOS_TOKEN
-        )
-        vocab = {i: s for i, s in vocab.items() if s not in {cls.UNK_TOKEN, cls.BOS_TOKEN, cls.EOS_TOKEN, cls.PAD_TOKEN}}
-        with open(decoder_config.output_path_prefix + ".txt", "w", encoding="utf-8") as f_out:
-            for _, s in sorted(vocab.items(), key=lambda x: x[0]):
-                f_out.write(f"{s} 1\n")
 
-        return cls(decoder_config, processor)
+        return cls(decoder_config)
 
     def extract(self, text: str) -> tf.Tensor:
-        """
-        Convert string to a list of integers
-        # encode: text => id
-        sp.encode_as_pieces('This is a test') --> ['▁This', '▁is', '▁a', '▁t', 'est']
-        sp.encode_as_ids('This is a test') --> [209, 31, 9, 375, 586]
-        Args:
-            text: string (sequence of characters)
-
-        Returns:
-            sequence of ints in tf.Tensor
-        """
-        text = self.preprocess_text(text)
-        text = text.strip()  # remove trailing space
-        indices = self.model.encode_as_ids(text)
-        return tf.convert_to_tensor(indices, dtype=tf.int32)
+        return self.tf_extract(text)
 
     def tf_extract(self, text: tf.Tensor) -> tf.Tensor:
-        return self.extract(text)
+        text = self.tf_preprocess_text(text)
+        text = tf.strings.split(text)
+        indices = self.tokenizer.tokenize(text).merge_dims(0, 1)
+        return indices
 
     def iextract(self, indices: tf.Tensor) -> tf.Tensor:
         """
         Convert list of indices to string
-        # decode: id => text
-        sp.decode_pieces(['▁This', '▁is', '▁a', '▁t', 'est']) --> This is a test
-        sp.decode_ids([209, 31, 9, 375, 586]) --> This is a test
-
         Args:
             indices: tf.Tensor with dim [B, None]
 
         Returns:
             transcripts: tf.Tensor of dtype tf.string with dim [B]
         """
-        indices = self.normalize_indices(indices)
-        with tf.device("/CPU:0"):  # string data is not supported on GPU
-
-            def decode(x):
-                if x[0] == self.blank:
-                    x = x[1:]
-                return self.model.decode_ids(x.tolist())
-
-            text = tf.map_fn(
-                lambda x: tf.numpy_function(decode, inp=[x], Tout=tf.string),
-                indices,
-                fn_output_signature=tf.TensorSpec([], dtype=tf.string),
-            )
-        return text
+        indices = tf.ragged.boolean_mask(indices, tf.not_equal(indices, self.blank))
+        indices = tf.ragged.boolean_mask(indices, tf.not_equal(indices, self.decoder_config.unknown_index))
+        indices = tf.ragged.boolean_mask(indices, tf.not_equal(indices, self.decoder_config.bos_index))
+        indices = tf.ragged.boolean_mask(indices, tf.not_equal(indices, self.decoder_config.eos_index))
+        transcripts = self.tokenizer.detokenize(indices)
+        return transcripts
 
     @tf.function(input_signature=[tf.TensorSpec([None], dtype=tf.int32)])
     def indices2upoints(self, indices: tf.Tensor) -> tf.Tensor:
@@ -480,9 +419,9 @@ class SentencePieceFeaturizer(TextFeaturizer):
             unicode code points transcript with dtype tf.int32 and shape [None]
         """
         with tf.name_scope("indices2upoints"):
-            indices = self.normalize_indices(indices)
-            upoints = tf.gather_nd(self.upoints, tf.expand_dims(indices, axis=-1))
-            return tf.gather_nd(upoints, tf.where(tf.not_equal(upoints, 0)))
+            transcripts = self.iextract(tf.reshape(indices, [1, -1]))
+            upoints = tf.strings.unicode_decode(transcripts, "UTF-8").to_tensor()
+            return tf.reshape(upoints, [-1])
 
 
 class WordPieceFeaturizer(TextFeaturizer):

@@ -100,7 +100,7 @@ def preprocess_paths(
 def save_file(
     filepath: str,
 ):
-    if is_cloud_path(filepath) and is_hdf5_filepath(filepath):
+    if is_cloud_path(filepath):
         _, ext = os.path.splitext(filepath)
         with tempfile.NamedTemporaryFile(suffix=ext) as tmp:
             yield tmp.name
@@ -113,7 +113,7 @@ def save_file(
 def read_file(
     filepath: str,
 ):
-    if is_cloud_path(filepath) and is_hdf5_filepath(filepath):
+    if is_cloud_path(filepath):
         _, ext = os.path.splitext(filepath)
         with tempfile.NamedTemporaryFile(suffix=ext) as tmp:
             tf.io.gfile.copy(filepath, tmp.name, overwrite=True)
