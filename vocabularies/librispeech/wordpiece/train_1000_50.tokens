@@ -1,5 +1,5 @@
-[PAD]
- 
+<pad>
+<unk>
 '
 a
 b
@@ -73,9 +73,9 @@ so
 one
 were
 me
+##n
 we
 there
-##n
 no
 or
 when
@@ -136,6 +136,7 @@ well
 two
 ##ine
 other
+##nt
 ##ment
 see
 before
@@ -153,9 +154,9 @@ made
 ##ant
 our
 after
+##ness
 should
 ##ar
-##ness
 great
 old
 such
@@ -165,7 +166,6 @@ came
 must
 how
 day
-##nt
 ##g
 never
 these
@@ -478,6 +478,7 @@ does
 four
 hundred
 next
+##ntly
 ##fully
 till
 ##ble
@@ -512,7 +513,6 @@ country
 ##ier
 best
 ##een
-##ntly
 gone
 matter
 wife
@@ -612,16 +612,15 @@ lord
 ##body
 fire
 given
-##ess
 hope
 ##ough
 certain
 therefore
 ##mber
+##ls
 body
 help
 ##atch
-##ls
 rest
 sea
 hear
@@ -651,7 +650,9 @@ dead
 son
 coming
 everything
+##ner
 ##overed
+##ess
 ##ked
 ##ying
 ##uty
@@ -659,7 +660,6 @@ everything
 hour
 ##ven
 above
-##ner
 ##its
 ##pect
 master
@@ -772,8 +772,8 @@ sometimes
 ##rain
 question
 ##dded
-ready
 ##ny
+ready
 ##ape
 ##ause
 ##ages
@@ -806,6 +806,7 @@ arms
 ##bly
 ten
 turn
+##ns
 year
 ##ange
 fear
@@ -851,7 +852,6 @@ ran
 window
 ##ane
 ##ather
-##ns
 ##lic
 truth
 ##be
@@ -939,6 +939,7 @@ need
 ##u
 carried
 run
+##nts
 ##ox
 ##ush
 eye
@@ -990,8 +991,6 @@ book
 ##ont
 cut
 ##ining
-##cent
-## 
 ##'
 ##c
 ##j

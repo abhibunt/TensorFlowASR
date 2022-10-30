@@ -10,7 +10,7 @@ decoder_config = DecoderConfig(
     {
         "vocabulary": f"{os.path.dirname(__file__)}/../vocabularies/librispeech/wordpiece/train_1000_50.tokens",
         "max_subword_length": 50,
-        "unknown_token": "[PAD]",
+        "unknown_token": "<unk>",
     }
 )
 
