@@ -157,6 +157,8 @@ learning_config:
       save_best_only: False
       save_weights_only: True
       save_freq: epoch
+      options:
+        experimental_enable_async_checkpoint: True
     backup_and_restore:
       backup_dir: {{modeldir}}/states
       save_freq: epoch

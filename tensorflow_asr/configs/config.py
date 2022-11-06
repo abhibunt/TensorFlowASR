@@ -14,6 +14,8 @@
 
 from typing import Union
 
+import tensorflow as tf
+
 from tensorflow_asr.augmentations.augmentation import Augmentation
 from tensorflow_asr.utils import file_util
 
@@ -133,6 +135,8 @@ class RunningConfig:
             if k == "checkpoint":
                 if v and v.get("filepath"):
                     file_util.preprocess_paths(v.get("filepath"))
+                if v and v.get("options"):
+                    self.checkpoint["options"] = tf.train.CheckpointOptions(**v.get("options"))
             elif k == "backup_and_restore" and v:
                 if v and v.get("backup_dir"):
                     file_util.preprocess_paths(v.get("backup_dir"), isdir=True)
