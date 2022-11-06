@@ -1,3 +1,4 @@
+# pylint: disable=attribute-defined-outside-init
 # Copyright 2020 Huy Le Nguyen (@usimarit)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -324,6 +325,8 @@ class Transducer(BaseModel):
             name="joint",
         )
         self.time_reduction_factor = 1
+        self.decoder_gwn_step = None
+        self.decoder_gwn_stddev = None
 
     def make(self, input_shape, prediction_shape=[None], batch_size=None):
         inputs = tf.keras.Input(shape=input_shape, batch_size=batch_size, dtype=tf.float32)
@@ -347,15 +350,29 @@ class Transducer(BaseModel):
         run_eagerly=None,
         mxp=True,
         ga_steps=None,
+        decoder_gwn_step=None,
+        decoder_gwn_stddev=None,
         **kwargs,
     ):
         loss = RnntLoss(blank=blank)
+        self.decoder_gwn_step = decoder_gwn_step
+        self.decoder_gwn_stddev = decoder_gwn_stddev
+        if self.decoder_gwn_step and not decoder_gwn_stddev:
+            raise ValueError("decoder_gwn_stddev must be set")
         super().compile(loss=loss, optimizer=optimizer, run_eagerly=run_eagerly, mxp=mxp, ga_steps=ga_steps, **kwargs)
+
+    def _apply_decoder_gwn(self):
+        for weight in self.predict_net.trainable_weights:
+            weight.assign_add(tf.random.normal(mean=0, stddev=self.decoder_gwn_stddev, shape=weight.shape, dtype=weight.dtype))
+        for weight in self.joint_net.trainable_weights:
+            weight.assign_add(tf.random.normal(mean=0, stddev=self.decoder_gwn_stddev, shape=weight.shape, dtype=weight.dtype))
 
     def call(self, inputs, training=False):
         enc, enc_length = self.encoder([inputs["inputs"], inputs["inputs_length"]], training=training)
         pred = self.predict_net([inputs["predictions"], inputs["predictions_length"]], training=training)
         logits = self.joint_net([enc, pred], training=training)
+        if self.decoder_gwn_step and training:
+            tf.cond(tf.greater_equal(self.optimizer.iterations, self.decoder_gwn_step), self._apply_decoder_gwn, lambda: None)
         return data_util.create_logits(logits=logits, logits_length=enc_length)
 
     # -------------------------------- INFERENCES -------------------------------------

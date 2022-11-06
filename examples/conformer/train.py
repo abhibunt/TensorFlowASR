@@ -28,7 +28,7 @@ from tensorflow_asr.models.transducer.conformer import Conformer
 from tensorflow_asr.optimizers.schedules import TransformerSchedule
 from tensorflow_asr.utils import file_util
 
-DEFAULT_YAML = os.path.join(os.path.abspath(os.path.dirname(__file__)), "config_wp.yml")
+DEFAULT_YAML = os.path.join(os.path.abspath(os.path.dirname(__file__)), "config_wp.j2")
 
 
 def main(
@@ -88,6 +88,8 @@ def main(
             jit_compile=jit_compile,
             mxp=mxp,
             ga_steps=ga_steps,
+            decoder_gwn_step=config.learning_config.decoder_gwn_step,
+            decoder_gwn_stddev=config.learning_config.decoder_gwn_stddev,
         )
         conformer.summary()
 
