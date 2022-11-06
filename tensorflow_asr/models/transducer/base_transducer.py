@@ -363,7 +363,7 @@ class Transducer(BaseModel):
 
     def _apply_decoder_gwn(self):
         for weight in self.predict_net.weights + self.joint_net.weights:
-            noise = tf.stop_gradient(tf.random.normal(mean=0, stddev=self.decoder_gwn_stddev, shape=weight.shape, dtype=weight.dtype))
+            noise = tf.random.normal(mean=0, stddev=self.decoder_gwn_stddev, shape=weight.shape, dtype=weight.dtype)
             weight.assign_add(noise)
 
     def call(self, inputs, training=False):
