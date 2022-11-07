@@ -364,7 +364,7 @@ class Transducer(BaseModel):
     def _apply_decoder_gwn(self):
         for weight in self.predict_net.weights + self.joint_net.weights:
             noise = tf.random.normal(mean=0, stddev=self.decoder_gwn_stddev, shape=weight.shape, dtype=weight.dtype)
-            weight.assign_add(noise)
+            tf.no_gradient(weight.assign_add(noise, read_value=False))
 
     def call(self, inputs, training=False):
         enc, enc_length = self.encoder([inputs["inputs"], inputs["inputs_length"]], training=training)
