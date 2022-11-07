@@ -371,7 +371,7 @@ class Transducer(BaseModel):
         pred = self.predict_net([inputs["predictions"], inputs["predictions_length"]], training=training)
         logits = self.joint_net([enc, pred], training=training)
         if self.decoder_gwn_step and training:
-            tf.cond(tf.greater_equal(self.optimizer.iterations, self.decoder_gwn_step), self._apply_decoder_gwn, tf.no_op)
+            tf.cond(tf.greater_equal(self.optimizer.iterations, self.decoder_gwn_step), self._apply_decoder_gwn, lambda: None)
         return data_util.create_logits(logits=logits, logits_length=enc_length)
 
     # -------------------------------- INFERENCES -------------------------------------
