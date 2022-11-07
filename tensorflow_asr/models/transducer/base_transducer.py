@@ -362,9 +362,9 @@ class Transducer(BaseModel):
         super().compile(loss=loss, optimizer=optimizer, run_eagerly=run_eagerly, mxp=mxp, ga_steps=ga_steps, **kwargs)
 
     def _apply_decoder_gwn(self):
-        for weight in self.predict_net.weights + self.joint_net.weights:
+        for weight in self.predict_net.weights:
             noise = tf.random.normal(mean=0, stddev=self.decoder_gwn_stddev, shape=weight.shape, dtype=weight.dtype)
-            tf.stop_gradient(weight.assign_add(noise))
+            weight.assign_add(noise)
 
     def call(self, inputs, training=False):
         enc, enc_length = self.encoder([inputs["inputs"], inputs["inputs_length"]], training=training)
