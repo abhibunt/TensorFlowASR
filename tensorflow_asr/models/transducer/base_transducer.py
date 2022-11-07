@@ -364,14 +364,14 @@ class Transducer(BaseModel):
     def _apply_decoder_gwn(self):
         for weight in self.predict_net.weights + self.joint_net.weights:
             noise = tf.random.normal(mean=0, stddev=self.decoder_gwn_stddev, shape=weight.shape, dtype=weight.dtype)
-            tf.no_gradient(weight.assign_add(noise, read_value=False))
+            tf.stop_gradient(weight.assign_add(noise))
 
     def call(self, inputs, training=False):
         enc, enc_length = self.encoder([inputs["inputs"], inputs["inputs_length"]], training=training)
         pred = self.predict_net([inputs["predictions"], inputs["predictions_length"]], training=training)
         logits = self.joint_net([enc, pred], training=training)
         if self.decoder_gwn_step and training:
-            tf.cond(tf.greater_equal(self.optimizer.iterations, self.decoder_gwn_step), self._apply_decoder_gwn, lambda: None)
+            tf.cond(tf.greater_equal(self.optimizer.iterations, self.decoder_gwn_step), self._apply_decoder_gwn, tf.no_op)
         return data_util.create_logits(logits=logits, logits_length=enc_length)
 
     # -------------------------------- INFERENCES -------------------------------------
