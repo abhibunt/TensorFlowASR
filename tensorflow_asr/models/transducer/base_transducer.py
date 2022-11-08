@@ -384,9 +384,16 @@ class Transducer(BaseModel):
         return []
 
     def remove_gwn(self, noises):
-        if self.apply_gwn_step and len(noises) > 0:
+        def sub_noise():
             for i, weight in enumerate(self.predict_net.weights):
                 weight.assign_sub(noises[i])
+
+        if self.apply_gwn_step and len(noises) > 0:
+            tf.cond(
+                tf.greater_equal(self.optimizer.iterations, self.apply_gwn_step),
+                sub_noise,
+                lambda: None,
+            )
 
     def call(self, inputs, training=False):
         enc, enc_length = self.encoder([inputs["inputs"], inputs["inputs_length"]], training=training)
