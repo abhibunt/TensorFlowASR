@@ -94,6 +94,8 @@ class BaseModel(tf.keras.Model):
         run_eagerly=None,
         mxp=True,
         ga_steps=None,
+        apply_gwn_step=None,
+        apply_gwn_stddev=None,
         **kwargs,
     ):
         if env_util.has_devices("TPU"):
@@ -107,6 +109,10 @@ class BaseModel(tf.keras.Model):
         else:
             self.use_ga = False
         self.add_metric(metric=tf.keras.metrics.Mean(name="loss", dtype=tf.float32))
+        self.apply_gwn_step = apply_gwn_step
+        self.apply_gwn_stddev = apply_gwn_stddev
+        if self.apply_gwn_step and not self.apply_gwn_stddev:
+            raise ValueError("apply_gwn_stddev must be specified with apply_gwn_step")
         super().compile(optimizer=optimizer, loss=loss, run_eagerly=run_eagerly, **kwargs)
 
     def add_featurizers(self, speech_featurizer: SpeechFeaturizer, text_featurizer: TextFeaturizer):
@@ -121,6 +127,11 @@ class BaseModel(tf.keras.Model):
         self.text_featurizer = text_featurizer
 
     # -------------------------------- STEP FUNCTIONS -------------------------------------
+    def apply_gwn(self):
+        return []
+
+    def remove_gwn(self, noises):
+        pass
 
     def _get_global_batch_size(self, y_pred):
         global_batch_size = tf.shape(y_pred["logits"])[0] * tf.distribute.get_strategy().num_replicas_in_sync
@@ -140,7 +151,9 @@ class BaseModel(tf.keras.Model):
         inputs, y_true = batch
 
         with tf.GradientTape() as tape:
+            noises = self.apply_gwn()
             y_pred = self(inputs, training=True)
+            self.remove_gwn(noises=noises)
             tape.watch(y_pred["logits"])
             per_sample_loss = self.loss(y_true=y_true, y_pred=y_pred)
             loss = tf.nn.compute_average_loss(per_sample_loss, global_batch_size=self._get_global_batch_size(y_pred))

@@ -156,8 +156,8 @@ class LearningConfig:
         self.optimizer_config: dict = config.pop("optimizer_config", {})
         self.learning_rate_config: dict = config.pop("learning_rate_config", {})
         self.running_config = RunningConfig(config.pop("running_config", {}))
-        self.decoder_gwn_step = config.pop("decoder_gwn_step", None)
-        self.decoder_gwn_stddev = config.pop("decoder_gwn_stddev", None)
+        self.apply_gwn_step = config.pop("apply_gwn_step", None)
+        self.apply_gwn_stddev = config.pop("apply_gwn_stddev", None)
         for k, v in config.items():
             setattr(self, k, v)
 

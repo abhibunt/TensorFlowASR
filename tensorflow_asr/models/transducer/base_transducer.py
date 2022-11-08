@@ -350,26 +350,46 @@ class Transducer(BaseModel):
         run_eagerly=None,
         mxp=True,
         ga_steps=None,
-        decoder_gwn_step=None,
-        decoder_gwn_stddev=None,
+        apply_gwn_step=None,
+        apply_gwn_stddev=None,
         **kwargs,
     ):
         loss = RnntLoss(blank=blank)
-        self.decoder_gwn_step = decoder_gwn_step
-        self.decoder_gwn_stddev = decoder_gwn_stddev
-        if self.decoder_gwn_step and not decoder_gwn_stddev:
-            raise ValueError("decoder_gwn_stddev must be set")
-        super().compile(loss=loss, optimizer=optimizer, run_eagerly=run_eagerly, mxp=mxp, ga_steps=ga_steps, **kwargs)
+        super().compile(
+            loss=loss,
+            optimizer=optimizer,
+            run_eagerly=run_eagerly,
+            mxp=mxp,
+            ga_steps=ga_steps,
+            apply_gwn_step=apply_gwn_step,
+            apply_gwn_stddev=apply_gwn_stddev,
+            **kwargs,
+        )
 
-    def _apply_decoder_gwn(self):
-        for weight in self.predict_net.weights + self.joint_net.weights:
-            noise = tf.random.normal(mean=0, stddev=self.decoder_gwn_stddev, shape=weight.shape, dtype=weight.dtype)
-            weight.assign_add(noise)
+    def apply_gwn(self):
+        def add_noise():
+            noises = []
+            for weight in self.predict_net.weights:
+                noise = tf.random.normal(mean=0, stddev=self.apply_gwn_stddev, shape=weight.shape, dtype=weight.dtype)
+                noises.append(noise)
+                weight.assign_add(noise)
+            return noises
+
+        if self.apply_gwn_step:
+            return tf.cond(
+                tf.greater_equal(self.optimizer.iterations, self.apply_gwn_step),
+                add_noise,
+                lambda: self.predict_net.weights,
+            )
+        return []
+
+    def remove_gwn(self, noises):
+        if self.apply_gwn_step and len(noises) > 0:
+            for i, weight in enumerate(self.predict_net.weights):
+                weight.assign_sub(noises[i])
 
     def call(self, inputs, training=False):
         enc, enc_length = self.encoder([inputs["inputs"], inputs["inputs_length"]], training=training)
-        if self.decoder_gwn_step and training:  # apply before decoder call
-            tf.cond(tf.greater_equal(self.optimizer.iterations, self.decoder_gwn_step), self._apply_decoder_gwn, lambda: None)
         pred = self.predict_net([inputs["predictions"], inputs["predictions_length"]], training=training)
         logits = self.joint_net([enc, pred], training=training)
         return data_util.create_logits(logits=logits, logits_length=enc_length)
