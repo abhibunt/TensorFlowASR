@@ -34,7 +34,7 @@ class Conformer(Transducer):
         encoder_fc_factor: float = 0.5,
         encoder_dropout: float = 0,
         encoder_trainable: bool = True,
-        prediction_label_encode_mode: str = "one_hot",
+        prediction_label_encode_mode: str = "embedding",
         prediction_embed_dim: int = 512,
         prediction_num_rnns: int = 1,
         prediction_rnn_units: int = 320,

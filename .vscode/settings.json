@@ -12,5 +12,6 @@
         "black",
         "--line-length",
         "130"
-    ]
+    ],
+    "python.formatting.provider": "black"
 }

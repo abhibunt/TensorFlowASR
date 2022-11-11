@@ -18,7 +18,7 @@ import tensorflow as tf
 
 from tensorflow_asr.models.encoders.contextnet import L2, ContextNetEncoder
 from tensorflow_asr.models.transducer.base_transducer import Transducer
-from tensorflow_asr.utils import data_util, math_util
+from tensorflow_asr.utils import data_util
 
 
 class ContextNet(Transducer):
@@ -29,7 +29,7 @@ class ContextNet(Transducer):
         encoder_blocks: List[dict],
         encoder_alpha: float = 0.5,
         encoder_trainable: bool = True,
-        prediction_label_encode_mode: str = "one_hot",
+        prediction_label_encode_mode: str = "embedding",
         prediction_embed_dim: int = 512,
         prediction_num_rnns: int = 1,
         prediction_rnn_units: int = 320,

@@ -18,7 +18,7 @@ matplotlib==3.5.3
 pydot==1.4.2
 graphviz==0.20.1
 netron==6.0.8
-tf2onnx==1.12.1
+tf2onnx==1.13.0
 
 # extra=tf2.8
 tensorflow>=2.8.0,<2.9.0

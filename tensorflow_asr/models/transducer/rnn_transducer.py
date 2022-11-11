@@ -182,7 +182,7 @@ class RnnTransducer(Transducer):
         encoder_rnn_units: int = 2048,
         encoder_layer_norm: bool = False,
         encoder_trainable: bool = True,
-        prediction_label_encode_mode: str = "one_hot",
+        prediction_label_encode_mode: str = "embedding",
         prediction_embed_dim: int = 320,
         prediction_num_rnns: int = 2,
         prediction_rnn_units: int = 2048,

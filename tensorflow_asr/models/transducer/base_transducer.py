@@ -270,7 +270,7 @@ class Transducer(BaseModel):
         encoder: tf.keras.layers.Layer,
         blank: int,
         vocab_size: int,
-        prediction_label_encoder_mode: str = "one_hot",
+        prediction_label_encoder_mode: str = "embedding",
         prediction_embed_dim: int = 512,
         prediction_num_rnns: int = 1,
         prediction_rnn_units: int = 320,
