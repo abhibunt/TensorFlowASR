@@ -12,13 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List
-
-import tensorflow as tf
+from typing import List
 
 from tensorflow_asr.models.encoders.contextnet import L2, ContextNetEncoder
 from tensorflow_asr.models.transducer.base_transducer import Transducer
-from tensorflow_asr.utils import data_util
 
 
 class ContextNet(Transducer):

@@ -275,10 +275,15 @@ class MultiHeadRelativeAttention(MultiHeadAttention):
         inputs,
         pos_bias_u,
         pos_bias_v,
+        mems=None,
         training=False,
         attention_mask=None,
     ):
         query, key, value, pos = inputs
+
+        if mems is not None:
+            key = tf.concat([tf.cast(mems, dtype=key.dtype), key], 1)
+            value = tf.concat([tf.cast(mems, dtype=value.dtype), value], 1)
 
         query, key, value = self.call_qkv(query, key, value, training=training)
 

@@ -20,6 +20,8 @@ from tensorflow_asr.featurizers.text_featurizers import TextFeaturizer
 from tensorflow_asr.optimizers.accumulation import GradientAccumulator
 from tensorflow_asr.utils import env_util, file_util
 
+logger = tf.get_logger()
+
 
 class BaseModel(tf.keras.Model):
     def summary(
@@ -94,25 +96,24 @@ class BaseModel(tf.keras.Model):
         run_eagerly=None,
         mxp=True,
         ga_steps=None,
-        apply_gwn_step=None,
-        apply_gwn_stddev=None,
+        apply_gwn_config=None,
         **kwargs,
     ):
         if env_util.has_devices("TPU"):
             self.use_loss_scale = False
         else:
             self.use_loss_scale = mxp
-            optimizer = tf.keras.mixed_precision.LossScaleOptimizer(tf.keras.optimizers.get(optimizer)) if self.use_loss_scale else optimizer
+            if self.use_loss_scale:
+                optimizer = tf.keras.mixed_precision.LossScaleOptimizer(tf.keras.optimizers.get(optimizer))
+                logger.info("Using loss scale")
         if isinstance(ga_steps, int) and ga_steps > 1:
             self.use_ga = True
             self.ga = GradientAccumulator(ga_steps=ga_steps, trainable_variables=self.trainable_variables)
+            logger.info(f"Using gradient accumulation with accumulate steps = {ga_steps}")
         else:
             self.use_ga = False
+        self.apply_gwn_config = apply_gwn_config
         self.add_metric(metric=tf.keras.metrics.Mean(name="loss", dtype=tf.float32))
-        self.apply_gwn_step = apply_gwn_step
-        self.apply_gwn_stddev = apply_gwn_stddev
-        if self.apply_gwn_step and not self.apply_gwn_stddev:
-            raise ValueError("apply_gwn_stddev must be specified with apply_gwn_step")
         super().compile(optimizer=optimizer, loss=loss, run_eagerly=run_eagerly, **kwargs)
 
     def add_featurizers(self, speech_featurizer: SpeechFeaturizer, text_featurizer: TextFeaturizer):
@@ -127,7 +128,7 @@ class BaseModel(tf.keras.Model):
         self.text_featurizer = text_featurizer
 
     # -------------------------------- STEP FUNCTIONS -------------------------------------
-    def apply_gwn(self):
+    def apply_gwn(self) -> list:
         return []
 
     def remove_gwn(self, noises):
@@ -170,10 +171,11 @@ class BaseModel(tf.keras.Model):
             self.ga.accumulate(gradients=gradients)
             self.optimizer.apply_gradients(zip(self.ga.gradients, self.trainable_variables))
             tf.cond(self.ga.is_apply_step, self.ga.reset, lambda: None)
+            tf.cond(self.ga.is_apply_step, lambda: self._tfasr_metrics["loss"].update_state(per_sample_loss), lambda: None)
         else:
             self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
+            self._tfasr_metrics["loss"].update_state(per_sample_loss)
 
-        self._tfasr_metrics["loss"].update_state(per_sample_loss)
         return {m.name: m.result() for m in self.metrics}
 
     def test_step(self, batch):
