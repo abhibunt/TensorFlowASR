@@ -88,8 +88,7 @@ def main(
             jit_compile=jit_compile,
             mxp=mxp,
             ga_steps=ga_steps,
-            apply_gwn_step=config.learning_config.apply_gwn_step,
-            apply_gwn_stddev=config.learning_config.apply_gwn_stddev,
+            apply_gwn_config=config.learning_config.apply_gwn_config,
         )
         conformer.summary()
 

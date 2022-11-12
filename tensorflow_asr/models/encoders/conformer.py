@@ -1,3 +1,4 @@
+# pylint: disable=attribute-defined-outside-init
 # Copyright 2020 Huy Le Nguyen (@usimarit)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -176,7 +177,12 @@ class MHSAModule(tf.keras.layers.Layer):
                 attention_mask=attention_mask,
             )
         else:
-            outputs = self.mha([outputs, outputs, outputs], training=training, attention_mask=attention_mask)
+            outputs = self.mha(
+                [outputs, outputs, outputs],
+                mems=mems,
+                training=training,
+                attention_mask=attention_mask,
+            )
         outputs = self.do(outputs, training=training)
         outputs = self.res_add([inputs, outputs])
         return outputs
@@ -380,6 +386,7 @@ class ConformerEncoder(Layer):
         depth_multiplier=1,
         padding="causal",
         use_attention_mask=False,
+        use_attention_causal_mask=False,
         fc_factor=0.5,
         dropout=0.0,
         kernel_regularizer=L2,
@@ -429,6 +436,7 @@ class ConformerEncoder(Layer):
         self._num_heads = num_heads
         self._head_size = head_size
         self._use_attention_mask = use_attention_mask
+        self._use_attention_causal_mask = use_attention_causal_mask
         self._mem_size = mem_size
 
         self.conformer_blocks = []
@@ -451,7 +459,7 @@ class ConformerEncoder(Layer):
 
     def build(self, input_shape):
         if self._mha_type == "relmha":
-            self.pos_bias_u = self.add_weight(  # pylint: disable=attribute-defined-outside-init
+            self.pos_bias_u = self.add_weight(
                 name="content_attention_bias",
                 shape=[self._num_heads, self._head_size],
                 dtype=self.dtype,
@@ -459,7 +467,7 @@ class ConformerEncoder(Layer):
                 initializer="zeros",
                 regularizer=self._bias_regularizer,
             )
-            self.pos_bias_v = self.add_weight(  # pylint: disable=attribute-defined-outside-init
+            self.pos_bias_v = self.add_weight(
                 name="positional_attention_bias",
                 shape=[self._num_heads, self._head_size],
                 dtype=self.dtype,
@@ -468,31 +476,44 @@ class ConformerEncoder(Layer):
                 regularizer=self._bias_regularizer,
             )
         else:
-            self.pos_bias_u, self.pos_bias_v = None, None  # pylint: disable=attribute-defined-outside-init
+            self.pos_bias_u, self.pos_bias_v = None, None
+        self.mems = None
         super().build(input_shape)
 
-    def _init_mems(self, batch_size):
-        if self._mem_size is not None:
-            mems = []
-            for i in range(self._num_blocks):
-                mems.append(tf.zeros([batch_size, self._mem_size, self._dmodel]))
-            return mems
+    def _compute_attention_mask(self, max_length, inputs_length):
+        if self._use_attention_mask:
+            return compute_self_attention_mask(max_length, inputs_length, self._mem_size, self._use_attention_causal_mask)
         return None
 
-    def _update_mems(self, hids, mems, qlen):
-        if mems is None:
-            return None
-        assert len(hids) == len(mems), "len(hids) != len(mems)"
-        new_mems = []
+    def _compute_relpos(self, batch_size, max_length):
+        if self._mha_type == "relmha":
+            relative_position_encoding = compute_sinusoid_position_encoding(batch_size, max_length, self._dmodel, dtype=self.compute_dtype)
+        else:
+            relative_position_encoding = None
+        return relative_position_encoding
+
+    def _init_mems(self, batch_size):
+        if self._mem_size is not None and self.mems is None:
+            self.mems = []
+            for _ in range(self._num_blocks):
+                empty = tf.zeros([batch_size, self._mem_size, self._dmodel], dtype=self.compute_dtype)
+                self.mems.append(empty)
+        else:
+            self.mems = None
+
+    def _update_mems(self, hids):
+        if self.mems is None:
+            return
+        assert len(hids) == len(self.mems), "len(hids) != len(mems)"
         mlen = tf.convert_to_tensor(self._mem_size)
-        end_idx = mlen + qlen
-        beg_idx = end_idx - mlen
         for i, hid in enumerate(hids):
-            mems[i] = tf.cast(mems[i], dtype=hid.dtype)
-            cat = tf.concat([mems[i], hid], 0)
+            qlen = tf.shape(hid)[1]
+            end_idx = mlen + qlen
+            beg_idx = end_idx - mlen
+            self.mems[i] = tf.cast(self.mems[i], dtype=hid.dtype)
+            cat = tf.concat([self.mems[i], hid], 1)
             tf.stop_gradient(cat)
-            new_mems.append(cat[beg_idx:end_idx])
-        return new_mems
+            self.mems[i] = cat[beg_idx:end_idx]
 
     def call(self, inputs, training=False):
         outputs, inputs_length = inputs
@@ -500,17 +521,10 @@ class ConformerEncoder(Layer):
         inputs_length = math_util.get_reduced_length(inputs_length, self.conv_subsampling.time_reduction_factor)
         outputs = self.linear(outputs, training=training)
         outputs = self.do(outputs, training=training)
-        if self._use_attention_mask:
-            attention_mask = compute_self_attention_mask(outputs, inputs_length)
-        else:
-            attention_mask = None
-        if self._mha_type == "relmha":
-            batch_size, max_length, dmodel = shape_util.shape_list(outputs)
-            relative_position_encoding = compute_sinusoid_position_encoding(batch_size, max_length, dmodel, dtype=outputs.dtype)
-            mems = self._init_mems(batch_size)
-        else:
-            relative_position_encoding = None
-            mems = None
+        batch_size, max_length, _ = shape_util.shape_list(outputs)
+        self._init_mems(batch_size)
+        attention_mask = self._compute_attention_mask(max_length, inputs_length)
+        relative_position_encoding = self._compute_relpos(batch_size, max_length)
         hids = []
         for i, cblock in enumerate(self.conformer_blocks):
             hids.append(outputs)
@@ -519,11 +533,11 @@ class ConformerEncoder(Layer):
                 relative_position_encoding=relative_position_encoding,
                 pos_bias_u=self.pos_bias_u,
                 pos_bias_v=self.pos_bias_v,
-                mems=(mems[i] if mems is not None else None),
+                mems=(self.mems[i] if self.mems is not None else None),
                 training=training,
                 attention_mask=attention_mask,
             )
-
+        self._update_mems(hids)
         return outputs, inputs_length
 
     def compute_output_shape(self, input_shape):

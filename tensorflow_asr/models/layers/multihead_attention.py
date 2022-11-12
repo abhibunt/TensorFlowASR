@@ -17,7 +17,7 @@ import typing
 
 import tensorflow as tf
 
-from tensorflow_asr.utils import math_util, shape_util
+from tensorflow_asr.utils import math_util
 
 
 def _rel_shift(x):
@@ -56,7 +56,7 @@ def compute_causal_mask(query, value=None):
     return tf.linalg.band_part(tf.ones((1, q_seq_length, v_seq_length), tf.bool), -1, 0)  # creates a lower triangular matrix
 
 
-def compute_self_attention_mask(inputs, inputs_length, use_causal_mask=False):
+def compute_self_attention_mask(max_length, inputs_length, mem_length=None, use_causal_mask=False):
     """
     Returns
     ```
@@ -66,11 +66,11 @@ def compute_self_attention_mask(inputs, inputs_length, use_causal_mask=False):
       [False, False, False, False]]]
     ```
     """
-    _, max_length, _ = shape_util.shape_list(inputs)
-    mask = tf.sequence_mask(inputs_length, maxlen=max_length)
-    attention_mask = mask[:, None, :] & mask[:, :, None]
+    qmask = tf.sequence_mask(inputs_length, maxlen=max_length)
+    vmask = tf.sequence_mask(inputs_length + mem_length, maxlen=max_length + mem_length) if mem_length is not None else qmask
+    attention_mask = qmask[:, :, None] & vmask[:, None, :]
     if use_causal_mask:
-        attention_mask = attention_mask & compute_causal_mask(attention_mask)
+        attention_mask = attention_mask & compute_causal_mask(qmask, value=vmask)
     return attention_mask
 
 
@@ -219,10 +219,16 @@ class MultiHeadAttention(tf.keras.layers.Layer):
     def call(
         self,
         inputs,
+        mems=None,
         training=False,
         attention_mask=None,
     ):
         query, key, value = inputs
+
+        if mems is not None:
+            key = tf.concat([tf.cast(mems, dtype=key.dtype), key], 1)
+            value = tf.concat([tf.cast(mems, dtype=value.dtype), value], 1)
+
         query, key, value = self.call_qkv(query, key, value, training=training)
 
         # Scale dot-product, doing the division to either query or key
