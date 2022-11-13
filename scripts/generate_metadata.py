@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import fire
 
 from tensorflow_asr.utils import env_util
 
@@ -21,7 +20,7 @@ env_util.setup_environment()
 from tensorflow_asr.configs.config import Config
 from tensorflow_asr.datasets.asr_dataset import ASRDataset
 from tensorflow_asr.helpers import featurizer_helpers
-from tensorflow_asr.utils.file_util import preprocess_paths
+from tensorflow_asr.utils import cli_util, file_util
 
 
 def main(
@@ -30,7 +29,7 @@ def main(
     config_path: str = None,
     metadata: str = None,
 ):
-    transcripts = preprocess_paths(transcripts)
+    transcripts = file_util.preprocess_paths(transcripts)
 
     config = Config(config_path)
 
@@ -48,4 +47,4 @@ def main(
 
 
 if __name__ == "__main__":
-    fire.Fire(main)
+    cli_util.run(main)

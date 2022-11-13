@@ -18,14 +18,13 @@ logger = env_util.setup_environment()
 
 import os
 
-import fire
 import tensorflow as tf
 
 from tensorflow_asr.configs.config import Config
 from tensorflow_asr.helpers import dataset_helpers, featurizer_helpers
 from tensorflow_asr.models.transducer.contextnet import ContextNet
 from tensorflow_asr.optimizers.schedules import TransformerSchedule
-from tensorflow_asr.utils import file_util
+from tensorflow_asr.utils import cli_util, file_util
 
 DEFAULT_YAML = os.path.join(os.path.abspath(os.path.dirname(__file__)), "config_wp.j2")
 
@@ -101,4 +100,4 @@ def main(
 
 
 if __name__ == "__main__":
-    fire.Fire(main)
+    cli_util.run(main)

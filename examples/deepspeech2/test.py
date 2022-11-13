@@ -14,12 +14,10 @@
 
 import os
 
-import fire
-
 from tensorflow_asr.configs.config import Config
 from tensorflow_asr.helpers import dataset_helpers, exec_helpers, featurizer_helpers
 from tensorflow_asr.models.ctc.deepspeech2 import DeepSpeech2
-from tensorflow_asr.utils import env_util, file_util
+from tensorflow_asr.utils import cli_util, env_util, file_util
 
 logger = env_util.setup_environment()
 
@@ -58,4 +56,4 @@ def main(
 
 
 if __name__ == "__main__":
-    fire.Fire(main)
+    cli_util.run(main)

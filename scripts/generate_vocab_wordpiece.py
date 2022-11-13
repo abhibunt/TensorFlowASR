@@ -1,5 +1,4 @@
-# coding=utf-8
-# Copyright 2022 TF.Text Authors.
+# Copyright 2022 Huy Le Nguyen (@usimarit)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,11 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import fire
-
 from tensorflow_asr.configs.config import Config
 from tensorflow_asr.featurizers.text_featurizers import WordPieceFeaturizer
-from tensorflow_asr.utils import env_util
+from tensorflow_asr.utils import cli_util, env_util
 
 logger = env_util.setup_environment()
 
@@ -30,4 +27,4 @@ def main(
 
 
 if __name__ == "__main__":
-    fire.Fire(main)
+    cli_util.run(main)

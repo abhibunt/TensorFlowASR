@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import fire
-
 from tensorflow_asr.utils import env_util
 
 logger = env_util.setup_environment()
@@ -21,7 +19,7 @@ logger = env_util.setup_environment()
 from tensorflow_asr.configs.config import Config
 from tensorflow_asr.datasets.asr_dataset import ASRTFRecordDataset
 from tensorflow_asr.helpers import featurizer_helpers
-from tensorflow_asr.utils.file_util import preprocess_paths
+from tensorflow_asr.utils import cli_util, file_util
 
 
 def main(
@@ -32,8 +30,8 @@ def main(
     tfrecords_shards: int = 16,
     shuffle: bool = True,
 ):
-    data_paths = preprocess_paths(transcripts)
-    tfrecords_dir = preprocess_paths(tfrecords_dir, isdir=True)
+    data_paths = file_util.preprocess_paths(transcripts)
+    tfrecords_dir = file_util.preprocess_paths(tfrecords_dir, isdir=True)
     logger.info(f"Create tfrecords to directory: {tfrecords_dir}")
 
     config = Config(config_path)
@@ -53,4 +51,4 @@ def main(
 
 
 if __name__ == "__main__":
-    fire.Fire(main)
+    cli_util.run(main)

@@ -16,21 +16,18 @@ import glob
 import os
 import unicodedata
 
-import fire
 import librosa
 from tqdm.auto import tqdm
 
-from tensorflow_asr.utils.file_util import preprocess_paths
+from tensorflow_asr.utils import cli_util, file_util
 
 
 def main(
-    directory: str = None,
-    output: str = None,
+    directory: str,
+    output: str,
 ):
-    assert directory and output
-
-    directory = preprocess_paths(directory, isdir=True)
-    output = preprocess_paths(output)
+    directory = file_util.preprocess_paths(directory, isdir=True)
+    output = file_util.preprocess_paths(output)
 
     transcripts = []
 
@@ -55,4 +52,4 @@ def main(
 
 
 if __name__ == "__main__":
-    fire.Fire(main)
+    cli_util.run(main)
