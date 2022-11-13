@@ -477,7 +477,7 @@ class ConformerEncoder(Layer):
             )
         else:
             self.pos_bias_u, self.pos_bias_v = None, None
-        self._cache_relpos = input_shape[0][1] is not None  # cache relpos on static length
+        self._init_mems(input_shape[0][0])
         super().build(input_shape)
 
     def _compute_attention_mask(self, max_length, inputs_length):
@@ -485,48 +485,53 @@ class ConformerEncoder(Layer):
             return compute_self_attention_mask(max_length, inputs_length, self._mem_size, self._use_attention_causal_mask)
         return None
 
-    def _compute_relpos(self, batch_size, max_length, relative_position_encoding=None):
+    def _compute_relpos(self, batch_size, max_length):
         if self._mha_type == "relmha":
-            if self._cache_relpos and relative_position_encoding is not None:
-                return relative_position_encoding
-            if relative_position_encoding is None:
-                maxlen = max_length + tf.convert_to_tensor(self._mem_size) if self._mem_size is not None else max_length
-                relative_position_encoding = compute_sinusoid_position_encoding(batch_size, maxlen, self._dmodel, dtype=self.compute_dtype)
-        return relative_position_encoding
+            maxlen = max_length + tf.convert_to_tensor(self._mem_size) if self._mem_size is not None else max_length
+            relative_position_encoding = compute_sinusoid_position_encoding(batch_size, maxlen, self._dmodel, dtype=self.compute_dtype)
+            return relative_position_encoding
+        return None
 
-    def _init_mems(self, batch_size, mems=None):
-        if self._mem_size is not None and mems is None:
-            mems = []
+    def reset_mem_size(self, mem_size):
+        self._mem_size = mem_size
+
+    def _init_mems(self, batch_size):
+        if self._mem_size is not None:
+            self.mems = []
             for _ in range(self._num_blocks):
-                empty = tf.zeros([batch_size, self._mem_size, self._dmodel], dtype=self.compute_dtype)
-                mems.append(empty)
-            return mems
-        return mems
+                self.mems.append(
+                    tf.Variable(
+                        tf.zeros([batch_size, self._mem_size, self._dmodel], dtype=self.compute_dtype),
+                        trainable=False,
+                        synchronization=tf.VariableSynchronization.ON_READ,
+                        aggregation=tf.VariableAggregation.ONLY_FIRST_REPLICA,
+                        name="mems",
+                    )
+                )
+        else:
+            self.mems = None
 
-    def _update_mems(self, hids, mems):
-        if mems is None:
-            return None
+    def _update_mems(self, hids):
+        if self.mems is None:
+            return
         mlen = tf.convert_to_tensor(self._mem_size)
-        new_mems = []
         for i, hid in enumerate(hids):
             qlen = tf.shape(hid)[1]
             end_idx = mlen + qlen
             beg_idx = end_idx - mlen
-            cat = tf.concat([tf.cast(mems[i], dtype=hid.dtype), hid], 1)
+            cat = tf.concat([self.mems[i], tf.cast(hid, dtype=self.mems[i].dtype)], 1)
             cat = tf.stop_gradient(cat)
-            new_mems.append(cat[:, beg_idx:end_idx, :])
-        return new_mems
+            self.mems[i].assign(cat[:, beg_idx:end_idx, :])
 
-    def call(self, inputs, mems=None, relative_position_encoding=None, training=False):
+    def call(self, inputs, training=False):
         outputs, inputs_length = inputs
         outputs = self.conv_subsampling(outputs, training=training)
         inputs_length = math_util.get_reduced_length(inputs_length, self.conv_subsampling.time_reduction_factor)
         outputs = self.linear(outputs, training=training)
         outputs = self.do(outputs, training=training)
         batch_size, max_length, _ = shape_util.shape_list(outputs)
-        mems = self._init_mems(batch_size, mems)
         attention_mask = self._compute_attention_mask(max_length, inputs_length)
-        relative_position_encoding = self._compute_relpos(batch_size, max_length, relative_position_encoding)
+        relative_position_encoding = self._compute_relpos(batch_size, max_length)
         hids = []
         for i, cblock in enumerate(self.conformer_blocks):
             hids.append(outputs)
@@ -535,11 +540,11 @@ class ConformerEncoder(Layer):
                 relative_position_encoding=relative_position_encoding,
                 pos_bias_u=self.pos_bias_u,
                 pos_bias_v=self.pos_bias_v,
-                mems=(mems[i] if mems is not None else None),
+                mems=(self.mems[i] if self.mems is not None else None),
                 training=training,
                 attention_mask=attention_mask,
             )
-        mems = self._update_mems(hids, mems)
+        self._update_mems(hids)
         return outputs, inputs_length
 
     def compute_output_shape(self, input_shape):

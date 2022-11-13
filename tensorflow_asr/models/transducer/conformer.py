@@ -27,7 +27,7 @@ class Conformer(Transducer):
         encoder_head_size: int = 36,
         encoder_num_heads: int = 4,
         encoder_mha_type: str = "relmha",
-        encoder_mem_size: int = 100,
+        encoder_mem_size: int = None,
         encoder_use_attention_mask: bool = False,
         encoder_use_attention_causal_mask: bool = False,
         encoder_kernel_size: int = 32,
