@@ -167,8 +167,6 @@ class MHSAModule(tf.keras.layers.Layer):
         self,
         inputs,
         relative_position_encoding=None,
-        pos_bias_u=None,
-        pos_bias_v=None,
         mems=None,
         training=False,
         attention_mask=None,
@@ -180,8 +178,6 @@ class MHSAModule(tf.keras.layers.Layer):
                 key=outputs,
                 value=outputs,
                 relative_position_encoding=relative_position_encoding,
-                content_attention_bias=pos_bias_u,
-                positional_attention_bias=pos_bias_v,
                 state=mems,
                 training=training,
                 attention_mask=attention_mask,
@@ -361,8 +357,6 @@ class ConformerBlock(tf.keras.layers.Layer):
         self,
         inputs,
         relative_position_encoding=None,
-        pos_bias_u=None,
-        pos_bias_v=None,
         # mems=None,
         training=False,
         attention_mask=None,
@@ -371,8 +365,6 @@ class ConformerBlock(tf.keras.layers.Layer):
         outputs = self.mhsam(
             outputs,
             relative_position_encoding=relative_position_encoding,
-            pos_bias_u=pos_bias_u,
-            pos_bias_v=pos_bias_v,
             # mems=mems,
             training=training,
             attention_mask=attention_mask,
@@ -468,29 +460,6 @@ class ConformerEncoder(Layer):
             )
             self.conformer_blocks.append(conformer_block)
 
-    def build(self, input_shape):
-        if self._mha_type == "relmha":
-            self.pos_bias_u = self.add_weight(
-                name="content_attention_bias",
-                shape=[self._num_heads, self._head_size],
-                dtype=self.dtype,
-                trainable=True,
-                initializer="zeros",
-                regularizer=self._bias_regularizer,
-            )
-            self.pos_bias_v = self.add_weight(
-                name="positional_attention_bias",
-                shape=[self._num_heads, self._head_size],
-                dtype=self.dtype,
-                trainable=True,
-                initializer="zeros",
-                regularizer=self._bias_regularizer,
-            )
-        else:
-            self.pos_bias_u, self.pos_bias_v = None, None
-        # self._init_mems(input_shape[0][0])
-        super().build(input_shape)
-
     def _compute_attention_mask(self, max_length, inputs_length):
         if self._use_attention_mask:
             return compute_self_attention_mask(max_length, inputs_length, self._mem_size, self._use_attention_causal_mask)
@@ -549,8 +518,6 @@ class ConformerEncoder(Layer):
             outputs = cblock(
                 outputs,
                 relative_position_encoding=relative_position_encoding,
-                pos_bias_u=self.pos_bias_u,
-                pos_bias_v=self.pos_bias_v,
                 # mems=(self.mems[i] if self.mems is not None else None),
                 training=training,
                 attention_mask=attention_mask,

@@ -211,38 +211,41 @@ class VggBlurPoolSubsampling(tf.keras.layers.Layer):
 class Conv2dSubsampling(tf.keras.layers.Layer):
     def __init__(
         self,
+        nlayers: int,
         filters: int,
         strides: list or tuple or int = 2,
         kernel_size: int or list or tuple = 3,
         padding: str = "same",
-        activation: str = "relu",
+        norm: str = "batch",
+        activation: str = "swish",
         kernel_regularizer=None,
         bias_regularizer=None,
         name="Conv2dSubsampling",
         **kwargs,
     ):
         super().__init__(name=name, **kwargs)
-        self.conv1 = tf.keras.layers.Conv2D(
-            filters=filters,
-            kernel_size=kernel_size,
-            strides=strides,
-            padding=padding,
-            name="1",
-            kernel_regularizer=kernel_regularizer,
-            bias_regularizer=bias_regularizer,
-            activation=activation,
-        )
-        self.conv2 = tf.keras.layers.Conv2D(
-            filters=filters,
-            kernel_size=kernel_size,
-            strides=strides,
-            padding=padding,
-            name="2",
-            kernel_regularizer=kernel_regularizer,
-            bias_regularizer=bias_regularizer,
-            activation=activation,
-        )
-        self.time_reduction_factor = self.conv1.strides[0] * self.conv2.strides[0]
+        self.convs = []
+        self.time_reduction_factor = 1
+        for i in range(nlayers):
+            subblock = tf.keras.Sequential(name=f"block_{i}")
+            subblock.add(
+                tf.keras.layers.Conv2D(
+                    filters=filters,
+                    kernel_size=kernel_size,
+                    strides=strides,
+                    padding=padding,
+                    name=f"conv_{i}",
+                    kernel_regularizer=kernel_regularizer,
+                    bias_regularizer=bias_regularizer,
+                )
+            )
+            if norm == "batch":
+                subblock.add(tf.keras.layers.BatchNormalization(name=f"bn_{i}"))
+            elif norm == "layer":
+                subblock.add(tf.keras.layers.LayerNormalization(name=f"ln_{i}"))
+            subblock.add(tf.keras.layers.Activation(activation, name=f"{activation}_{i}"))
+            self.convs.append(subblock)
+            self.time_reduction_factor *= strides
 
     def call(
         self,
@@ -250,8 +253,9 @@ class Conv2dSubsampling(tf.keras.layers.Layer):
         training=False,
         **kwargs,
     ):
-        outputs = self.conv1(inputs, training=training)
-        outputs = self.conv2(outputs, training=training)
+        outputs = inputs
+        for block in self.convs:
+            outputs = block(outputs, training=training)
         return math_util.merge_two_last_dims(outputs)
 
 

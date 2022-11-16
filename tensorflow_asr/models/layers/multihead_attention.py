@@ -152,6 +152,22 @@ class MultiHeadRelativeAttention(MultiHeadAttention):
                 name="encoding",
                 **common_kwargs,
             )
+            self.content_attention_bias = self.add_weight(
+                name="content_attention_bias",
+                shape=[self._num_heads, self._key_dim],
+                dtype=self.dtype,
+                trainable=True,
+                initializer="zeros",
+                regularizer=self._bias_regularizer,
+            )
+            self.positional_attention_bias = self.add_weight(
+                name="positional_attention_bias",
+                shape=[self._num_heads, self._key_dim],
+                dtype=self.dtype,
+                trainable=True,
+                initializer="zeros",
+                regularizer=self._bias_regularizer,
+            )
 
     def _compute_attention(
         self,
@@ -159,8 +175,6 @@ class MultiHeadRelativeAttention(MultiHeadAttention):
         key,
         value,
         position,
-        content_attention_bias,
-        positional_attention_bias,
         attention_mask=None,
         training=None,
     ):
@@ -190,8 +204,8 @@ class MultiHeadRelativeAttention(MultiHeadAttention):
           attention_output: Multi-headed output of attention computation of shape
             `[B, S, N, key_dim]`.
         """
-        content_attention = tf.einsum(self._dot_product_equation, key, query + content_attention_bias)  # BSNH,BTNH->BNTS
-        positional_attention = tf.einsum(self._dot_product_equation, position, query + positional_attention_bias)  # BRNH,BTNH->BNTR
+        content_attention = tf.einsum(self._dot_product_equation, key, query + self.content_attention_bias)  # BSNH,BTNH->BNTS
+        positional_attention = tf.einsum(self._dot_product_equation, position, query + self.positional_attention_bias)  # BRNH,BTNH->BNTR
         positional_attention = _rel_shift(positional_attention)
 
         attention_sum = content_attention + positional_attention
@@ -210,8 +224,6 @@ class MultiHeadRelativeAttention(MultiHeadAttention):
         query,
         value,
         relative_position_encoding,
-        content_attention_bias,
-        positional_attention_bias,
         key=None,
         state=None,
         attention_mask=None,
@@ -289,8 +301,6 @@ class MultiHeadRelativeAttention(MultiHeadAttention):
             key=key,
             value=value,
             position=position,
-            content_attention_bias=content_attention_bias,
-            positional_attention_bias=positional_attention_bias,
             attention_mask=attention_mask,
             training=training,
         )
