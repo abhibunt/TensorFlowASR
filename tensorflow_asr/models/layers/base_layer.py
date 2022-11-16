@@ -26,6 +26,7 @@ class Layer(keras.layers.Layer):
     ):
         super().__init__(trainable, name, dtype, dynamic, **kwargs)
         self._output_shape = None
+        self.supports_masking = True
 
     @property
     def output_shape(self):

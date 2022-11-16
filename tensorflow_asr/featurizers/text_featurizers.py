@@ -159,7 +159,7 @@ class CharFeaturizer(TextFeaturizer):
         self.tokens = []
         index = 1 if self.blank == 0 else 0
         for line in lines:
-            line = self.preprocess_text(line)
+            line = unicodedata.normalize(self.decoder_config.normalization_form, line.lower()).strip("\n")
             if line.startswith("#") or not line:
                 continue
             self.tokens2indices[line[0]] = index
@@ -188,7 +188,7 @@ class CharFeaturizer(TextFeaturizer):
         return tf.convert_to_tensor(indices, dtype=tf.int32)
 
     def tf_extract(self, text):
-        return self.extract(text)
+        return tf.numpy_function(lambda t: self.extract(t.decode("utf-8")), [text], Tout=tf.int32, stateful=False)
 
     def iextract(self, indices: tf.Tensor) -> tf.Tensor:
         """
@@ -201,8 +201,7 @@ class CharFeaturizer(TextFeaturizer):
         """
         indices = self.normalize_indices(indices)
         tokens = tf.gather_nd(self.tokens, tf.expand_dims(indices, axis=-1))
-        with tf.device("/CPU:0"):  # string data is not supported on GPU
-            tokens = tf.strings.reduce_join(tokens, axis=-1)
+        tokens = tf.strings.reduce_join(tokens, axis=-1)
         return tokens
 
     @tf.function(input_signature=[tf.TensorSpec([None], dtype=tf.int32)])
