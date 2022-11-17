@@ -135,8 +135,8 @@ class MHSAModule(tf.keras.layers.Layer):
         if mha_type == "relmha":
             self.mha = MultiHeadRelativeAttention(
                 num_heads=num_heads,
-                key_dim=head_size,
-                output_shape=dmodel,
+                head_size=head_size,
+                output_size=dmodel,
                 kernel_regularizer=kernel_regularizer,
                 bias_regularizer=bias_regularizer,
                 name="mhsa",
@@ -144,8 +144,8 @@ class MHSAModule(tf.keras.layers.Layer):
         elif mha_type == "mha":
             self.mha = MultiHeadAttention(
                 num_heads=num_heads,
-                key_dim=head_size,
-                output_shape=dmodel,
+                head_size=head_size,
+                output_size=dmodel,
                 kernel_regularizer=kernel_regularizer,
                 bias_regularizer=bias_regularizer,
                 name="mhsa",
@@ -155,13 +155,6 @@ class MHSAModule(tf.keras.layers.Layer):
         self.do = tf.keras.layers.Dropout(dropout, name="dropout")
         self.res_add = tf.keras.layers.Add(name="add")
         self.mha_type = mha_type
-
-    def build(self, input_shape):
-        self.ln.build(input_shape)
-        self.mha._build_from_signature(input_shape, input_shape, input_shape)  # pylint:disable=protected-access
-        self.do.build(input_shape)
-        self.res_add.build([input_shape, input_shape])
-        return super().build(input_shape)
 
     def call(
         self,
@@ -173,23 +166,9 @@ class MHSAModule(tf.keras.layers.Layer):
     ):
         outputs = self.ln(inputs, training=training)
         if self.mha_type == "relmha":
-            outputs = self.mha(
-                query=outputs,
-                key=outputs,
-                value=outputs,
-                relative_position_encoding=relative_position_encoding,
-                state=mems,
-                training=training,
-                attention_mask=attention_mask,
-            )
+            outputs = self.mha([outputs, outputs, outputs, relative_position_encoding], mems=mems, training=training, attention_mask=attention_mask)
         else:
-            outputs = self.mha(
-                query=outputs,
-                key=outputs,
-                value=outputs,
-                training=training,
-                attention_mask=attention_mask,
-            )
+            outputs = self.mha([outputs, outputs, outputs], training=training, attention_mask=attention_mask)
         outputs = self.do(outputs, training=training)
         outputs = self.res_add([inputs, outputs])
         return outputs
