@@ -20,13 +20,11 @@ model_config:
   name: conformer
   encoder_subsampling:
     type: conv2d
-    nlayers: 2
     filters: 144
     kernel_size: 3
     strides: 2
     padding: same
-    activation: swish
-    norm: batch
+    activation: relu
   encoder_dmodel: 144
   encoder_num_blocks: 16
   encoder_head_size: 36 # == dmodel // num_heads
@@ -36,7 +34,7 @@ model_config:
   encoder_kernel_size: 32
   encoder_fc_factor: 0.5
   encoder_dropout: 0.1
-  encoder_padding: same
+  encoder_padding: causal
   prediction_label_encode_mode: embedding
   prediction_embed_dim: 320
   prediction_num_rnns: 1
@@ -45,11 +43,11 @@ model_config:
   prediction_rnn_implementation: 2
   prediction_rnn_unroll: False # False to use with CUDA or dynamic length, True to use with TPU and static length
   prediction_layer_norm: False
-  prediction_projection_units: 0
+  prediction_projection_units: 144
   joint_dim: 320
-  prejoint_encoder_linear: True
-  prejoint_prediction_linear: True
-  postjoint_linear: False
+  prejoint_encoder_linear: False
+  prejoint_prediction_linear: False
+  postjoint_linear: True
   joint_activation: tanh
   joint_mode: add
 
@@ -61,35 +59,15 @@ speech_config:
   feature_type: log_mel_spectrogram
 
 decoder_config:
-  type: sentencepiece
+  type: characters
 
   blank_index: 0
-  pad_token: "<pad>"
-  pad_index: 0
-  unknown_token: "<unk>"
-  unknown_index: 1
-  bos_token: "<s>"
-  bos_index: 2
-  eos_token: "</s>"
-  eos_index: 3
 
   beam_width: 0
   norm_score: True
   lm_config: null
 
-  model_type: bpe
-  vocabulary: {{repodir}}/vocabularies/librispeech/sentencepiece/train_bpe_1000.model
-  vocab_size: 1000
-  max_token_length: 50
-  max_unique_chars: 1000
-  reserved_tokens: null
-  normalization_form: NFKC
-  num_iterations: 4
-
-  corpus_files:
-    - {{datadir}}/train-clean-100/transcripts.tsv
-    - {{datadir}}/train-clean-360/transcripts.tsv
-    - {{datadir}}/train-other-500/transcripts.tsv
+  vocabulary: {{repodir}}/vocabularies/english.characters
 
 learning_config:
   train_dataset_config:
@@ -114,7 +92,6 @@ learning_config:
     buffer_size: 100
     drop_remainder: True
     stage: train
-    metadata: {{repodir}}/vocabularies/librispeech/sentencepiece/train_1000.metadata.json
 
   eval_dataset_config:
     enabled: False
@@ -127,7 +104,6 @@ learning_config:
     buffer_size: 100
     drop_remainder: True
     stage: eval
-    metadata: {{repodir}}/vocabularies/librispeech/sentencepiece/train_1000.metadata.json
 
   test_dataset_config:
     enabled: False
@@ -162,6 +138,8 @@ learning_config:
       save_best_only: False
       save_weights_only: True
       save_freq: epoch
+      options:
+        experimental_enable_async_checkpoint: True
     backup_and_restore:
       backup_dir: {{modeldir}}/states
       save_freq: epoch

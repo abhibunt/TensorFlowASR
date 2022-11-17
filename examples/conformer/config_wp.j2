@@ -13,20 +13,22 @@
 # limitations under the License.
 
 {% set repodir = "." %}
-{% set modeldir = "/mnt/Miscellanea/Models/local/conformer" %}
-{% set datadir = "/mnt/Data/MLDL/Datasets/ASR/LibriSpeech" %}
+{% set modeldir = "/Users/nlhuy/Paraphernalia/models/local/conformer" %}
+{% set datadir = "/Users/nlhuy/Paraphernalia/data/LibriSpeech" %}
 
 model_config:
   name: conformer
   encoder_subsampling:
     type: conv2d
+    nlayers: 2
     filters: 144
     kernel_size: 3
     strides: 2
     padding: same
-    activation: relu
+    activation: swish
+    norm: batch
   encoder_dmodel: 144
-  encoder_num_blocks: 1
+  encoder_num_blocks: 16
   encoder_head_size: 36 # == dmodel // num_heads
   encoder_num_heads: 4
   encoder_mha_type: relmha
@@ -90,9 +92,6 @@ learning_config:
     use_tf: True
     augmentation_config:
       feature_augment:
-        gauss_noise:
-          prob: 0.1
-          stddev: 0.075
         time_masking:
           prob: 0.5
           num_masks: 10
@@ -103,14 +102,14 @@ learning_config:
           num_masks: 1
           mask_factor: 27
     data_paths:
-      - {{datadir}}/train-clean-100/transcripts.tsv
-    tfrecords_dir: {{datadir}}/tfrecords/100h
+      - {{datadir}}/dev-clean/transcripts.tsv
+    tfrecords_dir: {{datadir}}/tfrecords
     shuffle: True
     cache: True
     buffer_size: 100
     drop_remainder: True
     stage: train
-    metadata: {{repodir}}/vocabularies/librispeech/wordpiece/train_1000.metadata.json
+    metadata: {{repodir}}/vocabularies/librispeech/wordpiece/train_1000_50.metadata.json
 
   eval_dataset_config:
     enabled: False
@@ -123,7 +122,7 @@ learning_config:
     buffer_size: 100
     drop_remainder: True
     stage: eval
-    metadata: {{repodir}}/vocabularies/librispeech/wordpiece/train_1000.metadata.json
+    metadata: {{repodir}}/vocabularies/librispeech/wordpiece/train_1000_50.metadata.json
 
   test_dataset_config:
     enabled: False
@@ -149,8 +148,6 @@ learning_config:
   apply_gwn_config:
     predict_net_step: 20000
     predict_net_stddev: 0.075
-    joint_net_step: 20000
-    joint_net_stddev: 0.075
 
   running_config:
     batch_size: 2
